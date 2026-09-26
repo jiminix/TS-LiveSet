@@ -8,6 +8,7 @@ import android.graphics.Typeface;
 import android.view.View;
 
 public class PlaylistBannerView extends View {
+    // Build V0.29
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
 
     public PlaylistBannerView(Context c){
