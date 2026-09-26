@@ -22,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout content;
     private EditText search;
     private Button importButton;
+    private Button libraryTab;
     private boolean libraryMode = false;
 
     @Override protected void onCreate(Bundle b) {
@@ -44,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
         TextView head = Ui.title(this, "LIVESET");
         Ui.weight(head,1);
         TextView version = new TextView(this);
-        version.setText("v0.6");
+        version.setText("v0.7");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(12);
         version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
@@ -54,9 +55,9 @@ public class MainActivity extends AppCompatActivity {
 
         LinearLayout tabs = Ui.row(this);
         Button setlists = Ui.button(this, "Setlists");
-        Button library = Ui.button(this, "Bibliothèque");
-        Ui.weight(setlists,1); Ui.weight(library,1);
-        tabs.addView(setlists); tabs.addView(library);
+        libraryTab = Ui.button(this, "Bibliothèque");
+        Ui.weight(setlists,1); Ui.weight(libraryTab,1);
+        tabs.addView(setlists); tabs.addView(libraryTab);
         root.addView(tabs);
 
         search = new EditText(this);
@@ -100,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
             importButton.setVisibility(View.INVISIBLE);
             showSetlists();
         });
-        library.setOnClickListener(v -> {
+        libraryTab.setOnClickListener(v -> {
             libraryMode=true;
             search.setVisibility(View.VISIBLE);
             importButton.setVisibility(View.VISIBLE);
@@ -145,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
         content.removeAllViews();
         String q = search == null ? "" : search.getText().toString().trim().toLowerCase();
         List<Song> songs=AppStore.loadSongs(this);
+        if(libraryTab!=null) libraryTab.setText("Bibliothèque ("+songs.size()+")");
         if(songs.isEmpty()){
             TextView empty=Ui.title(this,"Bibliothèque vide\n\nUtilise « Importer » pour récupérer toute ta playlist d’un coup.");
             empty.setTextSize(18); empty.setGravity(Gravity.CENTER); content.addView(empty);
