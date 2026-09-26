@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -16,6 +17,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private String setlistId;
     private SetListModel setlist;
     private int currentIndex=-1;
+    private boolean compact=true;
+    private LinearLayout root;
+    private LinearLayout list;
+    private Button modeButton;
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
@@ -23,41 +28,69 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         currentIndex=getIntent().getIntExtra("current_index",-1);
         setlist=AppStore.findSetlist(this,setlistId);
         if(setlist==null){ finish(); return; }
+        compact=getSharedPreferences("playlist_view",MODE_PRIVATE).getBoolean("compact",true);
         buildUi();
     }
 
     private void buildUi(){
-        LinearLayout root=new LinearLayout(this);
+        root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(12,12,12));
+        root.setBackgroundColor(Color.rgb(10,10,10));
 
         LinearLayout head=Ui.row(this);
         Button back=Ui.button(this,"‹");
         TextView title=Ui.title(this,setlist.name);
-        title.setTextSize(21);
+        title.setTextSize(20);
         Ui.weight(title,1);
+
+        modeButton=Ui.button(this, compact ? "Détaillé" : "Compact");
         TextView count=new TextView(this);
         count.setText(setlist.songIds.size()+" titres");
         count.setTextColor(Color.LTGRAY);
-        count.setTextSize(14);
-        count.setPadding(Ui.dp(this,8),0,Ui.dp(this,12),0);
+        count.setTextSize(13);
+        count.setPadding(Ui.dp(this,8),0,Ui.dp(this,10),0);
+
         head.addView(back);
         head.addView(title);
+        head.addView(modeButton);
         head.addView(count);
         root.addView(head);
 
         TextView sub=new TextView(this);
-        sub.setText("PLAYLIST COMPLÈTE");
+        sub.setText(compact ? "PLAYLIST — AFFICHAGE COMPACT" : "PLAYLIST — AFFICHAGE DÉTAILLÉ");
         sub.setTextColor(Color.LTGRAY);
-        sub.setTextSize(13);
+        sub.setTextSize(12);
         sub.setGravity(Gravity.CENTER);
-        sub.setPadding(Ui.dp(this,12),0,Ui.dp(this,12),Ui.dp(this,8));
+        sub.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,5));
+        sub.setTag("sub");
         root.addView(sub);
 
         ScrollView sv=new ScrollView(this);
-        LinearLayout list=new LinearLayout(this);
+        list=new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,20));
+        list.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),Ui.dp(this,16));
+        sv.addView(list);
+        root.addView(sv,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
+
+        back.setOnClickListener(v->finish());
+        modeButton.setOnClickListener(v->toggleMode());
+
+        renderList();
+        Ui.applySafeArea(root);
+        setContentView(root);
+    }
+
+    private void toggleMode(){
+        compact=!compact;
+        getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putBoolean("compact",compact).apply();
+        modeButton.setText(compact ? "Détaillé" : "Compact");
+        TextView sub=root.findViewWithTag("sub");
+        if(sub!=null)sub.setText(compact ? "PLAYLIST — AFFICHAGE COMPACT" : "PLAYLIST — AFFICHAGE DÉTAILLÉ");
+        renderList();
+    }
+
+    private void renderList(){
+        list.removeAllViews();
 
         for(int i=0;i<setlist.songIds.size();i++){
             final int pos=i;
@@ -65,51 +98,64 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             if(s==null)continue;
 
             LinearLayout row=Ui.row(this);
-            row.setPadding(Ui.dp(this,6),Ui.dp(this,4),Ui.dp(this,6),Ui.dp(this,4));
+            row.setPadding(Ui.dp(this,4),compact?Ui.dp(this,1):Ui.dp(this,4),Ui.dp(this,4),compact?Ui.dp(this,1):Ui.dp(this,4));
 
             TextView num=new TextView(this);
             num.setText(String.format("%02d",i+1));
-            num.setTextSize(16);
+            num.setTextSize(compact?14:16);
             num.setTypeface(Typeface.DEFAULT_BOLD);
             num.setGravity(Gravity.CENTER);
-            num.setMinWidth(Ui.dp(this,44));
+            num.setMinWidth(Ui.dp(this,38));
 
             TextView song=new TextView(this);
-            StringBuilder text=new StringBuilder(s.title);
-            String meta="";
-            if(!s.key.isEmpty()) meta=s.key;
-            if(!s.bpm.isEmpty()) meta+=(meta.isEmpty()?"":" · ")+s.bpm+" BPM";
-            if(!meta.isEmpty()) text.append("\n").append(meta);
-            song.setText(text.toString());
-            song.setTextSize(17);
-            song.setPadding(Ui.dp(this,8),Ui.dp(this,9),Ui.dp(this,8),Ui.dp(this,9));
+            song.setTextSize(compact?15:17);
+            song.setTypeface(Typeface.DEFAULT_BOLD);
+            song.setSingleLine(compact);
+            song.setEllipsize(compact ? android.text.TextUtils.TruncateAt.END : null);
+            song.setPadding(Ui.dp(this,5),compact?Ui.dp(this,5):Ui.dp(this,9),Ui.dp(this,5),compact?Ui.dp(this,5):Ui.dp(this,9));
             Ui.weight(song,1);
+
+            TextView bpm=new TextView(this);
+            bpm.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+            bpm.setTextSize(compact?14:15);
+            bpm.setTypeface(Typeface.DEFAULT_BOLD);
+            bpm.setMinWidth(Ui.dp(this,68));
+            bpm.setPadding(Ui.dp(this,4),0,Ui.dp(this,8),0);
+
+            if(compact){
+                song.setText(s.title);
+                bpm.setText(s.bpm.isEmpty() ? "" : s.bpm);
+            }else{
+                StringBuilder text=new StringBuilder(s.title);
+                String meta="";
+                if(!s.artist.isEmpty())meta=s.artist;
+                if(!s.key.isEmpty())meta+=(meta.isEmpty()?"":" · ")+s.key;
+                if(!s.tuning.isEmpty())meta+=(meta.isEmpty()?"":" · ")+s.tuning;
+                song.setText(text.toString()+(meta.isEmpty()?"":"\n"+meta));
+                bpm.setText(s.bpm.isEmpty() ? "" : s.bpm+" BPM");
+            }
 
             if(i==currentIndex){
                 num.setTextColor(Color.rgb(255,193,7));
                 song.setTextColor(Color.rgb(255,193,7));
+                bpm.setTextColor(Color.rgb(255,193,7));
                 row.setBackgroundColor(Color.rgb(38,38,38));
             }else{
                 num.setTextColor(Color.LTGRAY);
                 song.setTextColor(Color.WHITE);
+                bpm.setTextColor(Color.WHITE);
             }
 
             row.addView(num);
             row.addView(song);
+            row.addView(bpm);
             row.setOnClickListener(v->openSong(pos));
             list.addView(row);
 
-            TextView sep=new TextView(this);
-            sep.setBackgroundColor(Color.rgb(45,45,45));
+            View sep=new View(this);
+            sep.setBackgroundColor(Color.rgb(38,38,38));
             list.addView(sep,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,1)));
         }
-
-        sv.addView(list);
-        root.addView(sv,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
-
-        back.setOnClickListener(v->finish());
-        Ui.applySafeArea(root);
-        setContentView(root);
     }
 
     private void openSong(int pos){
