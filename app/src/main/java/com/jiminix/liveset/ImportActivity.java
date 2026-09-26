@@ -807,6 +807,7 @@ public class ImportActivity extends AppCompatActivity {
             if(keys.contains(k)){
                 Song old=byKey.get(k);
                 if(replaceDuplicates.isChecked() || tsSongbookDetected){
+                    preserveExistingData(in,old);
                     in.id=old.id;
                     AppStore.upsertSong(this,in);
                     importedIds.add(in.id);
@@ -873,6 +874,22 @@ public class ImportActivity extends AppCompatActivity {
         }else{
             finish();
         }
+    }
+
+    private void preserveExistingData(Song incoming,Song old){
+        if(incoming==null || old==null)return;
+        if(incoming.title==null || incoming.title.trim().isEmpty()) incoming.title=old.title;
+        if(incoming.artist==null || incoming.artist.trim().isEmpty()) incoming.artist=old.artist;
+        if(incoming.lyrics==null || incoming.lyrics.trim().isEmpty()) incoming.lyrics=old.lyrics;
+        if(incoming.key==null || incoming.key.trim().isEmpty()) incoming.key=old.key;
+        if(incoming.bpm==null || incoming.bpm.trim().isEmpty()) incoming.bpm=old.bpm;
+        if(incoming.tuning==null || incoming.tuning.trim().isEmpty()) incoming.tuning=old.tuning;
+        if(incoming.capo==null || incoming.capo.trim().isEmpty()) incoming.capo=old.capo;
+        if(incoming.duration==null || incoming.duration.trim().isEmpty()) incoming.duration=old.duration;
+        if(incoming.singer==null || incoming.singer.trim().isEmpty()) incoming.singer=old.singer;
+        if(incoming.guitar==null || incoming.guitar.trim().isEmpty()) incoming.guitar=old.guitar;
+        if(incoming.notes==null || incoming.notes.trim().isEmpty()) incoming.notes=old.notes;
+        if(incoming.mediaUrl==null || incoming.mediaUrl.trim().isEmpty()) incoming.mediaUrl=old.mediaUrl;
     }
 
     private String dupKey(Song s){
