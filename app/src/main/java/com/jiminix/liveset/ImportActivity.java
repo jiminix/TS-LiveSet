@@ -48,6 +48,7 @@ import java.io.StringReader;
 public class ImportActivity extends AppCompatActivity {
     // V0.23 numbered DOCX parser
     // V0.23 rebuild
+    // V0.23 rebuild 2
     private static final int PICK_FILE = 42;
     private EditText source;
     private TextView preview;
