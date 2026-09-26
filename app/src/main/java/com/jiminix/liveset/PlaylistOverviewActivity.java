@@ -30,6 +30,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.25
     // Build V0.26
     // Build V0.27
+    // Build V0.32
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -591,12 +592,44 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
             if(s!=null && hasStageInfo){
                 h.stageBox.setVisibility(View.VISIBLE);
+                h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,116),Ui.dp(PlaylistOverviewActivity.this,28)));
+                GradientDrawable stageBg=new GradientDrawable();
+                stageBg.setColor(Color.BLACK);
+                stageBg.setCornerRadius(Ui.dp(PlaylistOverviewActivity.this,4));
+                stageBg.setStroke(Ui.dp(PlaylistOverviewActivity.this,1),Color.rgb(70,70,70));
+                h.stageBox.setBackground(stageBg);
+
+                h.stage1.setVisibility(View.VISIBLE);
+                h.stage2.setVisibility(View.VISIBLE);
+                h.guitarIcon.setVisibility(View.VISIBLE);
+                h.keyboardIcon.setVisibility(View.VISIBLE);
+
+                h.stage1.setTextColor(Color.WHITE);
+                h.stage1.setTextSize(12);
+                h.stage1.setGravity(Gravity.CENTER);
                 h.stage1.setText(twoDigits(s.stageNum1));
                 h.stage2.setText(twoDigits(s.stageNum2));
                 h.guitarIcon.setAlpha(s.stageGuitar?1f:0.22f);
                 h.keyboardIcon.setAlpha(s.stageKeyboard?1f:0.22f);
             }else{
-                h.stageBox.setVisibility(View.GONE);
+                h.stageBox.setVisibility(View.VISIBLE);
+                h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,34),Ui.dp(PlaylistOverviewActivity.this,28)));
+
+                GradientDrawable emptyBg=new GradientDrawable();
+                emptyBg.setColor(Color.TRANSPARENT);
+                emptyBg.setCornerRadius(Ui.dp(PlaylistOverviewActivity.this,4));
+                emptyBg.setStroke(Ui.dp(PlaylistOverviewActivity.this,1),Color.rgb(90,90,90));
+                h.stageBox.setBackground(emptyBg);
+
+                h.stage1.setVisibility(View.VISIBLE);
+                h.stage1.setText("＋");
+                h.stage1.setTextColor(Color.LTGRAY);
+                h.stage1.setTextSize(18);
+                h.stage1.setGravity(Gravity.CENTER);
+
+                h.stage2.setVisibility(View.GONE);
+                h.guitarIcon.setVisibility(View.GONE);
+                h.keyboardIcon.setVisibility(View.GONE);
             }
 
             boolean current=id.equals(currentSongId);
