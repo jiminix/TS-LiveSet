@@ -34,7 +34,7 @@ public class EditSongActivity extends AppCompatActivity {
 
     private void buildUi(){
         LinearLayout outer=new LinearLayout(this); outer.setOrientation(LinearLayout.VERTICAL); outer.setBackgroundColor(Color.rgb(18,18,18));
-        TextView h=Ui.title(this,"Modifier le morceau"); outer.addView(h);
+        LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
         ScrollView sv=new ScrollView(this); LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),Ui.dp(this,30)); sv.addView(root);
         title=field(root,"Titre"); artist=field(root,"Artiste");
         LinearLayout r1=Ui.row(this); key=mini("Tonalité",r1); bpm=mini("BPM",r1); capo=mini("Capo",r1); root.addView(r1);
