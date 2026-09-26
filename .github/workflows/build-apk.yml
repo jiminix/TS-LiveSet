@@ -50,11 +50,17 @@ jobs:
           test -f .signing/liveset-debug.keystore
           keytool -list -keystore .signing/liveset-debug.keystore -storepass android -alias androiddebugkey
 
-      - name: Build debug APK
-        run: gradle :app:assembleDebug
+      - name: Build debug APKs
+        run: gradle :app:assembleDebug :viewer:assembleDebug
 
-      - name: Upload APK
+      - name: Upload Manager APK
         uses: actions/upload-artifact@v4
         with:
-          name: LiveSet-V0.16-debug
+          name: TS-LiveSet-Manager-V0.31-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload Viewer APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TS-Playlist-Viewer-V0.1-debug
+          path: viewer/build/outputs/apk/debug/viewer-debug.apk
