@@ -7,6 +7,7 @@
         android:label="LiveSet"
         android:supportsRtl="true"
         android:theme="@style/Theme.LiveSet">
+        <activity android:name=".PlaylistOverviewActivity" />
         <activity android:name=".PlayerActivity" />
         <activity android:name=".LiveSongActivity" />
         <activity android:name=".EditSongActivity" />
