@@ -425,14 +425,14 @@ public class ImportActivity extends AppCompatActivity {
                 Element p=(Element)ps.item(i);
                 String line=paragraphText(p).trim();
                 if(line.isEmpty()){
-                    if(body.length()>0 && body.charAt(body.length()-1)!='\\n')body.append('\\n');
+                    if(body.length()>0 && body.charAt(body.length()-1)!='\n')body.append('\n');
                     continue;
                 }
 
                 // Ignore page-list/navigation artefacts, but keep musical notes and lyrics.
                 if(line.matches("^\\d{1,2}$"))continue;
 
-                if(body.length()>0)body.append('\\n');
+                if(body.length()>0)body.append('\n');
                 body.append(line);
             }
             s.lyrics=body.toString().trim();
