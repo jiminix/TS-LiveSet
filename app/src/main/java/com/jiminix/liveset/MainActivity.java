@@ -35,10 +35,17 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         buildUi();
-        libraryMode=false;
-        search.setVisibility(View.GONE);
-        importButton.setVisibility(View.INVISIBLE);
-        showSetlists();
+        if(getIntent().getBooleanExtra("open_library",false)){
+            libraryMode=true;
+            search.setVisibility(View.VISIBLE);
+            importButton.setVisibility(View.VISIBLE);
+            showLibrary();
+        }else{
+            libraryMode=false;
+            search.setVisibility(View.GONE);
+            importButton.setVisibility(View.INVISIBLE);
+            showSetlists();
+        }
     }
 
     @Override protected void onResume() {
@@ -55,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
         TextView head = Ui.title(this, "LIVESET");
         Ui.compactHeaderTitle(head,this);
         TextView version = new TextView(this);
-        version.setText("v0.21");
+        version.setText("v0.22");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(12);
         version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
