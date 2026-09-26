@@ -22,6 +22,7 @@ import java.util.List;
 public class HomePlaylistsActivity extends AppCompatActivity {
     // V0.24 draggable playlists
     // Build V0.24
+    // Build V0.28
     private RecyclerView recycler;
     private PlaylistHomeAdapter adapter;
     private List<SetListModel> lists;
