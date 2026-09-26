@@ -5,6 +5,7 @@ name: Build LiveSet APK
 # V0.10 compact playlist
 # V0.11 library render fix
 # V0.12 startup routing
+# V0.13 fixed access buttons
 on:
   workflow_dispatch:
   push:
@@ -52,5 +53,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LiveSet-V0.12-debug
+          name: LiveSet-V0.13-debug
           path: app/build/outputs/apk/debug/app-debug.apk
