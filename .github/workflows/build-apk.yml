@@ -1,5 +1,6 @@
 name: Build LiveSet APK
 # signing-cache verification
+# V0.8 table parser build
 on:
   workflow_dispatch:
   push:
@@ -47,5 +48,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LiveSet-V0.7-debug
+          name: LiveSet-V0.8-debug
           path: app/build/outputs/apk/debug/app-debug.apk
