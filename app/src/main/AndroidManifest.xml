@@ -13,7 +13,8 @@
         <activity android:name=".EditSongActivity" />
         <activity android:name=".ImportActivity" />
         <activity android:name=".SetlistActivity" />
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".MainActivity" />
+        <activity android:name=".HomePlaylistsActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
