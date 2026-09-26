@@ -38,17 +38,42 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         root.setBackgroundColor(Color.rgb(10,10,10));
 
         LinearLayout head=Ui.row(this);
-        Button back=Ui.button(this,"‹");
-        TextView title=Ui.title(this,setlist.name);
-        title.setTextSize(20);
-        Ui.weight(title,1);
+        head.setPadding(Ui.dp(this,6),Ui.dp(this,4),Ui.dp(this,6),Ui.dp(this,4));
 
-        modeButton=Ui.button(this, compact ? "Détaillé" : "Compact");
+        TextView back=new TextView(this);
+        back.setText("‹");
+        back.setTextColor(Color.WHITE);
+        back.setTextSize(30);
+        back.setGravity(Gravity.CENTER);
+        back.setClickable(true);
+        back.setFocusable(true);
+        back.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,52)));
+
+        TextView title=new TextView(this);
+        title.setText(setlist.name);
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(17);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setSingleLine(true);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        title.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);
+        title.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,52),1));
+
+        modeButton=Ui.button(this, compact ? "Détail" : "Compact");
+        modeButton.setTextSize(13);
+        modeButton.setMinWidth(0);
+        modeButton.setMinimumWidth(0);
+        modeButton.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);
+        modeButton.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,82),Ui.dp(this,48)));
+
         TextView count=new TextView(this);
         count.setText(setlist.songIds.size()+" titres");
         count.setTextColor(Color.LTGRAY);
-        count.setTextSize(13);
-        count.setPadding(Ui.dp(this,8),0,Ui.dp(this,10),0);
+        count.setTextSize(12);
+        count.setSingleLine(true);
+        count.setGravity(Gravity.CENTER);
+        count.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,68),Ui.dp(this,48)));
 
         head.addView(back);
         head.addView(title);
@@ -83,7 +108,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private void toggleMode(){
         compact=!compact;
         getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putBoolean("compact",compact).apply();
-        modeButton.setText(compact ? "Détaillé" : "Compact");
+        modeButton.setText(compact ? "Détail" : "Compact");
         TextView sub=root.findViewWithTag("sub");
         if(sub!=null)sub.setText(compact ? "PLAYLIST — AFFICHAGE COMPACT" : "PLAYLIST — AFFICHAGE DÉTAILLÉ");
         renderList();
