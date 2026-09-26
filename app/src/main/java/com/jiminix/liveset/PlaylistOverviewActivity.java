@@ -305,6 +305,27 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         if(count!=null)count.setText(setlist.songIds.size()+" titres");
     }
 
+    private void confirmRemoveSong(int pos){
+        if(pos<0 || pos>=setlist.songIds.size())return;
+        String id=setlist.songIds.get(pos);
+        Song s=AppStore.findSong(this,id);
+        String name=(s==null || s.title==null || s.title.trim().isEmpty()) ? "ce morceau" : "« "+s.title+" »";
+
+        new AlertDialog.Builder(this)
+            .setTitle("Retirer ce morceau ?")
+            .setMessage(name+" sera retiré de cette playlist. Il restera dans la bibliothèque avec ses paroles.")
+            .setPositiveButton("Retirer",(d,w)->{
+                setlist.songIds.remove(pos);
+                AppStore.upsertSetlist(this,setlist);
+                if(id.equals(currentSongId))currentSongId=null;
+                adapter.notifyItemRemoved(pos);
+                if(pos<setlist.songIds.size())adapter.notifyItemRangeChanged(pos,setlist.songIds.size()-pos);
+                updateCount();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
     private void openSong(int pos){
         if(pos<0 || pos>=setlist.songIds.size())return;
         Intent i=new Intent(this,LiveSongActivity.class);
@@ -319,13 +340,15 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             final TextView num;
             final TextView song;
             final TextView bpm;
+            final TextView delete;
             final TextView handle;
 
-            Holder(LinearLayout row,TextView num,TextView song,TextView bpm,TextView handle){
+            Holder(LinearLayout row,TextView num,TextView song,TextView bpm,TextView delete,TextView handle){
                 super(row);
                 this.num=num;
                 this.song=song;
                 this.bpm=bpm;
+                this.delete=delete;
                 this.handle=handle;
             }
         }
@@ -352,6 +375,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             bpm.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,44));
             bpm.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
 
+            TextView delete=new TextView(PlaylistOverviewActivity.this);
+            delete.setText("🗑");
+            delete.setTextColor(Color.LTGRAY);
+            delete.setTextSize(16);
+            delete.setGravity(Gravity.CENTER);
+            delete.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,34),Ui.dp(PlaylistOverviewActivity.this,32)));
+
             TextView handle=new TextView(PlaylistOverviewActivity.this);
             handle.setText("≡");
             handle.setTextColor(Color.LTGRAY);
@@ -362,13 +392,19 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             row.addView(num);
             row.addView(song);
             row.addView(bpm);
+            row.addView(delete);
             row.addView(handle);
 
-            Holder h=new Holder(row,num,song,bpm,handle);
+            Holder h=new Holder(row,num,song,bpm,delete,handle);
             row.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p!=RecyclerView.NO_POSITION)openSong(p);
             });
+            delete.setOnClickListener(v->{
+                int p=h.getBindingAdapterPosition();
+                if(p!=RecyclerView.NO_POSITION)confirmRemoveSong(p);
+            });
+
             handle.setOnTouchListener((v,event)->{
                 if(event.getActionMasked()==MotionEvent.ACTION_DOWN){
                     touchHelper.startDrag(h);
