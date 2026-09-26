@@ -44,25 +44,31 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.rgb(18,18,18));
 
+        PlaylistBannerView banner=new PlaylistBannerView(this);
+        root.addView(banner,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+
         LinearLayout head=Ui.row(this);
-        TextView title=Ui.title(this,"PLAYLISTS");
-        Ui.compactHeaderTitle(title,this);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView spacer=new TextView(this);
+        spacer.setText("");
+        Ui.weight(spacer,1);
 
         Button library=Ui.button(this,"Titres");
         library.setTextSize(13);
-        Ui.compactHeaderButton(library,this,70);
+        Ui.compactHeaderButton(library,this,82);
 
         Button add=Ui.button(this,"＋");
         add.setTextSize(24);
-        Ui.compactHeaderButton(add,this,50);
+        Ui.compactHeaderButton(add,this,54);
 
-        head.addView(title);
+        head.addView(spacer);
         head.addView(library);
         head.addView(add);
         root.addView(head);
 
         TextView version=new TextView(this);
-        version.setText("LiveSet v0.27");
+        version.setText("LiveSet v0.28");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(11);
         version.setGravity(Gravity.RIGHT);
