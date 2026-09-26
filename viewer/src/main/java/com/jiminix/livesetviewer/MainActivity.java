@@ -18,6 +18,7 @@ import org.json.JSONObject;
 public class MainActivity extends AppCompatActivity {
     // Viewer V0.1 build 2
     // Viewer V0.2
+    // Viewer V0.3
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView playlistTitle;
     private TextView info;
@@ -189,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
         row.addView(name,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1));
 
         TextView bpmView=new TextView(this);
-        bpmView.setText(bpm==null || bpm.trim().isEmpty() ? "" : bpm.trim()+" BPM");
+        bpmView.setText(bpm==null || bpm.trim().isEmpty() ? "" : bpm.trim());
         bpmView.setTextColor(Color.rgb(255,196,30));
         bpmView.setTextSize(14);
         bpmView.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
