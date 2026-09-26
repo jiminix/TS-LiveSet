@@ -21,6 +21,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     private LinearLayout content;
     private EditText search;
+    private Button importButton;
     private boolean libraryMode = false;
 
     @Override protected void onCreate(Bundle b) {
@@ -65,15 +66,35 @@ public class MainActivity extends AppCompatActivity {
         scroll.addView(content);
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
 
+        LinearLayout bottom = Ui.row(this);
+        importButton = Ui.button(this,"⇩ Importer");
         Button add = Ui.button(this,"＋ Ajouter");
-        add.setTextSize(18);
-        root.addView(add,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,60)));
+        Ui.weight(importButton,1);
+        Ui.weight(add,1);
+        importButton.setVisibility(View.GONE);
+        bottom.addView(importButton);
+        bottom.addView(add);
+        root.addView(bottom,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,66)));
 
         setContentView(root);
 
-        setlists.setOnClickListener(v -> { libraryMode=false; search.setVisibility(View.GONE); showSetlists(); });
-        library.setOnClickListener(v -> { libraryMode=true; search.setVisibility(View.VISIBLE); showLibrary(); });
-        add.setOnClickListener(v -> { if (libraryMode) startActivity(new Intent(this,EditSongActivity.class)); else createSetlist(); });
+        setlists.setOnClickListener(v -> {
+            libraryMode=false;
+            search.setVisibility(View.GONE);
+            importButton.setVisibility(View.GONE);
+            showSetlists();
+        });
+        library.setOnClickListener(v -> {
+            libraryMode=true;
+            search.setVisibility(View.VISIBLE);
+            importButton.setVisibility(View.VISIBLE);
+            showLibrary();
+        });
+        add.setOnClickListener(v -> {
+            if (libraryMode) startActivity(new Intent(this,EditSongActivity.class));
+            else createSetlist();
+        });
+        importButton.setOnClickListener(v -> startActivity(new Intent(this,ImportActivity.class)));
         search.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s,int st,int c,int a){}
             public void onTextChanged(CharSequence s,int st,int before,int count){ if(libraryMode) showLibrary(); }
@@ -107,7 +128,12 @@ public class MainActivity extends AppCompatActivity {
     private void showLibrary() {
         content.removeAllViews();
         String q = search == null ? "" : search.getText().toString().trim().toLowerCase();
-        for (Song s : AppStore.loadSongs(this)) {
+        List<Song> songs=AppStore.loadSongs(this);
+        if(songs.isEmpty()){
+            TextView empty=Ui.title(this,"Bibliothèque vide\n\nUtilise « Importer » pour récupérer toute ta playlist d’un coup.");
+            empty.setTextSize(18); empty.setGravity(Gravity.CENTER); content.addView(empty);
+        }
+        for (Song s : songs) {
             if (!q.isEmpty() && !(s.title+" "+s.artist).toLowerCase().contains(q)) continue;
             LinearLayout row = Ui.row(this);
             TextView txt = new TextView(this);
