@@ -10,6 +10,7 @@
         <activity android:name=".PlayerActivity" />
         <activity android:name=".LiveSongActivity" />
         <activity android:name=".EditSongActivity" />
+        <activity android:name=".ImportActivity" />
         <activity android:name=".SetlistActivity" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
