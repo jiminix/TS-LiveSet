@@ -72,7 +72,7 @@ public class ImportActivity extends AppCompatActivity {
         scroll.addView(root);
 
         TextView info = new TextView(this);
-        info.setText("Depuis Google Docs : copie tout le document puis touche « Coller ».\n\nLiveSet reconnaît les titres écrits comme des titres Google Docs/Markdown (# Titre), les lignes « Titre : ... », les séparateurs --- et les tableaux copiés depuis Google Sheets.\n\nTu peux aussi ouvrir un fichier TXT, CSV, TSV ou DOCX depuis Google Drive.");
+        info.setText("Depuis Google Docs : tu peux coller tout le texte, ou importer le document en DOCX depuis Google Drive.\n\nEn DOCX, LiveSet reconnaît les styles Titre / Heading comme débuts de chansons. En texte collé, il reconnaît # Titre, « Titre : ... », les séparateurs --- et les tableaux copiés depuis Google Sheets.");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(15);
         info.setPadding(0,Ui.dp(this,8),0,Ui.dp(this,12));
@@ -202,14 +202,37 @@ public class ImportActivity extends AppCompatActivity {
                     ByteArrayOutputStream out=new ByteArrayOutputStream();
                     byte[] buf=new byte[8192]; int n;
                     while((n=zip.read(buf))>0) out.write(buf,0,n);
-                    String xml=out.toString("UTF-8");
-                    xml=xml.replaceAll("</w:p>","\n").replaceAll("<w:tab[^>]*/>","\t").replaceAll("<w:br[^>]*/>","\n");
-                    xml=xml.replaceAll("<[^>]+>","");
-                    return xml.replace("&amp;","&").replace("&lt;","<").replace("&gt;",">").replace("&quot;","\"").replace("&apos;","'");
+                    return docxXmlToText(out.toString("UTF-8"));
                 }
             }
         }
         throw new Exception("Ce fichier DOCX ne contient pas de texte lisible.");
+    }
+
+    private String docxXmlToText(String xml) {
+        StringBuilder result=new StringBuilder();
+        Pattern paragraph=Pattern.compile("(?s)<w:p\\b.*?</w:p>");
+        Pattern stylePattern=Pattern.compile("w:pStyle[^>]*w:val=\\\"([^\\\"]+)\\\"");
+        Matcher pm=paragraph.matcher(xml);
+        while(pm.find()){
+            String p=pm.group();
+            Matcher sm=stylePattern.matcher(p);
+            String style=sm.find()?sm.group(1).toLowerCase(Locale.ROOT):"";
+            boolean heading=style.equals("title")||style.equals("titre")||style.matches("heading[1-6]")||style.matches("titre[1-6]");
+            String text=p.replaceAll("<w:tab[^>]*/>","\\t").replaceAll("<w:br[^>]*/>","\\n").replaceAll("<[^>]+>","");
+            text=decodeXml(text).trim();
+            if(text.isEmpty()){
+                result.append('\n');
+            }else{
+                if(heading)result.append("# ");
+                result.append(text).append('\n');
+            }
+        }
+        return result.toString();
+    }
+
+    private String decodeXml(String text) {
+        return text.replace("&amp;","&").replace("&lt;","<").replace("&gt;",">").replace("&quot;","\\\"").replace("&apos;","'");
     }
 
     private String fileName(Uri uri){
