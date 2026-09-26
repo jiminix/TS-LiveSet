@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.util.List;
 
 public class HomePlaylistsActivity extends AppCompatActivity {
+    // V0.22 launcher build
     private LinearLayout content;
 
     @Override protected void onCreate(Bundle b){
