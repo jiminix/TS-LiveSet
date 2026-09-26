@@ -28,7 +28,7 @@ public class SetlistActivity extends AppCompatActivity {
 
     private void buildUi(){
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.rgb(18,18,18));
-        LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); title=Ui.title(this,setlist.name); title.setTextSize(21); Ui.weight(title,1); Button menu=Ui.button(this,"⋮"); head.addView(back); head.addView(title); head.addView(menu); root.addView(head);
+        LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); title=Ui.title(this,setlist.name); title.setTextSize(21); Ui.weight(title,1); Button overview=Ui.button(this,"☰"); Button menu=Ui.button(this,"⋮"); head.addView(back); head.addView(title); head.addView(overview); head.addView(menu); root.addView(head);
         ScrollView sv=new ScrollView(this); content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,80)); sv.addView(content); root.addView(sv,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
         LinearLayout bottom=Ui.row(this);
         Button importer=Ui.button(this,"⇩ Importer");
@@ -41,6 +41,7 @@ public class SetlistActivity extends AppCompatActivity {
         importer.setOnClickListener(v->openImporter());
         add.setOnClickListener(v->chooseSong());
         live.setOnClickListener(v->startLive());
+        overview.setOnClickListener(v->openOverview());
         menu.setOnClickListener(v->setlistMenu());
         Ui.applySafeArea(root); setContentView(root);
     }
@@ -85,6 +86,12 @@ public class SetlistActivity extends AppCompatActivity {
     private void openImporter(){
         Intent i=new Intent(this,ImportActivity.class);
         i.putExtra("target_setlist_id",setlist.id);
+        startActivity(i);
+    }
+
+    private void openOverview(){
+        Intent i=new Intent(this,PlaylistOverviewActivity.class);
+        i.putExtra("setlist_id",setlist.id);
         startActivity(i);
     }
 
