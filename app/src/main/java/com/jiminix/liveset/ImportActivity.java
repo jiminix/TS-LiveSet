@@ -37,6 +37,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import java.io.StringReader;
 
 public class ImportActivity extends AppCompatActivity {
     private static final int PICK_FILE = 42;
@@ -192,22 +199,221 @@ public class ImportActivity extends AppCompatActivity {
         if(requestCode==PICK_FILE&&resultCode==RESULT_OK&&data!=null&&data.getData()!=null){
             Uri uri=data.getData();
             try{
+                String name=fileName(uri).toLowerCase(Locale.ROOT);
+                String mime=getContentResolver().getType(uri);
+                boolean docx=name.endsWith(".docx") ||
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equals(mime);
+
+                if(docx){
+                    List<Song> direct=parseTs2026DocxTable(uri);
+                    if(direct!=null && !direct.isEmpty()){
+                        parsed.clear();
+                        parsed.addAll(direct);
+                        tsSongbookDetected=true;
+                        replaceDuplicates.setChecked(true);
+                        if(targetSetlist==null) setlistName.setText("PLAYLIST 2026");
+                        source.setText("T S. 2026.docx\n\nTableau Word reconnu directement.\n"+parsed.size()+" morceaux prêts à être importés.");
+                        renderPreview();
+                        return;
+                    }
+                }
+
                 String txt=readUri(uri);
                 if(txt==null || txt.trim().isEmpty()){
-                    throw new Exception("Le document sélectionné ne fournit aucun texte. Pour un Google Doc natif, utilise « Envoyer une copie » en DOCX, ou copie-colle tout le document.");
+                    throw new Exception("Le document sélectionné ne fournit aucun texte lisible.");
                 }
                 source.setText(txt);
                 analyse();
                 if(parsed.isEmpty()){
                     new AlertDialog.Builder(this)
                         .setTitle("0 morceau détecté")
-                        .setMessage("Le fichier a bien été lu, mais LiveSet n’a pas reconnu la séparation entre les chansons. Essaie le DOCX avec les noms de morceaux en style Titre, ou colle le texte complet.")
+                        .setMessage("Le fichier a bien été lu mais aucun morceau n’a été reconnu.")
                         .setPositiveButton("OK",null).show();
                 }
             }catch(Exception e){
-                new AlertDialog.Builder(this).setTitle("Import impossible").setMessage(e.getMessage()==null?"Fichier non lisible.":e.getMessage()).setPositiveButton("OK",null).show();
+                new AlertDialog.Builder(this)
+                    .setTitle("Import impossible")
+                    .setMessage(e.getMessage()==null ? e.getClass().getSimpleName() : e.getMessage())
+                    .setPositiveButton("OK",null).show();
             }
         }
+    }
+
+    private static final String W_NS="http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+
+    private List<Song> parseTs2026DocxTable(Uri uri) throws Exception {
+        String xml=readDocxXml(uri);
+        if(xml==null || xml.isEmpty())return null;
+
+        DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        Document doc=factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
+        NodeList tables=doc.getElementsByTagNameNS(W_NS,"tbl");
+
+        Element target=null;
+        List<Element> rows=null;
+        for(int t=0;t<tables.getLength();t++){
+            Element table=(Element)tables.item(t);
+            List<Element> candidateRows=directChildren(table,"tr");
+            if(candidateRows.isEmpty())continue;
+            String first=rowText(candidateRows.get(0));
+            if(normalizeSongTitle(first).contains("PLAYLIST 2026")){
+                target=table;
+                rows=candidateRows;
+                break;
+            }
+        }
+        if(target==null || rows==null || rows.size()<3)return null;
+
+        // Row 1 contains PLAYLIST 2026, spread over the first two cells.
+        List<Song> songs=new ArrayList<>();
+        List<Element> playlistCells=directChildren(rows.get(1),"tc");
+        int cellsToRead=Math.min(2,playlistCells.size());
+        for(int ci=0;ci<cellsToRead;ci++){
+            for(String line:cellParagraphs(playlistCells.get(ci))){
+                String cleaned=line.trim();
+                if(cleaned.isEmpty())continue;
+                String title=parsePlaylistTitle(cleaned);
+                if(title.isEmpty())continue;
+                Song s=new Song();
+                s.title=title;
+                s.bpm=extractPlaylistBpm(cleaned);
+                songs.add(s);
+            }
+        }
+
+        if(songs.size()<20 || songs.size()>40)return null;
+
+        // Match each playlist title to its actual title row in the same Word table.
+        Map<Integer,Integer> songToRow=new HashMap<>();
+        Set<Integer> usedRows=new HashSet<>();
+
+        for(int si=0;si<songs.size();si++){
+            double best=0.0;
+            int bestRow=-1;
+            for(int ri=2;ri<rows.size();ri++){
+                if(usedRows.contains(ri))continue;
+                List<Element> cells=directChildren(rows.get(ri),"tc");
+                if(cells.isEmpty())continue;
+                String candidate=cellText(cells.get(0)).trim();
+                if(candidate.isEmpty() || candidate.length()>100)continue;
+
+                double score=titleScore(songs.get(si).title,candidate);
+                if(score>best){
+                    best=score;
+                    bestRow=ri;
+                }
+            }
+            if(bestRow>=0 && best>=0.55){
+                songToRow.put(si,bestRow);
+                usedRows.add(bestRow);
+            }
+        }
+
+        for(int si=0;si<songs.size();si++){
+            Integer titleRow=songToRow.get(si);
+            if(titleRow==null)continue;
+
+            int bodyRow=titleRow+1;
+
+            // Some songs have the title duplicated on two consecutive rows.
+            while(bodyRow<rows.size()){
+                List<Element> cells=directChildren(rows.get(bodyRow),"tc");
+                if(cells.isEmpty()){bodyRow++;continue;}
+                String first=cellText(cells.get(0)).trim();
+                if(first.isEmpty())break;
+                if(first.length()<=100 && titleScore(songs.get(si).title,first)>=0.80){
+                    bodyRow++;
+                    continue;
+                }
+                break;
+            }
+
+            if(bodyRow>=rows.size())continue;
+            List<Element> bodyCells=directChildren(rows.get(bodyRow),"tc");
+            if(bodyCells.isEmpty())continue;
+
+            List<String> parts=new ArrayList<>();
+            int bodyCellCount=Math.min(2,bodyCells.size());
+            for(int ci=0;ci<bodyCellCount;ci++){
+                String part=cellText(bodyCells.get(ci)).trim();
+                if(part.isEmpty())continue;
+                boolean duplicate=false;
+                for(String old:parts){
+                    if(compact(old).equals(compact(part))){duplicate=true;break;}
+                }
+                if(!duplicate)parts.add(part);
+            }
+            songs.get(si).lyrics=String.join("\n\n",parts).trim();
+        }
+
+        return songs;
+    }
+
+    private String readDocxXml(Uri uri) throws Exception {
+        try(InputStream in=getContentResolver().openInputStream(uri); ZipInputStream zip=new ZipInputStream(in)){
+            ZipEntry e;
+            while((e=zip.getNextEntry())!=null){
+                if("word/document.xml".equals(e.getName())){
+                    ByteArrayOutputStream out=new ByteArrayOutputStream();
+                    byte[] buf=new byte[8192];
+                    int n;
+                    while((n=zip.read(buf))>0)out.write(buf,0,n);
+                    return out.toString("UTF-8");
+                }
+            }
+        }
+        return null;
+    }
+
+    private List<Element> directChildren(Element parent,String localName){
+        List<Element> out=new ArrayList<>();
+        Node child=parent.getFirstChild();
+        while(child!=null){
+            if(child.getNodeType()==Node.ELEMENT_NODE &&
+               W_NS.equals(child.getNamespaceURI()) &&
+               localName.equals(child.getLocalName())){
+                out.add((Element)child);
+            }
+            child=child.getNextSibling();
+        }
+        return out;
+    }
+
+    private List<String> cellParagraphs(Element cell){
+        List<String> lines=new ArrayList<>();
+        NodeList ps=cell.getElementsByTagNameNS(W_NS,"p");
+        for(int i=0;i<ps.getLength();i++){
+            Element p=(Element)ps.item(i);
+            String t=paragraphText(p).trim();
+            if(!t.isEmpty())lines.add(t);
+        }
+        return lines;
+    }
+
+    private String paragraphText(Element p){
+        StringBuilder sb=new StringBuilder();
+        NodeList texts=p.getElementsByTagNameNS(W_NS,"t");
+        for(int i=0;i<texts.getLength();i++)sb.append(texts.item(i).getTextContent());
+        return sb.toString();
+    }
+
+    private String cellText(Element cell){
+        List<String> lines=cellParagraphs(cell);
+        return String.join("\n",lines);
+    }
+
+    private String rowText(Element row){
+        StringBuilder sb=new StringBuilder();
+        for(Element cell:directChildren(row,"tc")){
+            if(sb.length()>0)sb.append(" ");
+            sb.append(cellText(cell));
+        }
+        return sb.toString();
+    }
+
+    private String compact(String s){
+        return s==null ? "" : s.replaceAll("\\s+"," ").trim();
     }
 
     private String readUri(Uri uri) throws Exception {
@@ -447,7 +653,9 @@ public class ImportActivity extends AppCompatActivity {
             .replace("MEDDLEY","MIX")
             .replace("MEDLEY","MIX")
             .replace("JAIL HOUND DOG","HOUND DOG");
-        return n.replaceAll("[^A-Z0-9]+"," ").trim().replaceAll("\\s+"," ");
+        n=n.replaceAll("[^A-Z0-9]+"," ").trim().replaceAll("\\s+"," ");
+        n=n.replaceAll("\\b\\d{1,3}\\b"," ").replaceAll("\\s+"," ").trim();
+        return n;
     }
 
     private double titleScore(String expected,String candidate){
