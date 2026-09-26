@@ -16,6 +16,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
+    // Viewer V0.1 build 2
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView playlistTitle;
     private TextView info;
