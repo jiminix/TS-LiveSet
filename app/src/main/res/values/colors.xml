@@ -1,0 +1,7 @@
+<resources>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="rock_red">#E53935</color>
+    <color name="rock_red_dark">#B71C1C</color>
+    <color name="surface_dark">#121212</color>
+</resources>
