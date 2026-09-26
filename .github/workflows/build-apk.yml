@@ -4,29 +4,47 @@ on:
   push:
     branches: [ main ]
 
+concurrency:
+  group: liveset-android-build
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Prepare Android signing folder
-        run: mkdir -p ~/.android
-      - name: Keep LiveSet debug signing key
+
+      - name: Prepare signing directory
+        run: mkdir -p .signing
+
+      - name: Restore permanent LiveSet signing key
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: liveset-debug-keystore-v1
+          path: .signing/liveset-debug.keystore
+          key: liveset-permanent-signing-v1
+
+      - name: Create signing key once
+        run: |
+          if [ ! -f .signing/liveset-debug.keystore ]; then
+            keytool -genkeypair -noprompt               -keystore .signing/liveset-debug.keystore               -storetype JKS               -storepass android               -alias androiddebugkey               -keypass android               -keyalg RSA               -keysize 2048               -validity 10000               -dname "CN=TS LiveSet,O=TS LiveSet,C=FR"
+          fi
+          test -f .signing/liveset-debug.keystore
+          keytool -list -keystore .signing/liveset-debug.keystore -storepass android -alias androiddebugkey
+
       - name: Build debug APK
         run: gradle :app:assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LiveSet-V0.6-debug
+          name: LiveSet-V0.7-debug
           path: app/build/outputs/apk/debug/app-debug.apk
