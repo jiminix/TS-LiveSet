@@ -178,12 +178,16 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         actions.setPadding(Ui.dp(this,4),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,2));
         Button addLibrary=Ui.button(this,"＋ Bibliothèque");
         Button importTitles=Ui.button(this,"⇩ Importer");
-        addLibrary.setTextSize(14);
-        importTitles.setTextSize(14);
+        Button viewer=Ui.button(this,"▣ Viewer");
+        addLibrary.setTextSize(13);
+        importTitles.setTextSize(13);
+        viewer.setTextSize(13);
         Ui.weight(addLibrary,1);
         Ui.weight(importTitles,1);
+        Ui.weight(viewer,1);
         actions.addView(addLibrary);
         actions.addView(importTitles);
+        actions.addView(viewer);
         root.addView(actions);
 
         back.setOnClickListener(v->finish());
@@ -192,6 +196,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         add.setOnClickListener(v->addSong());
         addLibrary.setOnClickListener(v->addSong());
         importTitles.setOnClickListener(v->openImporter());
+        viewer.setOnClickListener(v->openViewer());
         modeButton.setOnClickListener(v->toggleMode());
 
         Ui.applySafeArea(root);
@@ -239,6 +244,16 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private String normalizedTitle(String value){
         String s=value==null?"":Normalizer.normalize(value,Normalizer.Form.NFD).replaceAll("\\p{M}+","");
         return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+"," ").trim().replaceAll("\\s+"," ");
+    }
+
+    private void openViewer(){
+        AppStore.selectViewerSetlist(this,setlist.id);
+        Intent launch=getPackageManager().getLaunchIntentForPackage("com.jiminix.livesetviewer");
+        if(launch!=null){
+            startActivity(launch);
+        }else{
+            Toast.makeText(this,"Playlist sélectionnée pour TS Playlist Viewer. Installe maintenant l’appli Viewer.",Toast.LENGTH_LONG).show();
+        }
     }
 
     private void openImporter(){
