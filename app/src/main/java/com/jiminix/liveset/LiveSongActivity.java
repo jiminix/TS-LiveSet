@@ -31,7 +31,7 @@ public class LiveSongActivity extends AppCompatActivity {
         LinearLayout nav=Ui.row(this); Button prev=Ui.button(this,"◀ Précédent"); Button next=Ui.button(this,"Suivant ▶"); Ui.weight(prev,1);Ui.weight(next,1);nav.addView(prev);nav.addView(next);root.addView(nav);
         back.setOnClickListener(v->finish()); edit.setOnClickListener(v->{Intent i=new Intent(this,EditSongActivity.class);i.putExtra("song_id",song.id);startActivity(i);}); minus.setOnClickListener(v->font(-2)); plus.setOnClickListener(v->font(2)); play.setOnClickListener(v->player()); prev.setOnClickListener(v->navigate(-1)); next.setOnClickListener(v->navigate(1));
         if(setlistId==null){prev.setEnabled(false);next.setEnabled(false);} else { SetListModel sl=AppStore.findSetlist(this,setlistId); if(sl!=null){prev.setEnabled(index>0);next.setEnabled(index<sl.songIds.size()-1);} }
-        setContentView(root);
+        Ui.applySafeArea(root); setContentView(root);
     }
 
     private void font(float d){fontSize=Math.max(16f,Math.min(52f,fontSize+d));lyrics.setTextSize(fontSize);getSharedPreferences("live_ui",MODE_PRIVATE).edit().putFloat("font",fontSize).apply();}
