@@ -44,10 +44,14 @@ public class ImportActivity extends AppCompatActivity {
     private CheckBox replaceDuplicates;
     private EditText setlistName;
     private Button importButton;
+    private String targetSetlistId;
+    private SetListModel targetSetlist;
     private final List<Song> parsed = new ArrayList<>();
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        targetSetlistId=getIntent().getStringExtra("target_setlist_id");
+        if(targetSetlistId!=null) targetSetlist=AppStore.findSetlist(this,targetSetlistId);
         buildUi();
     }
 
@@ -100,6 +104,15 @@ public class ImportActivity extends AppCompatActivity {
         parseRow.addView(analyse); parseRow.addView(clear);
         root.addView(parseRow);
 
+        if(targetSetlist!=null){
+            TextView dest=new TextView(this);
+            dest.setText("Destination : " + targetSetlist.name);
+            dest.setTextColor(Color.rgb(255,193,7));
+            dest.setTextSize(17);
+            dest.setPadding(Ui.dp(this,6),Ui.dp(this,10),Ui.dp(this,6),Ui.dp(this,2));
+            root.addView(dest);
+        }
+
         preview = new TextView(this);
         preview.setText("Aucun morceau analysé.");
         preview.setTextColor(Color.WHITE);
@@ -119,6 +132,12 @@ public class ImportActivity extends AppCompatActivity {
         setlistName.setTextColor(Color.WHITE);
         setlistName.setHintTextColor(Color.GRAY);
         root.addView(setlistName);
+
+        if(targetSetlist!=null){
+            createSetlist.setChecked(false);
+            createSetlist.setVisibility(View.GONE);
+            setlistName.setVisibility(View.GONE);
+        }
 
         replaceDuplicates = new CheckBox(this);
         replaceDuplicates.setText("Remplacer les doublons (même titre + artiste)");
@@ -171,8 +190,17 @@ public class ImportActivity extends AppCompatActivity {
             Uri uri=data.getData();
             try{
                 String txt=readUri(uri);
+                if(txt==null || txt.trim().isEmpty()){
+                    throw new Exception("Le document sélectionné ne fournit aucun texte. Pour un Google Doc natif, utilise « Envoyer une copie » en DOCX, ou copie-colle tout le document.");
+                }
                 source.setText(txt);
                 analyse();
+                if(parsed.isEmpty()){
+                    new AlertDialog.Builder(this)
+                        .setTitle("0 morceau détecté")
+                        .setMessage("Le fichier a bien été lu, mais LiveSet n’a pas reconnu la séparation entre les chansons. Essaie le DOCX avec les noms de morceaux en style Titre, ou colle le texte complet.")
+                        .setPositiveButton("OK",null).show();
+                }
             }catch(Exception e){
                 new AlertDialog.Builder(this).setTitle("Import impossible").setMessage(e.getMessage()==null?"Fichier non lisible.":e.getMessage()).setPositiveButton("OK",null).show();
             }
@@ -373,37 +401,78 @@ public class ImportActivity extends AppCompatActivity {
     }
 
     private void importSongs(){
-        if(parsed.isEmpty())return;
+        if(parsed.isEmpty()){
+            new AlertDialog.Builder(this).setTitle("Rien à importer").setMessage("Aucun morceau n’a été détecté.").setPositiveButton("OK",null).show();
+            return;
+        }
+
         List<Song> existing=AppStore.loadSongs(this);
         Set<String> keys=new HashSet<>();
         Map<String,Song> byKey=new HashMap<>();
-        for(Song s:existing){String k=dupKey(s);keys.add(k);byKey.put(k,s);}
+        for(Song s:existing){
+            String k=dupKey(s);
+            keys.add(k);
+            byKey.put(k,s);
+        }
+
         List<String> importedIds=new ArrayList<>();
-        int added=0,replaced=0,skipped=0;
+        int added=0,replaced=0,reused=0;
+
         for(Song in:parsed){
             String k=dupKey(in);
             if(keys.contains(k)){
+                Song old=byKey.get(k);
                 if(replaceDuplicates.isChecked()){
-                    Song old=byKey.get(k);
                     in.id=old.id;
                     AppStore.upsertSong(this,in);
                     importedIds.add(in.id);
                     replaced++;
-                }else skipped++;
+                }else{
+                    importedIds.add(old.id);
+                    reused++;
+                }
             }else{
                 AppStore.upsertSong(this,in);
-                keys.add(k); byKey.put(k,in); importedIds.add(in.id); added++;
+                keys.add(k);
+                byKey.put(k,in);
+                importedIds.add(in.id);
+                added++;
             }
         }
-        if(createSetlist.isChecked()&&!importedIds.isEmpty()){
+
+        int playlistAdds=0;
+        if(targetSetlist!=null){
+            Set<String> already=new HashSet<>(targetSetlist.songIds);
+            for(String id:importedIds){
+                if(!already.contains(id)){
+                    targetSetlist.songIds.add(id);
+                    already.add(id);
+                    playlistAdds++;
+                }
+            }
+            AppStore.upsertSetlist(this,targetSetlist);
+        }else if(createSetlist.isChecked()&&!importedIds.isEmpty()){
             SetListModel sl=new SetListModel();
             String n=setlistName.getText().toString().trim();
             sl.name=n.isEmpty()?"Import Google":n;
             sl.songIds.addAll(importedIds);
             AppStore.upsertSetlist(this,sl);
+            playlistAdds=importedIds.size();
         }
-        new AlertDialog.Builder(this).setTitle("Import terminé")
-            .setMessage(added+" ajouté(s)\n"+replaced+" remplacé(s)\n"+skipped+" doublon(s) ignoré(s)")
+
+        String destination=targetSetlist!=null
+            ? "\n\n"+playlistAdds+" morceau(x) ajouté(s) à « "+targetSetlist.name+" »."
+            : (createSetlist.isChecked() ? "\n\nSetlist créée avec "+playlistAdds+" morceau(x)." : "");
+
+        new AlertDialog.Builder(this)
+            .setTitle("Import terminé")
+            .setMessage(
+                parsed.size()+" morceau(x) détecté(s)\n"+
+                added+" nouveau(x)\n"+
+                reused+" déjà présent(s) réutilisé(s)\n"+
+                replaced+" remplacé(s)"+
+                destination
+            )
             .setPositiveButton("OK",(d,w)->finish()).show();
     }
 
