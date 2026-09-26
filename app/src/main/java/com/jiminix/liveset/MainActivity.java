@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         TextView head = Ui.title(this, "LIVESET");
         Ui.weight(head,1);
         TextView version = new TextView(this);
-        version.setText("v0.12");
+        version.setText("v0.13");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(12);
         version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
@@ -70,6 +70,19 @@ public class MainActivity extends AppCompatActivity {
         Ui.weight(setlists,1); Ui.weight(libraryTab,1);
         tabs.addView(setlists); tabs.addView(libraryTab);
         root.addView(tabs);
+
+        LinearLayout quick = Ui.row(this);
+        Button playlistAccess = Ui.button(this,"☰ PLAYLIST");
+        Button titlesAccess = Ui.button(this,"≡ TITRES");
+        playlistAccess.setTextSize(17);
+        titlesAccess.setTextSize(17);
+        playlistAccess.setMinHeight(Ui.dp(this,56));
+        titlesAccess.setMinHeight(Ui.dp(this,56));
+        Ui.weight(playlistAccess,1);
+        Ui.weight(titlesAccess,1);
+        quick.addView(playlistAccess);
+        quick.addView(titlesAccess);
+        root.addView(quick);
 
         search = new EditText(this);
         search.setHint("Rechercher un morceau…");
@@ -115,6 +128,14 @@ public class MainActivity extends AppCompatActivity {
         });
         libraryTab.setOnClickListener(v -> {
             libraryMode=true;
+            search.setVisibility(View.VISIBLE);
+            importButton.setVisibility(View.VISIBLE);
+            showLibrary();
+        });
+        playlistAccess.setOnClickListener(v -> openPlaylistAccess());
+        titlesAccess.setOnClickListener(v -> {
+            libraryMode=true;
+            search.setText("");
             search.setVisibility(View.VISIBLE);
             importButton.setVisibility(View.VISIBLE);
             showLibrary();
@@ -237,6 +258,30 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if(mainScroll!=null) mainScroll.post(()->mainScroll.scrollTo(0,0));
+    }
+
+    private void openPlaylistAccess() {
+        List<SetListModel> lists=AppStore.loadSetlists(this);
+        SetListModel target=null;
+
+        if(!lists.isEmpty()){
+            target=lists.get(0);
+        }else{
+            List<Song> songs=AppStore.loadSongs(this);
+            if(songs.isEmpty()){
+                Toast.makeText(this,"Aucun morceau dans la bibliothèque.",Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            target=new SetListModel();
+            target.name="PLAYLIST 2026";
+            for(Song s:songs) target.songIds.add(s.id);
+            AppStore.upsertSetlist(this,target);
+        }
+
+        Intent i=new Intent(this,PlaylistOverviewActivity.class);
+        i.putExtra("setlist_id",target.id);
+        startActivity(i);
     }
 
     private void createSetlist() {
