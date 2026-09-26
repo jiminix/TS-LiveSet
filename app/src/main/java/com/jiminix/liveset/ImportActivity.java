@@ -216,6 +216,16 @@ public class ImportActivity extends AppCompatActivity {
                         renderPreview();
                         return;
                     }
+
+                    List<Song> numbered=parseNumberedSongDocx(uri);
+                    if(numbered!=null && numbered.size()>=5){
+                        parsed.clear();
+                        parsed.addAll(numbered);
+                        replaceDuplicates.setChecked(true);
+                        source.setText(fileName(uri)+"\n\nDocument numéroté reconnu directement.\n"+parsed.size()+" morceaux avec paroles prêts à être importés.");
+                        renderPreview();
+                        return;
+                    }
                 }
 
                 String txt=readUri(uri);
@@ -346,6 +356,84 @@ public class ImportActivity extends AppCompatActivity {
                 if(!duplicate)parts.add(part);
             }
             songs.get(si).lyrics=String.join("\n\n",parts).trim();
+        }
+
+        return songs;
+    }
+
+    private List<Song> parseNumberedSongDocx(Uri uri) throws Exception {
+        String xml=readDocxXml(uri);
+        if(xml==null || xml.isEmpty())return null;
+
+        DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        Document doc=factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
+        NodeList ps=doc.getElementsByTagNameNS(W_NS,"p");
+
+        Pattern headingPattern=Pattern.compile("^\\s*(\\d{1,2})\\s*(?:[.\\-]|\\s)\\s*(.+?)\\s*$");
+        List<Integer> headingPara=new ArrayList<>();
+        List<Integer> headingNum=new ArrayList<>();
+        List<String> headingTitle=new ArrayList<>();
+
+        int expected=1;
+        boolean sequenceStarted=false;
+
+        for(int i=0;i<ps.getLength();i++){
+            Element p=(Element)ps.item(i);
+            String text=paragraphText(p).trim().replaceAll("\\s+"," ");
+            if(text.isEmpty())continue;
+
+            Matcher m=headingPattern.matcher(text);
+            if(!m.matches())continue;
+
+            int n;
+            try{ n=Integer.parseInt(m.group(1)); }catch(Exception e){ continue; }
+            String title=m.group(2).trim();
+            if(title.length()<3)continue;
+
+            if(!sequenceStarted){
+                if(n!=1)continue;
+                sequenceStarted=true;
+                expected=1;
+            }
+
+            if(n==expected){
+                headingPara.add(i);
+                headingNum.add(n);
+                headingTitle.add(title);
+                expected++;
+            }
+        }
+
+        if(headingPara.size()<5)return null;
+
+        List<Song> songs=new ArrayList<>();
+        for(int h=0;h<headingPara.size();h++){
+            int from=headingPara.get(h)+1;
+            int to=(h+1<headingPara.size())?headingPara.get(h+1):ps.getLength();
+
+            Song s=new Song();
+            s.title=headingTitle.get(h)
+                .replaceFirst("(?i)\\s+(?:INF|INTRO|FAIRE|EN\\s+DO|93)\\b.*$","")
+                .trim();
+
+            StringBuilder body=new StringBuilder();
+            for(int i=from;i<to;i++){
+                Element p=(Element)ps.item(i);
+                String line=paragraphText(p).trim();
+                if(line.isEmpty()){
+                    if(body.length()>0 && body.charAt(body.length()-1)!='\\n')body.append('\\n');
+                    continue;
+                }
+
+                // Ignore page-list/navigation artefacts, but keep musical notes and lyrics.
+                if(line.matches("^\\d{1,2}$"))continue;
+
+                if(body.length()>0)body.append('\\n');
+                body.append(line);
+            }
+            s.lyrics=body.toString().trim();
+            songs.add(s);
         }
 
         return songs;
