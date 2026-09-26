@@ -22,6 +22,7 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
     // V0.17 build trigger
     // V0.19 lyrics repair
+    // V0.20 relink complete songs
     private LinearLayout content;
     private ScrollView mainScroll;
     private EditText search;
@@ -58,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
         TextView head = Ui.title(this, "LIVESET");
         Ui.compactHeaderTitle(head,this);
         TextView version = new TextView(this);
-        version.setText("v0.19");
+        version.setText("v0.20");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(12);
         version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
