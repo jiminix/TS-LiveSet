@@ -18,6 +18,10 @@ public class Song {
     public String notes = "";
     public String mediaUrl = "";
     public String lyrics = "";
+    public String stageNum1 = "";
+    public String stageNum2 = "";
+    public boolean stageGuitar = false;
+    public boolean stageKeyboard = false;
 
     public JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
@@ -34,6 +38,10 @@ public class Song {
         o.put("notes", notes);
         o.put("mediaUrl", mediaUrl);
         o.put("lyrics", lyrics);
+        o.put("stageNum1", stageNum1);
+        o.put("stageNum2", stageNum2);
+        o.put("stageGuitar", stageGuitar);
+        o.put("stageKeyboard", stageKeyboard);
         return o;
     }
 
@@ -52,6 +60,10 @@ public class Song {
         s.notes = o.optString("notes", "");
         s.mediaUrl = o.optString("mediaUrl", "");
         s.lyrics = o.optString("lyrics", "");
+        s.stageNum1 = o.optString("stageNum1", "");
+        s.stageNum2 = o.optString("stageNum2", "");
+        s.stageGuitar = o.optBoolean("stageGuitar", false);
+        s.stageKeyboard = o.optBoolean("stageKeyboard", false);
         return s;
     }
 }
