@@ -338,6 +338,7 @@ public class ImportActivity extends AppCompatActivity {
             for(int ci=0;ci<bodyCellCount;ci++){
                 String part=cellText(bodyCells.get(ci)).trim();
                 if(part.isEmpty())continue;
+                if(part.contains("⇻") || part.contains("🔺"))continue;
                 boolean duplicate=false;
                 for(String old:parts){
                     if(compact(old).equals(compact(part))){duplicate=true;break;}
