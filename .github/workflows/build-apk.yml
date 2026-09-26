@@ -3,6 +3,7 @@ name: Build LiveSet APK
 # V0.8 table parser build
 # V0.9 playlist overview
 # V0.10 compact playlist
+# V0.11 library render fix
 on:
   workflow_dispatch:
   push:
@@ -50,5 +51,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LiveSet-V0.10-debug
+          name: LiveSet-V0.11-debug
           path: app/build/outputs/apk/debug/app-debug.apk
