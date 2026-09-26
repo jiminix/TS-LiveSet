@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
     // V0.17 build trigger
     // V0.19 lyrics repair
     // V0.20 relink complete songs
+    // build V0.20
     private LinearLayout content;
     private ScrollView mainScroll;
     private EditText search;
