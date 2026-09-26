@@ -62,5 +62,5 @@ jobs:
       - name: Upload Viewer APK
         uses: actions/upload-artifact@v4
         with:
-          name: TS-Playlist-Viewer-V0.2-debug
+          name: TS-Playlist-Viewer-V0.3-debug
           path: viewer/build/outputs/apk/debug/viewer-debug.apk
