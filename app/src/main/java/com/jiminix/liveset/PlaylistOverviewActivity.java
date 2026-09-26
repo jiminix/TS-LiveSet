@@ -137,6 +137,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 if(a==RecyclerView.NO_POSITION || b==RecyclerView.NO_POSITION)return false;
                 Collections.swap(setlist.songIds,a,b);
                 adapter.notifyItemMoved(a,b);
+                int first=Math.min(a,b);
+                int count=Math.abs(a-b)+1;
+                adapter.notifyItemRangeChanged(first,count);
                 AppStore.upsertSetlist(PlaylistOverviewActivity.this,setlist);
                 return true;
             }
@@ -154,21 +157,41 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
             @Override public void clearView(RecyclerView rv,RecyclerView.ViewHolder vh){
                 super.clearView(rv,vh);
-                adapter.notifyItemChanged(vh.getBindingAdapterPosition());
+                adapter.notifyDataSetChanged();
                 AppStore.upsertSetlist(PlaylistOverviewActivity.this,setlist);
             }
         };
         touchHelper=new ItemTouchHelper(callback);
         touchHelper.attachToRecyclerView(recycler);
 
+        LinearLayout actions=Ui.row(this);
+        actions.setPadding(Ui.dp(this,4),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,2));
+        Button addLibrary=Ui.button(this,"＋ Bibliothèque");
+        Button importTitles=Ui.button(this,"⇩ Importer");
+        addLibrary.setTextSize(14);
+        importTitles.setTextSize(14);
+        Ui.weight(addLibrary,1);
+        Ui.weight(importTitles,1);
+        actions.addView(addLibrary);
+        actions.addView(importTitles);
+        root.addView(actions);
+
         back.setOnClickListener(v->finish());
         titleView.setOnClickListener(v->renameList());
         rename.setOnClickListener(v->renameList());
         add.setOnClickListener(v->addSong());
+        addLibrary.setOnClickListener(v->addSong());
+        importTitles.setOnClickListener(v->openImporter());
         modeButton.setOnClickListener(v->toggleMode());
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private void openImporter(){
+        Intent i=new Intent(this,ImportActivity.class);
+        i.putExtra("target_setlist_id",setlist.id);
+        startActivity(i);
     }
 
     private void renameList(){
@@ -262,32 +285,32 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         @Override public Holder onCreateViewHolder(ViewGroup parent,int viewType){
             LinearLayout row=Ui.row(PlaylistOverviewActivity.this);
-            row.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,1),0);
-            row.setMinimumHeight(Ui.dp(PlaylistOverviewActivity.this,38));
+            row.setPadding(Ui.dp(PlaylistOverviewActivity.this,1),0,0,0);
+            row.setMinimumHeight(Ui.dp(PlaylistOverviewActivity.this,32));
 
             TextView num=new TextView(PlaylistOverviewActivity.this);
             num.setTypeface(Typeface.DEFAULT_BOLD);
             num.setGravity(Gravity.CENTER);
-            num.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,32));
+            num.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,28));
 
             TextView song=new TextView(PlaylistOverviewActivity.this);
             song.setTypeface(Typeface.DEFAULT_BOLD);
             song.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            song.setPadding(Ui.dp(PlaylistOverviewActivity.this,3),Ui.dp(PlaylistOverviewActivity.this,2),Ui.dp(PlaylistOverviewActivity.this,3),Ui.dp(PlaylistOverviewActivity.this,2));
+            song.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
             song.setLayoutParams(new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
 
             TextView bpm=new TextView(PlaylistOverviewActivity.this);
             bpm.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
             bpm.setTypeface(Typeface.DEFAULT_BOLD);
-            bpm.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,48));
+            bpm.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,44));
             bpm.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
 
             TextView handle=new TextView(PlaylistOverviewActivity.this);
             handle.setText("≡");
             handle.setTextColor(Color.LTGRAY);
-            handle.setTextSize(22);
+            handle.setTextSize(20);
             handle.setGravity(Gravity.CENTER);
-            handle.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,34),Ui.dp(PlaylistOverviewActivity.this,38)));
+            handle.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,30),Ui.dp(PlaylistOverviewActivity.this,32)));
 
             row.addView(num);
             row.addView(song);
@@ -314,9 +337,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             Song s=AppStore.findSong(PlaylistOverviewActivity.this,id);
 
             h.num.setText(String.format("%02d",position+1));
-            h.num.setTextSize(compact?13:16);
-            h.song.setTextSize(compact?14:17);
-            h.bpm.setTextSize(compact?13:15);
+            h.num.setTextSize(compact?12:16);
+            h.song.setTextSize(compact?13:17);
+            h.bpm.setTextSize(compact?12:15);
             h.song.setSingleLine(compact);
 
             if(s==null){
@@ -338,7 +361,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.song.setTextColor(fg);
             h.bpm.setTextColor(fg);
             h.num.setTextColor(current ? Color.rgb(255,193,7) : Color.LTGRAY);
-            h.itemView.setBackgroundColor(current ? Color.rgb(38,38,38) : Color.rgb(10,10,10));
+
+            // Odd-numbered titles (1,3,5...) use a dark grey stripe.
+            int stripe=(position%2==0) ? Color.rgb(31,31,31) : Color.rgb(10,10,10);
+            h.itemView.setBackgroundColor(current ? Color.rgb(55,48,25) : stripe);
         }
 
         @Override public int getItemCount(){ return setlist.songIds.size(); }
