@@ -46,6 +46,22 @@ public class Ui {
         v.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, w));
     }
 
+    public static void compactHeaderTitle(TextView v, Context c) {
+        v.setSingleLine(true);
+        v.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        v.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        v.setTextSize(18);
+        v.setPadding(dp(c,6),0,dp(c,6),0);
+        v.setLayoutParams(new LinearLayout.LayoutParams(0,dp(c,52),1));
+    }
+
+    public static void compactHeaderButton(Button b, Context c, int widthDp) {
+        b.setMinWidth(0);
+        b.setMinimumWidth(0);
+        b.setPadding(dp(c,4),0,dp(c,4),0);
+        b.setLayoutParams(new LinearLayout.LayoutParams(dp(c,widthDp),dp(c,48)));
+    }
+
     public static void applySafeArea(View root) {
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
             Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
