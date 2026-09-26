@@ -402,9 +402,11 @@ public class ImportActivity extends AppCompatActivity {
 
     private void importSongs(){
         if(parsed.isEmpty()){
-            new AlertDialog.Builder(this).setTitle("Rien à importer").setMessage("Aucun morceau n’a été détecté.").setPositiveButton("OK",null).show();
+            Toast.makeText(this,"Aucun morceau détecté.",Toast.LENGTH_LONG).show();
             return;
         }
+
+        importButton.setEnabled(false);
 
         List<Song> existing=AppStore.loadSongs(this);
         Set<String> keys=new HashSet<>();
@@ -441,6 +443,9 @@ public class ImportActivity extends AppCompatActivity {
         }
 
         int playlistAdds=0;
+        String destinationName="";
+        String destinationId=null;
+
         if(targetSetlist!=null){
             Set<String> already=new HashSet<>(targetSetlist.songIds);
             for(String id:importedIds){
@@ -451,6 +456,8 @@ public class ImportActivity extends AppCompatActivity {
                 }
             }
             AppStore.upsertSetlist(this,targetSetlist);
+            destinationName=targetSetlist.name;
+            destinationId=targetSetlist.id;
         }else if(createSetlist.isChecked()&&!importedIds.isEmpty()){
             SetListModel sl=new SetListModel();
             String n=setlistName.getText().toString().trim();
@@ -458,22 +465,26 @@ public class ImportActivity extends AppCompatActivity {
             sl.songIds.addAll(importedIds);
             AppStore.upsertSetlist(this,sl);
             playlistAdds=importedIds.size();
+            destinationName=sl.name;
+            destinationId=sl.id;
         }
 
-        String destination=targetSetlist!=null
-            ? "\n\n"+playlistAdds+" morceau(x) ajouté(s) à « "+targetSetlist.name+" »."
-            : (createSetlist.isChecked() ? "\n\nSetlist créée avec "+playlistAdds+" morceau(x)." : "");
+        String msg=parsed.size()+" détecté(s) · "+added+" nouveau(x) · "+reused+" réutilisé(s)";
+        if(replaced>0) msg+=" · "+replaced+" remplacé(s)";
+        if(!destinationName.isEmpty()) msg+="\n"+playlistAdds+" dans « "+destinationName+" »";
+        Toast.makeText(this,msg,Toast.LENGTH_LONG).show();
 
-        new AlertDialog.Builder(this)
-            .setTitle("Import terminé")
-            .setMessage(
-                parsed.size()+" morceau(x) détecté(s)\n"+
-                added+" nouveau(x)\n"+
-                reused+" déjà présent(s) réutilisé(s)\n"+
-                replaced+" remplacé(s)"+
-                destination
-            )
-            .setPositiveButton("OK",(d,w)->finish()).show();
+        if(targetSetlist!=null){
+            setResult(RESULT_OK);
+            finish();
+        }else if(destinationId!=null){
+            Intent i=new Intent(this,SetlistActivity.class);
+            i.putExtra("setlist_id",destinationId);
+            startActivity(i);
+            finish();
+        }else{
+            finish();
+        }
     }
 
     private String dupKey(Song s){
