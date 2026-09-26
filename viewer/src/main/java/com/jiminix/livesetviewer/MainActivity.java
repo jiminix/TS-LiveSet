@@ -17,6 +17,7 @@ import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
     // Viewer V0.1 build 2
+    // Viewer V0.2
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView playlistTitle;
     private TextView info;
@@ -63,6 +64,15 @@ public class MainActivity extends AppCompatActivity {
         appTitle.setGravity(Gravity.CENTER);
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         root.addView(appTitle,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
+
+        TextView slogan=new TextView(this);
+        slogan.setText("1 pour tous, tous pour la même playlist.");
+        slogan.setTextColor(Color.WHITE);
+        slogan.setTextSize(13);
+        slogan.setGravity(Gravity.CENTER);
+        slogan.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        slogan.setPadding(dp(4),0,dp(4),dp(6));
+        root.addView(slogan,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
 
         playlistTitle=new TextView(this);
         playlistTitle.setText("Aucune playlist sélectionnée");
@@ -135,7 +145,7 @@ public class MainActivity extends AppCompatActivity {
 
             for(int i=0;i<songs.length();i++){
                 JSONObject s=songs.getJSONObject(i);
-                addSongRow(i+1,s.optString("title",""));
+                addSongRow(i+1,s.optString("title",""),s.optString("bpm",""));
             }
         }catch(Exception e){
             showEmpty("TS Playlist Manager non accessible",
@@ -152,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
         songsBox.removeAllViews();
     }
 
-    private void addSongRow(int number,String title){
+    private void addSongRow(int number,String title,String bpm){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -177,6 +187,16 @@ public class MainActivity extends AppCompatActivity {
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         row.addView(name,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1));
+
+        TextView bpmView=new TextView(this);
+        bpmView.setText(bpm==null || bpm.trim().isEmpty() ? "" : bpm.trim()+" BPM");
+        bpmView.setTextColor(Color.rgb(255,196,30));
+        bpmView.setTextSize(14);
+        bpmView.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        bpmView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        bpmView.setSingleLine(true);
+        bpmView.setPadding(dp(8),0,dp(2),0);
+        row.addView(bpmView,new LinearLayout.LayoutParams(dp(74),ViewGroup.LayoutParams.MATCH_PARENT));
 
         songsBox.addView(row,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
