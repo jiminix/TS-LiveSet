@@ -133,7 +133,7 @@ public class ImportActivity extends AppCompatActivity {
         importButton.setTextSize(18);
         outer.addView(importButton,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,60)));
 
-        setContentView(outer);
+        Ui.applySafeArea(outer); setContentView(outer);
 
         back.setOnClickListener(v->finish());
         paste.setOnClickListener(v->pasteClipboard());
