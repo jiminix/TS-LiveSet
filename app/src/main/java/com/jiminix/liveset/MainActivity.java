@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
+    // V0.17 build trigger
     private LinearLayout content;
     private ScrollView mainScroll;
     private EditText search;
