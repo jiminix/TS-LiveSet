@@ -34,16 +34,10 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         buildUi();
-        boolean hasSongs=!AppStore.loadSongs(this).isEmpty();
-        boolean hasSetlists=!AppStore.loadSetlists(this).isEmpty();
-        if(hasSongs && !hasSetlists){
-            libraryMode=true;
-            search.setVisibility(View.VISIBLE);
-            importButton.setVisibility(View.VISIBLE);
-            showLibrary();
-        }else{
-            showSetlists();
-        }
+        libraryMode=false;
+        search.setVisibility(View.GONE);
+        importButton.setVisibility(View.INVISIBLE);
+        showSetlists();
     }
 
     @Override protected void onResume() {
@@ -60,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
         TextView head = Ui.title(this, "LIVESET");
         Ui.compactHeaderTitle(head,this);
         TextView version = new TextView(this);
-        version.setText("v0.20");
+        version.setText("v0.21");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(12);
         version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
@@ -159,46 +153,97 @@ public class MainActivity extends AppCompatActivity {
     private void showSetlists() {
         content.removeAllViews();
         List<SetListModel> lists = AppStore.loadSetlists(this);
+
+        TextView section=new TextView(this);
+        section.setText("PLAYLISTS");
+        section.setTextColor(Color.LTGRAY);
+        section.setTextSize(13);
+        section.setGravity(Gravity.CENTER_VERTICAL);
+        section.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,8));
+        content.addView(section);
+
         if (lists.isEmpty()) {
-            TextView empty = Ui.title(this,"Aucune setlist");
-            empty.setTextSize(22);
+            TextView empty = Ui.title(this,"Aucune playlist");
+            empty.setTextSize(20);
             empty.setGravity(Gravity.CENTER);
-            empty.setPadding(Ui.dp(this,12),Ui.dp(this,40),Ui.dp(this,12),Ui.dp(this,20));
+            empty.setPadding(Ui.dp(this,12),Ui.dp(this,32),Ui.dp(this,12),Ui.dp(this,18));
             content.addView(empty);
 
+            Button create=Ui.button(this,"＋ Créer une playlist");
+            create.setTextSize(17);
+            create.setOnClickListener(v->createSetlist());
+            content.addView(create,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,58)));
+
             Button library=Ui.button(this,"Voir la bibliothèque ("+AppStore.loadSongs(this).size()+")");
-            library.setTextSize(18);
+            library.setTextSize(16);
             library.setOnClickListener(v->{
                 libraryMode=true;
                 search.setVisibility(View.VISIBLE);
                 importButton.setVisibility(View.VISIBLE);
                 showLibrary();
             });
-            content.addView(library,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,64)));
-
-            Button create=Ui.button(this,"＋ Créer une setlist");
-            create.setTextSize(18);
-            create.setOnClickListener(v->createSetlist());
-            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,64));
-            cp.topMargin=Ui.dp(this,12);
-            content.addView(create,cp);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,56));
+            lp.topMargin=Ui.dp(this,8);
+            content.addView(library,lp);
 
             if(mainScroll!=null) mainScroll.post(()->mainScroll.scrollTo(0,0));
             return;
         }
+
         for (SetListModel sl : lists) {
-            LinearLayout row = Ui.row(this);
-            TextView name = new TextView(this);
-            name.setText(sl.name + "\n" + sl.songIds.size() + " morceau" + (sl.songIds.size()>1?"x":""));
-            name.setTextColor(Color.WHITE); name.setTextSize(18); name.setPadding(Ui.dp(this,12),Ui.dp(this,12),Ui.dp(this,8),Ui.dp(this,12));
+            LinearLayout row=Ui.row(this);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(Ui.dp(this,6),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,2));
+            row.setMinimumHeight(Ui.dp(this,54));
+
+            TextView name=new TextView(this);
+            name.setText(sl.name+"\n"+sl.songIds.size()+" titre"+(sl.songIds.size()>1?"s":""));
+            name.setTextColor(Color.WHITE);
+            name.setTextSize(16);
+            name.setSingleLine(false);
+            name.setPadding(Ui.dp(this,6),Ui.dp(this,3),Ui.dp(this,6),Ui.dp(this,3));
             Ui.weight(name,1);
-            Button open = Ui.button(this,"Ouvrir");
-            row.addView(name); row.addView(open);
-            open.setOnClickListener(v -> openSetlist(sl.id));
-            name.setOnClickListener(v -> openSetlist(sl.id));
-            name.setOnLongClickListener(v -> { setlistMenu(sl); return true; });
+
+            Button open=Ui.button(this,"Ouvrir");
+            open.setTextSize(13);
+            Ui.compactHeaderButton(open,this,72);
+
+            Button delete=Ui.button(this,"🗑");
+            delete.setTextSize(17);
+            Ui.compactHeaderButton(delete,this,48);
+
+            row.addView(name);
+            row.addView(open);
+            row.addView(delete);
+
+            View.OnClickListener opener=v->openPlaylistOverview(sl.id);
+            name.setOnClickListener(opener);
+            open.setOnClickListener(opener);
+            delete.setOnClickListener(v->confirmDeleteSetlist(sl));
+            name.setOnLongClickListener(v->{ setlistMenu(sl); return true; });
+
             content.addView(row);
+
+            View sep=new View(this);
+            sep.setBackgroundColor(Color.rgb(38,38,38));
+            content.addView(sep,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,1)));
         }
+
+        if(mainScroll!=null) mainScroll.post(()->mainScroll.scrollTo(0,0));
+    }
+
+    private void confirmDeleteSetlist(SetListModel sl){
+        new AlertDialog.Builder(this)
+            .setTitle("Supprimer la playlist ?")
+            .setMessage("« "+sl.name+" » sera supprimée. Les morceaux et les paroles resteront dans la bibliothèque.")
+            .setPositiveButton("Supprimer",(d,w)->{
+                List<SetListModel> all=AppStore.loadSetlists(this);
+                all.removeIf(x->x.id.equals(sl.id));
+                AppStore.saveSetlists(this,all);
+                showSetlists();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
     }
 
     private void showLibrary() {
@@ -323,7 +368,7 @@ public class MainActivity extends AppCompatActivity {
                 EditText e=new EditText(this); e.setText(sl.name); e.selectAll();
                 new AlertDialog.Builder(this).setTitle("Renommer").setView(e).setPositiveButton("OK",(x,y)->{ sl.name=e.getText().toString().trim(); AppStore.upsertSetlist(this,sl); showSetlists(); }).setNegativeButton("Annuler",null).show();
             } else {
-                List<SetListModel> all=AppStore.loadSetlists(this); all.removeIf(x->x.id.equals(sl.id)); AppStore.saveSetlists(this,all); showSetlists();
+                confirmDeleteSetlist(sl);
             }
         }).show();
     }
