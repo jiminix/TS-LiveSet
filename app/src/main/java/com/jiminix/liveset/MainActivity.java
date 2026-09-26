@@ -40,8 +40,17 @@ public class MainActivity extends AppCompatActivity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.rgb(18,18,18));
 
+        LinearLayout brand = Ui.row(this);
         TextView head = Ui.title(this, "LIVESET");
-        root.addView(head);
+        Ui.weight(head,1);
+        TextView version = new TextView(this);
+        version.setText("v" + BuildConfig.VERSION_NAME);
+        version.setTextColor(Color.LTGRAY);
+        version.setTextSize(12);
+        version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
+        brand.addView(head);
+        brand.addView(version);
+        root.addView(brand);
 
         LinearLayout tabs = Ui.row(this);
         Button setlists = Ui.button(this, "Setlists");
@@ -67,21 +76,28 @@ public class MainActivity extends AppCompatActivity {
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
 
         LinearLayout bottom = Ui.row(this);
+        bottom.setPadding(Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8));
         importButton = Ui.button(this,"⇩ Importer");
-        Button add = Ui.button(this,"＋ Ajouter");
+        Button add = Ui.button(this,"＋");
+        add.setTextSize(26);
+        add.setMinHeight(Ui.dp(this,56));
+        View spacer = new View(this);
         Ui.weight(importButton,1);
         Ui.weight(add,1);
-        importButton.setVisibility(View.GONE);
+        Ui.weight(spacer,1);
+        importButton.setVisibility(View.INVISIBLE);
         bottom.addView(importButton);
         bottom.addView(add);
-        root.addView(bottom,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,66)));
+        bottom.addView(spacer);
+        root.addView(bottom,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        Ui.applySafeArea(root);
         setContentView(root);
 
         setlists.setOnClickListener(v -> {
             libraryMode=false;
             search.setVisibility(View.GONE);
-            importButton.setVisibility(View.GONE);
+            importButton.setVisibility(View.INVISIBLE);
             showSetlists();
         });
         library.setOnClickListener(v -> {
