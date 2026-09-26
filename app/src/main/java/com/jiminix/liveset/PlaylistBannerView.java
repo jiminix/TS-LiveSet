@@ -62,7 +62,7 @@ public class PlaylistBannerView extends View {
         // Small white signature on the right.
         p.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
         p.setColor(Color.WHITE);
-        String signature="made with ChatGPT";
+        String signature="made with ChatGPT and I";
         float sigSize=fitText(signature,w*0.34f,h*0.115f);
         p.setTextSize(sigSize);
         float sigX=pad+Math.max(2f,w*0.02f);
