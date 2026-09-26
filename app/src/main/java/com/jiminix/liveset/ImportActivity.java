@@ -221,6 +221,7 @@ public class ImportActivity extends AppCompatActivity {
                     if(numbered!=null && numbered.size()>=5){
                         parsed.clear();
                         parsed.addAll(numbered);
+                        tsSongbookDetected=true;
                         replaceDuplicates.setChecked(true);
                         source.setText(fileName(uri)+"\n\nDocument numéroté reconnu directement.\n"+parsed.size()+" morceaux avec paroles prêts à être importés.");
                         renderPreview();
