@@ -24,7 +24,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +48,7 @@ public class ImportActivity extends AppCompatActivity {
     private Button importButton;
     private String targetSetlistId;
     private SetListModel targetSetlist;
+    private boolean tsSongbookDetected = false;
     private final List<Song> parsed = new ArrayList<>();
 
     @Override protected void onCreate(Bundle b) {
@@ -276,8 +279,17 @@ public class ImportActivity extends AppCompatActivity {
 
     private void analyse() {
         parsed.clear();
+        tsSongbookDetected=false;
         String raw=source.getText().toString().replace("\r\n","\n").replace('\r','\n').trim();
         if(raw.isEmpty()){renderPreview();return;}
+
+        if(parseTs2026Songbook(raw)){
+            tsSongbookDetected=true;
+            replaceDuplicates.setChecked(true);
+            if(targetSetlist==null) setlistName.setText("PLAYLIST 2026");
+            renderPreview();
+            return;
+        }
 
         if(looksLikeTsv(raw)) parseTsv(raw);
         if(parsed.isEmpty()) parseHeadings(raw);
@@ -327,6 +339,160 @@ public class ImportActivity extends AppCompatActivity {
     }
     private String val(String[] v,Integer i){return i==null||i<0||i>=v.length?"":v[i].replace("\\n","\n").trim();}
     private String norm(String s){return s.toLowerCase(Locale.ROOT).replace("é","e").replace("è","e").replace("ê","e").replace("à","a").replace("ô","o").replace("ï","i").replaceAll("[^a-z0-9]","");}
+
+    private boolean parseTs2026Songbook(String raw){
+        String[] lines=raw.split("\n",-1);
+        int playlist=-1;
+        for(int i=0;i<lines.length;i++){
+            String t=stripHeading(lines[i]);
+            if("PLAYLIST 2026".equalsIgnoreCase(t)){ playlist=i; break; }
+        }
+        if(playlist<0)return false;
+
+        List<Song> songs=new ArrayList<>();
+        for(int i=playlist+1;i<lines.length;i++){
+            String t=lines[i].trim();
+            if(t.startsWith("# "))break;
+            if(t.isEmpty())continue;
+
+            if(songs.size()>=5 && t.length()==1 && "PLAYLIST2025".contains(t.toUpperCase(Locale.ROOT))) break;
+
+            String title=parsePlaylistTitle(t);
+            if(title.isEmpty())continue;
+
+            Song s=new Song();
+            s.title=title;
+            s.bpm=extractPlaylistBpm(t);
+            songs.add(s);
+
+            if(songs.size()>=80)break;
+        }
+
+        // This document's PLAYLIST 2026 is a real setlist; reject accidental matches.
+        if(songs.size()<10 || songs.size()>60)return false;
+
+        List<Integer> matchLines=new ArrayList<>();
+        List<Integer> matchSongs=new ArrayList<>();
+        Set<Integer> assigned=new HashSet<>();
+
+        for(int i=playlist+1;i<lines.length;i++){
+            String rawLine=lines[i].trim();
+            if(!rawLine.startsWith("# "))continue;
+            String heading=stripHeading(rawLine);
+            if(heading.isEmpty())continue;
+
+            double best=0.0;
+            int bestSong=-1;
+            for(int s=0;s<songs.size();s++){
+                if(assigned.contains(s))continue;
+                double score=titleScore(songs.get(s).title,heading);
+                if(score>best){best=score;bestSong=s;}
+            }
+
+            if(bestSong>=0 && best>=0.55){
+                assigned.add(bestSong);
+                matchLines.add(i);
+                matchSongs.add(bestSong);
+            }
+        }
+
+        for(int m=0;m<matchLines.size();m++){
+            int from=matchLines.get(m)+1;
+            int to=(m+1<matchLines.size())?matchLines.get(m+1):lines.length;
+            String lyrics=cleanSongBody(lines,from,to);
+            songs.get(matchSongs.get(m)).lyrics=lyrics;
+        }
+
+        parsed.addAll(songs);
+        return true;
+    }
+
+    private String stripHeading(String line){
+        String t=line==null?"":line.trim();
+        while(t.startsWith("#"))t=t.substring(1).trim();
+        return t;
+    }
+
+    private String parsePlaylistTitle(String line){
+        String x=line.trim().replaceFirst("^\\d+\\.\\s*","");
+        int guitar=x.indexOf("🎸");
+        int keys=x.indexOf("🎹");
+        int cut=-1;
+        if(guitar>=0)cut=guitar;
+        if(keys>=0&&(cut<0||keys<cut))cut=keys;
+        if(cut>=0)x=x.substring(0,cut);
+
+        x=x.replaceFirst("\\s+\\.\\..*$","");
+        x=x.replaceFirst("\\s+\\d{2,3}(?:\\D.*)?$","");
+        return x.trim();
+    }
+
+    private String extractPlaylistBpm(String line){
+        Matcher m=Pattern.compile("(?<!\\d)(\\d{2,3})(?!\\d)").matcher(line);
+        String found="";
+        while(m.find()){
+            try{
+                int n=Integer.parseInt(m.group(1));
+                if(n>=60&&n<=220)found=String.valueOf(n);
+            }catch(Exception ignored){}
+        }
+        return found;
+    }
+
+    private String normalizeSongTitle(String value){
+        String n=Normalizer.normalize(value==null?"":value,Normalizer.Form.NFD)
+            .replaceAll("\\p{M}+","");
+        n=n.toUpperCase(Locale.ROOT)
+            .replace('’','\'')
+            .replace("MEDDLEY","MIX")
+            .replace("MEDLEY","MIX")
+            .replace("JAIL HOUND DOG","HOUND DOG");
+        return n.replaceAll("[^A-Z0-9]+"," ").trim().replaceAll("\\s+"," ");
+    }
+
+    private double titleScore(String expected,String candidate){
+        String a=normalizeSongTitle(expected);
+        String b=normalizeSongTitle(candidate);
+        if(a.isEmpty()||b.isEmpty())return 0.0;
+        if(a.equals(b))return 1.0;
+        if(a.contains(b)||b.contains(a)){
+            double ratio=(double)Math.min(a.length(),b.length())/(double)Math.max(a.length(),b.length());
+            return Math.min(1.0,ratio+0.15);
+        }
+
+        Set<String> aa=new HashSet<>(Arrays.asList(a.split(" ")));
+        Set<String> bb=new HashSet<>(Arrays.asList(b.split(" ")));
+        Set<String> both=new HashSet<>(aa);
+        both.retainAll(bb);
+        if(aa.isEmpty()||bb.isEmpty())return 0.0;
+        return (2.0*both.size())/(aa.size()+bb.size());
+    }
+
+    private String cleanSongBody(String[] lines,int from,int to){
+        List<String> body=new ArrayList<>();
+        for(int i=from;i<to;i++){
+            String t=lines[i].trim();
+
+            // Page navigation in this songbook: 01 / ⇻ / vertical title / 🔺.
+            if(t.contains("⇻")){
+                if(!body.isEmpty() && body.get(body.size()-1).matches("\\d{1,2}")) body.remove(body.size()-1);
+                break;
+            }
+
+            if(t.startsWith("# "))t=stripHeading(t);
+            body.add(t);
+        }
+
+        while(!body.isEmpty()&&body.get(body.size()-1).trim().isEmpty())body.remove(body.size()-1);
+        while(!body.isEmpty()&&body.get(0).trim().isEmpty())body.remove(0);
+
+        StringBuilder out=new StringBuilder();
+        for(String line:body){
+            if(out.length()>0)out.append('\n');
+            out.append(line);
+        }
+        return out.toString().trim();
+    }
 
     private void parseHeadings(String raw){
         Pattern p=Pattern.compile("(?m)^#{1,6}\\s+(.+?)\\s*$");
@@ -386,7 +552,14 @@ public class ImportActivity extends AppCompatActivity {
             return;
         }
         StringBuilder sb=new StringBuilder();
-        sb.append(parsed.size()).append(" morceau").append(parsed.size()>1?"x":"").append(" détecté").append(parsed.size()>1?"s":"").append(" :\n\n");
+        if(tsSongbookDetected){
+            sb.append("✅ PLAYLIST 2026 reconnue\n");
+            sb.append(parsed.size()).append(" morceaux trouvés dans la playlist du document.\n");
+            if(targetSetlist!=null) sb.append("La setlist ouverte sera remise dans cet ordre.\n");
+            sb.append("\n");
+        }else{
+            sb.append(parsed.size()).append(" morceau").append(parsed.size()>1?"x":"").append(" détecté").append(parsed.size()>1?"s":"").append(" :\n\n");
+        }
         int max=Math.min(parsed.size(),25);
         for(int i=0;i<max;i++){
             Song s=parsed.get(i);
@@ -424,7 +597,7 @@ public class ImportActivity extends AppCompatActivity {
             String k=dupKey(in);
             if(keys.contains(k)){
                 Song old=byKey.get(k);
-                if(replaceDuplicates.isChecked()){
+                if(replaceDuplicates.isChecked() || tsSongbookDetected){
                     in.id=old.id;
                     AppStore.upsertSong(this,in);
                     importedIds.add(in.id);
@@ -447,12 +620,18 @@ public class ImportActivity extends AppCompatActivity {
         String destinationId=null;
 
         if(targetSetlist!=null){
-            Set<String> already=new HashSet<>(targetSetlist.songIds);
-            for(String id:importedIds){
-                if(!already.contains(id)){
-                    targetSetlist.songIds.add(id);
-                    already.add(id);
-                    playlistAdds++;
+            if(tsSongbookDetected){
+                targetSetlist.songIds.clear();
+                targetSetlist.songIds.addAll(importedIds);
+                playlistAdds=importedIds.size();
+            }else{
+                Set<String> already=new HashSet<>(targetSetlist.songIds);
+                for(String id:importedIds){
+                    if(!already.contains(id)){
+                        targetSetlist.songIds.add(id);
+                        already.add(id);
+                        playlistAdds++;
+                    }
                 }
             }
             AppStore.upsertSetlist(this,targetSetlist);
