@@ -28,6 +28,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private boolean compact=true;
     private LinearLayout root;
     private Button modeButton;
+    private TextView titleView;
     private RecyclerView recycler;
     private PlaylistAdapter adapter;
     private ItemTouchHelper touchHelper;
@@ -69,36 +70,42 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         back.setFocusable(true);
         back.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,52)));
 
-        TextView title=new TextView(this);
-        title.setText(setlist.name);
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(17);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setSingleLine(true);
-        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        title.setGravity(Gravity.CENTER_VERTICAL);
-        title.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);
-        title.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,52),1));
+        titleView=new TextView(this);
+        titleView.setText(setlist.name);
+        titleView.setTextColor(Color.WHITE);
+        titleView.setTextSize(16);
+        titleView.setTypeface(Typeface.DEFAULT_BOLD);
+        titleView.setSingleLine(true);
+        titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        titleView.setGravity(Gravity.CENTER_VERTICAL);
+        titleView.setPadding(Ui.dp(this,5),0,Ui.dp(this,4),0);
+        titleView.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
+        titleView.setClickable(true);
+
+        Button rename=Ui.button(this,"✎");
+        rename.setTextSize(16);
+        Ui.compactHeaderButton(rename,this,42);
 
         Button add=Ui.button(this,"＋");
-        add.setTextSize(22);
-        Ui.compactHeaderButton(add,this,48);
+        add.setTextSize(20);
+        Ui.compactHeaderButton(add,this,44);
 
         modeButton=Ui.button(this, compact ? "Détail" : "Compact");
         modeButton.setTextSize(13);
-        Ui.compactHeaderButton(modeButton,this,82);
+        Ui.compactHeaderButton(modeButton,this,74);
 
         TextView count=new TextView(this);
         count.setText(setlist.songIds.size()+" titres");
         count.setTextColor(Color.LTGRAY);
-        count.setTextSize(12);
+        count.setTextSize(11);
         count.setSingleLine(true);
         count.setGravity(Gravity.CENTER);
-        count.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,68),Ui.dp(this,48)));
+        count.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,58),Ui.dp(this,44)));
         count.setTag("count");
 
         head.addView(back);
-        head.addView(title);
+        head.addView(titleView);
+        head.addView(rename);
         head.addView(add);
         head.addView(modeButton);
         head.addView(count);
@@ -107,16 +114,16 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         TextView sub=new TextView(this);
         sub.setText(compact ? "Maintiens et glisse un titre pour le déplacer" : "Maintiens et glisse un titre pour le déplacer");
         sub.setTextColor(Color.LTGRAY);
-        sub.setTextSize(12);
+        sub.setTextSize(10);
         sub.setGravity(Gravity.CENTER);
-        sub.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,6));
+        sub.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),Ui.dp(this,2));
         sub.setTag("sub");
         root.addView(sub);
 
         recycler=new RecyclerView(this);
         recycler.setLayoutManager(new LinearLayoutManager(this));
         recycler.setBackgroundColor(Color.rgb(10,10,10));
-        recycler.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),Ui.dp(this,16));
+        recycler.setPadding(Ui.dp(this,3),0,Ui.dp(this,3),Ui.dp(this,8));
         recycler.setClipToPadding(false);
 
         adapter=new PlaylistAdapter();
@@ -155,11 +162,32 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         touchHelper.attachToRecyclerView(recycler);
 
         back.setOnClickListener(v->finish());
+        titleView.setOnClickListener(v->renameList());
+        rename.setOnClickListener(v->renameList());
         add.setOnClickListener(v->addSong());
         modeButton.setOnClickListener(v->toggleMode());
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private void renameList(){
+        final android.widget.EditText input=new android.widget.EditText(this);
+        input.setSingleLine(true);
+        input.setText(setlist.name);
+        input.selectAll();
+        new AlertDialog.Builder(this)
+            .setTitle("Renommer la liste")
+            .setView(input)
+            .setPositiveButton("Enregistrer",(d,w)->{
+                String name=input.getText().toString().trim();
+                if(name.isEmpty())return;
+                setlist.name=name;
+                AppStore.upsertSetlist(this,setlist);
+                titleView.setText(name);
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
     }
 
     private void toggleMode(){
@@ -234,32 +262,32 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         @Override public Holder onCreateViewHolder(ViewGroup parent,int viewType){
             LinearLayout row=Ui.row(PlaylistOverviewActivity.this);
-            row.setPadding(Ui.dp(PlaylistOverviewActivity.this,4),Ui.dp(PlaylistOverviewActivity.this,1),Ui.dp(PlaylistOverviewActivity.this,2),Ui.dp(PlaylistOverviewActivity.this,1));
-            row.setMinimumHeight(Ui.dp(PlaylistOverviewActivity.this,48));
+            row.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,1),0);
+            row.setMinimumHeight(Ui.dp(PlaylistOverviewActivity.this,38));
 
             TextView num=new TextView(PlaylistOverviewActivity.this);
             num.setTypeface(Typeface.DEFAULT_BOLD);
             num.setGravity(Gravity.CENTER);
-            num.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,38));
+            num.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,32));
 
             TextView song=new TextView(PlaylistOverviewActivity.this);
             song.setTypeface(Typeface.DEFAULT_BOLD);
             song.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            song.setPadding(Ui.dp(PlaylistOverviewActivity.this,5),Ui.dp(PlaylistOverviewActivity.this,5),Ui.dp(PlaylistOverviewActivity.this,5),Ui.dp(PlaylistOverviewActivity.this,5));
+            song.setPadding(Ui.dp(PlaylistOverviewActivity.this,3),Ui.dp(PlaylistOverviewActivity.this,2),Ui.dp(PlaylistOverviewActivity.this,3),Ui.dp(PlaylistOverviewActivity.this,2));
             song.setLayoutParams(new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
 
             TextView bpm=new TextView(PlaylistOverviewActivity.this);
             bpm.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
             bpm.setTypeface(Typeface.DEFAULT_BOLD);
-            bpm.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,58));
-            bpm.setPadding(Ui.dp(PlaylistOverviewActivity.this,4),0,Ui.dp(PlaylistOverviewActivity.this,4),0);
+            bpm.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,48));
+            bpm.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
 
             TextView handle=new TextView(PlaylistOverviewActivity.this);
             handle.setText("≡");
             handle.setTextColor(Color.LTGRAY);
-            handle.setTextSize(26);
+            handle.setTextSize(22);
             handle.setGravity(Gravity.CENTER);
-            handle.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,42),Ui.dp(PlaylistOverviewActivity.this,48)));
+            handle.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,34),Ui.dp(PlaylistOverviewActivity.this,38)));
 
             row.addView(num);
             row.addView(song);
@@ -286,9 +314,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             Song s=AppStore.findSong(PlaylistOverviewActivity.this,id);
 
             h.num.setText(String.format("%02d",position+1));
-            h.num.setTextSize(compact?14:16);
-            h.song.setTextSize(compact?15:17);
-            h.bpm.setTextSize(compact?14:15);
+            h.num.setTextSize(compact?13:16);
+            h.song.setTextSize(compact?14:17);
+            h.bpm.setTextSize(compact?13:15);
             h.song.setSingleLine(compact);
 
             if(s==null){
