@@ -553,30 +553,34 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.bpm.setTextSize(compact?12:15);
             h.song.setSingleLine(compact);
 
+            boolean hasStageInfo=s!=null && (
+                (s.stageNum1!=null && !s.stageNum1.trim().isEmpty()) ||
+                (s.stageNum2!=null && !s.stageNum2.trim().isEmpty()) ||
+                s.stageGuitar || s.stageKeyboard
+            );
+
             if(s==null){
                 h.song.setText("Morceau introuvable");
                 h.bpm.setText("");
             }else if(compact){
-                h.song.setText(shortTitle(s.title));
+                h.song.setText(hasStageInfo ? shortTitle(s.title) : s.title);
                 h.bpm.setText(s.bpm.isEmpty()?"":s.bpm);
             }else{
                 String meta="";
                 if(!s.artist.isEmpty())meta=s.artist;
                 if(!s.key.isEmpty())meta+=(meta.isEmpty()?"":" · ")+s.key;
-                h.song.setText(shortTitle(s.title)+(meta.isEmpty()?"":"\n"+meta));
+                h.song.setText((hasStageInfo ? shortTitle(s.title) : s.title)+(meta.isEmpty()?"":"\n"+meta));
                 h.bpm.setText(s.bpm.isEmpty()?"":s.bpm+" BPM");
             }
 
-            if(s!=null){
+            if(s!=null && hasStageInfo){
+                h.stageBox.setVisibility(View.VISIBLE);
                 h.stage1.setText(twoDigits(s.stageNum1));
                 h.stage2.setText(twoDigits(s.stageNum2));
                 h.guitarIcon.setAlpha(s.stageGuitar?1f:0.22f);
                 h.keyboardIcon.setAlpha(s.stageKeyboard?1f:0.22f);
             }else{
-                h.stage1.setText("--");
-                h.stage2.setText("--");
-                h.guitarIcon.setAlpha(0.22f);
-                h.keyboardIcon.setAlpha(0.22f);
+                h.stageBox.setVisibility(View.GONE);
             }
 
             boolean current=id.equals(currentSongId);
