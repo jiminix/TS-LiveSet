@@ -17,9 +17,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     private LinearLayout content;
+    private ScrollView mainScroll;
     private EditText search;
     private Button importButton;
     private Button libraryTab;
@@ -69,12 +71,13 @@ public class MainActivity extends AppCompatActivity {
         search.setVisibility(View.GONE);
         root.addView(search, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        ScrollView scroll = new ScrollView(this);
+        mainScroll = new ScrollView(this);
+        mainScroll.setFillViewport(true);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,100));
-        scroll.addView(content);
-        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
+        mainScroll.addView(content,new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(mainScroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
 
         LinearLayout bottom = Ui.row(this);
         bottom.setPadding(Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8));
@@ -144,32 +147,65 @@ public class MainActivity extends AppCompatActivity {
 
     private void showLibrary() {
         content.removeAllViews();
-        String q = search == null ? "" : search.getText().toString().trim().toLowerCase();
+        String q = search == null ? "" : search.getText().toString().trim().toLowerCase(Locale.ROOT);
         List<Song> songs=AppStore.loadSongs(this);
         if(libraryTab!=null) libraryTab.setText("Bibliothèque ("+songs.size()+")");
+
+        int visible=0;
+        for (Song s : songs) {
+            String title=s.title==null?"":s.title;
+            String artist=s.artist==null?"":s.artist;
+            String bpm=s.bpm==null?"":s.bpm;
+            if (!q.isEmpty() && !(title+" "+artist).toLowerCase(Locale.ROOT).contains(q)) continue;
+
+            final Song song=s;
+            LinearLayout row=new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setBackgroundColor(Color.rgb(34,34,34));
+            row.setPadding(Ui.dp(this,12),Ui.dp(this,5),Ui.dp(this,8),Ui.dp(this,5));
+            row.setMinimumHeight(Ui.dp(this,58));
+
+            TextView txt=new TextView(this);
+            String meta="";
+            if(!artist.isEmpty())meta=artist;
+            if(!bpm.isEmpty())meta+=(meta.isEmpty()?"":" · ")+bpm+" BPM";
+            txt.setText(title+(meta.isEmpty()?"":"\n"+meta));
+            txt.setTextColor(Color.WHITE);
+            txt.setTextSize(18);
+            txt.setGravity(Gravity.CENTER_VERTICAL);
+            txt.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4));
+            txt.setLayoutParams(new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
+
+            TextView arrow=new TextView(this);
+            arrow.setText("›");
+            arrow.setTextColor(Color.LTGRAY);
+            arrow.setTextSize(30);
+            arrow.setGravity(Gravity.CENTER);
+            arrow.setMinWidth(Ui.dp(this,38));
+
+            row.addView(txt);
+            row.addView(arrow);
+
+            row.setOnClickListener(v->openLive(song.id,null,0));
+            row.setOnLongClickListener(v->{ songMenu(song); return true; });
+            content.addView(row,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            View sep=new View(this);
+            sep.setBackgroundColor(Color.rgb(18,18,18));
+            content.addView(sep,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,4)));
+            visible++;
+        }
+
         if(songs.isEmpty()){
             TextView empty=Ui.title(this,"Bibliothèque vide\n\nUtilise « Importer » pour récupérer toute ta playlist d’un coup.");
             empty.setTextSize(18); empty.setGravity(Gravity.CENTER); content.addView(empty);
+        }else if(visible==0){
+            TextView empty=Ui.title(this,"Aucun résultat pour « "+q+" »");
+            empty.setTextSize(18); empty.setGravity(Gravity.CENTER); content.addView(empty);
         }
-        for (Song s : songs) {
-            if (!q.isEmpty() && !(s.title+" "+s.artist).toLowerCase().contains(q)) continue;
-            LinearLayout row = Ui.row(this);
-            TextView txt = new TextView(this);
-            String meta = s.artist;
-            if (!s.key.isEmpty()) meta += (meta.isEmpty()?"":" · ") + s.key;
-            if (!s.bpm.isEmpty()) meta += (meta.isEmpty()?"":" · ") + s.bpm + " BPM";
-            txt.setText(s.title + (meta.isEmpty()?"":"\n"+meta));
-            txt.setTextColor(Color.WHITE); txt.setTextSize(18); txt.setPadding(Ui.dp(this,12),Ui.dp(this,10),Ui.dp(this,6),Ui.dp(this,10));
-            Ui.weight(txt,1);
-            Button play = Ui.button(this,"▶");
-            Button edit = Ui.button(this,"✎");
-            row.addView(txt); row.addView(play); row.addView(edit);
-            txt.setOnClickListener(v -> openLive(s.id,null,0));
-            play.setOnClickListener(v -> openPlayer(s));
-            edit.setOnClickListener(v -> editSong(s.id));
-            txt.setOnLongClickListener(v -> { songMenu(s); return true; });
-            content.addView(row);
-        }
+
+        if(mainScroll!=null) mainScroll.post(()->mainScroll.scrollTo(0,0));
     }
 
     private void createSetlist() {
