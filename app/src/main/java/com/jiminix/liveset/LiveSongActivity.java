@@ -42,7 +42,7 @@ public class LiveSongActivity extends AppCompatActivity {
         startActivity(i);
     }
 
-    private void font(float d){fontSize=Math.max(16f,Math.min(52f,fontSize+d));lyrics.setTextSize(fontSize);getSharedPreferences("live_ui",MODE_PRIVATE).edit().putFloat("font",fontSize).apply();}
+    private void font(float d){fontSize=Math.max(12f,Math.min(52f,fontSize+d));lyrics.setTextSize(fontSize);getSharedPreferences("live_ui",MODE_PRIVATE).edit().putFloat("font",fontSize).apply();}
     private void player(){if(song.mediaUrl.trim().isEmpty()){Toast.makeText(this,"Ajoute un lien média dans la fiche du morceau.",Toast.LENGTH_SHORT).show();return;}Intent i=new Intent(this,PlayerActivity.class);i.putExtra("title",song.title);i.putExtra("url",song.mediaUrl);startActivity(i);}
     private void navigate(int delta){SetListModel sl=AppStore.findSetlist(this,setlistId);if(sl==null)return;int n=index+delta;if(n<0||n>=sl.songIds.size())return;Intent i=new Intent(this,LiveSongActivity.class);i.putExtra("song_id",sl.songIds.get(n));i.putExtra("setlist_id",sl.id);i.putExtra("index",n);startActivity(i);finish();}
 }
