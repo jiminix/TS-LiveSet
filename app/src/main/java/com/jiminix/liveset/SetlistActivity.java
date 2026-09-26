@@ -31,7 +31,7 @@ public class SetlistActivity extends AppCompatActivity {
         LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); title=Ui.title(this,setlist.name); title.setTextSize(21); Ui.weight(title,1); Button menu=Ui.button(this,"⋮"); head.addView(back); head.addView(title); head.addView(menu); root.addView(head);
         ScrollView sv=new ScrollView(this); content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,8),Ui.dp(this,80)); sv.addView(content); root.addView(sv,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
         LinearLayout bottom=Ui.row(this); Button add=Ui.button(this,"＋ Morceau"); Button live=Ui.button(this,"▶ MODE LIVE"); Ui.weight(add,1); Ui.weight(live,1); bottom.addView(add); bottom.addView(live); root.addView(bottom);
-        back.setOnClickListener(v->finish()); add.setOnClickListener(v->chooseSong()); live.setOnClickListener(v->startLive()); menu.setOnClickListener(v->setlistMenu()); setContentView(root);
+        back.setOnClickListener(v->finish()); add.setOnClickListener(v->chooseSong()); live.setOnClickListener(v->startLive()); menu.setOnClickListener(v->setlistMenu()); Ui.applySafeArea(root); setContentView(root);
     }
 
     private void render(){
