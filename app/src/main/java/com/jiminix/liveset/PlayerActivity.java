@@ -25,7 +25,7 @@ public class PlayerActivity extends AppCompatActivity {
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
         LinearLayout top=Ui.row(this); Button close=Ui.button(this,"‹"); TextView t=Ui.title(this,title==null?"Lecteur":title); t.setTextSize(20); Ui.weight(t,1); Button reload=Ui.button(this,"↻"); top.addView(close);top.addView(t);top.addView(reload);root.addView(top);
         web=new WebView(this); WebSettings s=web.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setMediaPlaybackRequiresUserGesture(false); s.setLoadWithOverviewMode(true); s.setUseWideViewPort(true); web.setWebViewClient(new WebViewClient()); web.setWebChromeClient(new WebChromeClient()); web.setBackgroundColor(Color.BLACK);
-        root.addView(web,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1)); setContentView(root);
+        root.addView(web,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1)); Ui.applySafeArea(root); setContentView(root);
         close.setOnClickListener(v->finish()); reload.setOnClickListener(v->load(url)); load(url);
     }
 
