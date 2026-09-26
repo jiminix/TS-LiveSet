@@ -8,6 +8,9 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 public class Ui {
     public static int dp(Context c, int v) { return (int)(v * c.getResources().getDisplayMetrics().density + 0.5f); }
@@ -41,5 +44,20 @@ public class Ui {
 
     public static void weight(View v, float w) {
         v.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, w));
+    }
+
+    public static void applySafeArea(View root) {
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            int extra = dp(v.getContext(), 8);
+            v.setPadding(
+                Math.max(v.getPaddingLeft(), bars.left),
+                Math.max(v.getPaddingTop(), bars.top + extra),
+                Math.max(v.getPaddingRight(), bars.right),
+                Math.max(v.getPaddingBottom(), bars.bottom + extra)
+            );
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(root);
     }
 }
