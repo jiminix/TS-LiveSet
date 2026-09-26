@@ -16,6 +16,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
+      - name: Prepare Android signing folder
+        run: mkdir -p ~/.android
+      - name: Keep LiveSet debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: liveset-debug-keystore-v1
       - name: Build debug APK
         run: gradle :app:assembleDebug
       - name: Upload APK
