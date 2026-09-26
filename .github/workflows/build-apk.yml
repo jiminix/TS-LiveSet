@@ -21,5 +21,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LiveSet-V0.1-debug
+          name: LiveSet-V0.2-debug
           path: app/build/outputs/apk/debug/app-debug.apk
