@@ -10,6 +10,7 @@ public class AppStore {
     private static final String PREFS = "liveset_store";
     private static final String K_SONGS = "songs";
     private static final String K_SETLISTS = "setlists";
+    private static final String K_VIEWER_SETLIST = "viewer_setlist_id";
 
     public static List<Song> loadSongs(Context c) {
         List<Song> out = new ArrayList<>();
@@ -80,6 +81,14 @@ public class AppStore {
         }
         if (!replaced) all.add(setlist);
         saveSetlists(c, all);
+    }
+
+    public static void selectViewerSetlist(Context c, String id) {
+        prefs(c).edit().putString(K_VIEWER_SETLIST, id == null ? "" : id).apply();
+    }
+
+    public static String getViewerSetlistId(Context c) {
+        return prefs(c).getString(K_VIEWER_SETLIST, "");
     }
 
     private static SharedPreferences prefs(Context c) {
