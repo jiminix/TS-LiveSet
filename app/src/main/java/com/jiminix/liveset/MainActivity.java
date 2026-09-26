@@ -30,7 +30,16 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         buildUi();
-        showSetlists();
+        boolean hasSongs=!AppStore.loadSongs(this).isEmpty();
+        boolean hasSetlists=!AppStore.loadSetlists(this).isEmpty();
+        if(hasSongs && !hasSetlists){
+            libraryMode=true;
+            search.setVisibility(View.VISIBLE);
+            importButton.setVisibility(View.VISIBLE);
+            showLibrary();
+        }else{
+            showSetlists();
+        }
     }
 
     @Override protected void onResume() {
@@ -126,8 +135,30 @@ public class MainActivity extends AppCompatActivity {
         content.removeAllViews();
         List<SetListModel> lists = AppStore.loadSetlists(this);
         if (lists.isEmpty()) {
-            TextView empty = Ui.title(this,"Aucune setlist\n\nAppuie sur « + Ajouter » pour créer ton premier concert.");
-            empty.setTextSize(18); empty.setGravity(Gravity.CENTER); content.addView(empty);
+            TextView empty = Ui.title(this,"Aucune setlist");
+            empty.setTextSize(22);
+            empty.setGravity(Gravity.CENTER);
+            empty.setPadding(Ui.dp(this,12),Ui.dp(this,40),Ui.dp(this,12),Ui.dp(this,20));
+            content.addView(empty);
+
+            Button library=Ui.button(this,"Voir la bibliothèque ("+AppStore.loadSongs(this).size()+")");
+            library.setTextSize(18);
+            library.setOnClickListener(v->{
+                libraryMode=true;
+                search.setVisibility(View.VISIBLE);
+                importButton.setVisibility(View.VISIBLE);
+                showLibrary();
+            });
+            content.addView(library,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,64)));
+
+            Button create=Ui.button(this,"＋ Créer une setlist");
+            create.setTextSize(18);
+            create.setOnClickListener(v->createSetlist());
+            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,64));
+            cp.topMargin=Ui.dp(this,12);
+            content.addView(create,cp);
+
+            if(mainScroll!=null) mainScroll.post(()->mainScroll.scrollTo(0,0));
             return;
         }
         for (SetListModel sl : lists) {
