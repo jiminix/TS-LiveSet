@@ -73,8 +73,8 @@ public class ImportActivity extends AppCompatActivity {
         LinearLayout head = Ui.row(this);
         Button back = Ui.button(this, "‹");
         TextView title = Ui.title(this, "Import en masse");
-        title.setTextSize(21);
-        Ui.weight(title,1);
+        Ui.compactHeaderTitle(title,this);
+        Ui.compactHeaderButton(back,this,46);
         head.addView(back);
         head.addView(title);
         outer.addView(head);
