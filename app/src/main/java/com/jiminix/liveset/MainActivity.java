@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
         TextView head = Ui.title(this, "LIVESET");
         Ui.compactHeaderTitle(head,this);
         TextView version = new TextView(this);
-        version.setText("v0.17");
+        version.setText("v0.18");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(12);
         version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
@@ -263,25 +263,43 @@ public class MainActivity extends AppCompatActivity {
 
     private void openPlaylistAccess() {
         List<SetListModel> lists=AppStore.loadSetlists(this);
-        SetListModel target=null;
 
-        if(!lists.isEmpty()){
-            target=lists.get(0);
-        }else{
+        if(lists.isEmpty()){
             List<Song> songs=AppStore.loadSongs(this);
             if(songs.isEmpty()){
                 Toast.makeText(this,"Aucun morceau dans la bibliothèque.",Toast.LENGTH_LONG).show();
                 return;
             }
 
-            target=new SetListModel();
+            SetListModel target=new SetListModel();
             target.name="PLAYLIST 2026";
             for(Song s:songs) target.songIds.add(s.id);
             AppStore.upsertSetlist(this,target);
+            openPlaylistOverview(target.id);
+            return;
         }
 
+        if(lists.size()==1){
+            openPlaylistOverview(lists.get(0).id);
+            return;
+        }
+
+        String[] names=new String[lists.size()];
+        for(int i=0;i<lists.size();i++){
+            SetListModel sl=lists.get(i);
+            names[i]=sl.name+"   ("+sl.songIds.size()+" titres)";
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Choisir une playlist")
+            .setItems(names,(d,which)->openPlaylistOverview(lists.get(which).id))
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private void openPlaylistOverview(String id){
         Intent i=new Intent(this,PlaylistOverviewActivity.class);
-        i.putExtra("setlist_id",target.id);
+        i.putExtra("setlist_id",id);
         startActivity(i);
     }
 
