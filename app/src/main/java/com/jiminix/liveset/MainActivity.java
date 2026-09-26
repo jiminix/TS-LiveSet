@@ -24,6 +24,7 @@ public class MainActivity extends AppCompatActivity {
     // V0.19 lyrics repair
     // V0.20 relink complete songs
     // build V0.20
+    // V0.21 playlist home list
     private LinearLayout content;
     private ScrollView mainScroll;
     private EditText search;
