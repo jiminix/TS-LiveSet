@@ -20,6 +20,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.text.Normalizer;
+import java.util.Locale;
 
 public class PlaylistOverviewActivity extends AppCompatActivity {
     private String setlistId;
@@ -39,6 +41,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         int currentIndex=getIntent().getIntExtra("current_index",-1);
         setlist=AppStore.findSetlist(this,setlistId);
         if(setlist==null){ finish(); return; }
+        repairMissingLyrics();
         if(currentIndex>=0 && currentIndex<setlist.songIds.size()) currentSongId=setlist.songIds.get(currentIndex);
         compact=getSharedPreferences("playlist_view",MODE_PRIVATE).getBoolean("compact",true);
         buildUi();
@@ -49,6 +52,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         SetListModel fresh=AppStore.findSetlist(this,setlistId);
         if(fresh!=null){
             setlist=fresh;
+            repairMissingLyrics();
             if(adapter!=null) adapter.notifyDataSetChanged();
         }
     }
@@ -186,6 +190,49 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private void repairMissingLyrics(){
+        List<Song> all=AppStore.loadSongs(this);
+        if(all.isEmpty())return;
+
+        for(String id:setlist.songIds){
+            Song target=AppStore.findSong(this,id);
+            if(target==null || (target.lyrics!=null && !target.lyrics.trim().isEmpty()))continue;
+
+            String targetTitle=normalizedTitle(target.title);
+            if(targetTitle.isEmpty())continue;
+
+            Song donor=null;
+            for(Song candidate:all){
+                if(candidate.id.equals(target.id))continue;
+                if(candidate.lyrics==null || candidate.lyrics.trim().isEmpty())continue;
+                if(targetTitle.equals(normalizedTitle(candidate.title))){
+                    donor=candidate;
+                    break;
+                }
+            }
+
+            if(donor!=null){
+                target.lyrics=donor.lyrics;
+                if(target.artist==null || target.artist.trim().isEmpty())target.artist=donor.artist;
+                if(target.key==null || target.key.trim().isEmpty())target.key=donor.key;
+                if(target.bpm==null || target.bpm.trim().isEmpty())target.bpm=donor.bpm;
+                if(target.tuning==null || target.tuning.trim().isEmpty())target.tuning=donor.tuning;
+                if(target.capo==null || target.capo.trim().isEmpty())target.capo=donor.capo;
+                if(target.duration==null || target.duration.trim().isEmpty())target.duration=donor.duration;
+                if(target.singer==null || target.singer.trim().isEmpty())target.singer=donor.singer;
+                if(target.guitar==null || target.guitar.trim().isEmpty())target.guitar=donor.guitar;
+                if(target.notes==null || target.notes.trim().isEmpty())target.notes=donor.notes;
+                if(target.mediaUrl==null || target.mediaUrl.trim().isEmpty())target.mediaUrl=donor.mediaUrl;
+                AppStore.upsertSong(this,target);
+            }
+        }
+    }
+
+    private String normalizedTitle(String value){
+        String s=value==null?"":Normalizer.normalize(value,Normalizer.Form.NFD).replaceAll("\\p{M}+","");
+        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+"," ").trim().replaceAll("\\s+"," ");
     }
 
     private void openImporter(){
