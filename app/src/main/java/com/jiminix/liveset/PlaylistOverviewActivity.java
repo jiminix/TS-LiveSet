@@ -196,9 +196,15 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         List<Song> all=AppStore.loadSongs(this);
         if(all.isEmpty())return;
 
-        for(String id:setlist.songIds){
+        boolean changed=false;
+
+        for(int i=0;i<setlist.songIds.size();i++){
+            String id=setlist.songIds.get(i);
             Song target=AppStore.findSong(this,id);
-            if(target==null || (target.lyrics!=null && !target.lyrics.trim().isEmpty()))continue;
+            if(target==null)continue;
+
+            boolean hasLyrics=target.lyrics!=null && !target.lyrics.trim().isEmpty();
+            if(hasLyrics)continue;
 
             String targetTitle=normalizedTitle(target.title);
             if(targetTitle.isEmpty())continue;
@@ -214,20 +220,14 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             }
 
             if(donor!=null){
-                target.lyrics=donor.lyrics;
-                if(target.artist==null || target.artist.trim().isEmpty())target.artist=donor.artist;
-                if(target.key==null || target.key.trim().isEmpty())target.key=donor.key;
-                if(target.bpm==null || target.bpm.trim().isEmpty())target.bpm=donor.bpm;
-                if(target.tuning==null || target.tuning.trim().isEmpty())target.tuning=donor.tuning;
-                if(target.capo==null || target.capo.trim().isEmpty())target.capo=donor.capo;
-                if(target.duration==null || target.duration.trim().isEmpty())target.duration=donor.duration;
-                if(target.singer==null || target.singer.trim().isEmpty())target.singer=donor.singer;
-                if(target.guitar==null || target.guitar.trim().isEmpty())target.guitar=donor.guitar;
-                if(target.notes==null || target.notes.trim().isEmpty())target.notes=donor.notes;
-                if(target.mediaUrl==null || target.mediaUrl.trim().isEmpty())target.mediaUrl=donor.mediaUrl;
-                AppStore.upsertSong(this,target);
+                // Repoint the playlist to the complete library song instead of
+                // keeping a duplicate record with missing lyrics.
+                setlist.songIds.set(i,donor.id);
+                changed=true;
             }
         }
+
+        if(changed) AppStore.upsertSetlist(this,setlist);
     }
 
     private String normalizedTitle(String value){
