@@ -4,12 +4,15 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -306,6 +309,73 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         if(count!=null)count.setText(setlist.songIds.size()+" titres");
     }
 
+    private String shortTitle(String title){
+        if(title==null)return "";
+        String t=title.trim();
+        return t.length()<=15?t:t.substring(0,15);
+    }
+
+    private String twoDigits(String value){
+        if(value==null || value.trim().isEmpty())return "--";
+        String d=value.replaceAll("[^0-9]","");
+        if(d.isEmpty())return "--";
+        if(d.length()>2)d=d.substring(0,2);
+        return d.length()==1?"0"+d:d;
+    }
+
+    private void editStageInfo(int pos){
+        if(pos<0 || pos>=setlist.songIds.size())return;
+        Song s=AppStore.findSong(this,setlist.songIds.get(pos));
+        if(s==null)return;
+
+        LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(Ui.dp(this,24),Ui.dp(this,8),Ui.dp(this,24),0);
+
+        EditText n1=new EditText(this);
+        n1.setHint("1er nombre (00–99)");
+        n1.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        n1.setSingleLine(true);
+        n1.setText(s.stageNum1);
+
+        EditText n2=new EditText(this);
+        n2.setHint("2e nombre rouge (00–99)");
+        n2.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        n2.setSingleLine(true);
+        n2.setText(s.stageNum2);
+
+        CheckBox guitar=new CheckBox(this);
+        guitar.setText("🎸 Guitare");
+        guitar.setChecked(s.stageGuitar);
+
+        CheckBox keyboard=new CheckBox(this);
+        keyboard.setText("🎹 Clavier");
+        keyboard.setChecked(s.stageKeyboard);
+
+        box.addView(n1);
+        box.addView(n2);
+        box.addView(guitar);
+        box.addView(keyboard);
+
+        new AlertDialog.Builder(this)
+            .setTitle(s.title)
+            .setView(box)
+            .setPositiveButton("Enregistrer",(d,w)->{
+                String a=n1.getText().toString().replaceAll("[^0-9]","");
+                String b=n2.getText().toString().replaceAll("[^0-9]","");
+                if(a.length()>2)a=a.substring(0,2);
+                if(b.length()>2)b=b.substring(0,2);
+                s.stageNum1=a;
+                s.stageNum2=b;
+                s.stageGuitar=guitar.isChecked();
+                s.stageKeyboard=keyboard.isChecked();
+                AppStore.upsertSong(this,s);
+                adapter.notifyItemChanged(pos);
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
     private void confirmRemoveSong(int pos){
         if(pos<0 || pos>=setlist.songIds.size())return;
         String id=setlist.songIds.get(pos);
@@ -341,14 +411,24 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             final TextView num;
             final TextView song;
             final TextView bpm;
+            final LinearLayout stageBox;
+            final TextView stage1;
+            final TextView stage2;
+            final TextView guitarIcon;
+            final TextView keyboardIcon;
             final TextView delete;
             final TextView handle;
 
-            Holder(LinearLayout row,TextView num,TextView song,TextView bpm,TextView delete,TextView handle){
+            Holder(LinearLayout row,TextView num,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView delete,TextView handle){
                 super(row);
                 this.num=num;
                 this.song=song;
                 this.bpm=bpm;
+                this.stageBox=stageBox;
+                this.stage1=stage1;
+                this.stage2=stage2;
+                this.guitarIcon=guitarIcon;
+                this.keyboardIcon=keyboardIcon;
                 this.delete=delete;
                 this.handle=handle;
             }
@@ -376,6 +456,46 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             bpm.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,44));
             bpm.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
 
+            LinearLayout stageBox=new LinearLayout(PlaylistOverviewActivity.this);
+            stageBox.setOrientation(LinearLayout.HORIZONTAL);
+            stageBox.setGravity(Gravity.CENTER_VERTICAL);
+            stageBox.setPadding(Ui.dp(PlaylistOverviewActivity.this,4),0,Ui.dp(PlaylistOverviewActivity.this,4),0);
+            GradientDrawable stageBg=new GradientDrawable();
+            stageBg.setColor(Color.BLACK);
+            stageBg.setCornerRadius(Ui.dp(PlaylistOverviewActivity.this,4));
+            stageBg.setStroke(Ui.dp(PlaylistOverviewActivity.this,1),Color.rgb(70,70,70));
+            stageBox.setBackground(stageBg);
+            stageBox.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,116),Ui.dp(PlaylistOverviewActivity.this,28)));
+
+            TextView stage1=new TextView(PlaylistOverviewActivity.this);
+            stage1.setTextColor(Color.WHITE);
+            stage1.setTextSize(12);
+            stage1.setGravity(Gravity.CENTER);
+            stage1.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,22));
+
+            TextView stage2=new TextView(PlaylistOverviewActivity.this);
+            stage2.setTextColor(Color.RED);
+            stage2.setTextSize(12);
+            stage2.setGravity(Gravity.CENTER);
+            stage2.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,22));
+
+            TextView guitarIcon=new TextView(PlaylistOverviewActivity.this);
+            guitarIcon.setText("🎸");
+            guitarIcon.setTextSize(14);
+            guitarIcon.setGravity(Gravity.CENTER);
+            guitarIcon.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,28));
+
+            TextView keyboardIcon=new TextView(PlaylistOverviewActivity.this);
+            keyboardIcon.setText("🎹");
+            keyboardIcon.setTextSize(14);
+            keyboardIcon.setGravity(Gravity.CENTER);
+            keyboardIcon.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,28));
+
+            stageBox.addView(stage1);
+            stageBox.addView(stage2);
+            stageBox.addView(guitarIcon);
+            stageBox.addView(keyboardIcon);
+
             TextView delete=new TextView(PlaylistOverviewActivity.this);
             delete.setText("🗑");
             delete.setTextColor(Color.LTGRAY);
@@ -393,14 +513,20 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             row.addView(num);
             row.addView(song);
             row.addView(bpm);
+            row.addView(stageBox);
             row.addView(delete);
             row.addView(handle);
 
-            Holder h=new Holder(row,num,song,bpm,delete,handle);
+            Holder h=new Holder(row,num,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,delete,handle);
             row.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p!=RecyclerView.NO_POSITION)openSong(p);
             });
+            stageBox.setOnClickListener(v->{
+                int p=h.getBindingAdapterPosition();
+                if(p!=RecyclerView.NO_POSITION)editStageInfo(p);
+            });
+
             delete.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p!=RecyclerView.NO_POSITION)confirmRemoveSong(p);
@@ -430,14 +556,26 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.song.setText("Morceau introuvable");
                 h.bpm.setText("");
             }else if(compact){
-                h.song.setText(s.title);
+                h.song.setText(shortTitle(s.title));
                 h.bpm.setText(s.bpm.isEmpty()?"":s.bpm);
             }else{
                 String meta="";
                 if(!s.artist.isEmpty())meta=s.artist;
                 if(!s.key.isEmpty())meta+=(meta.isEmpty()?"":" · ")+s.key;
-                h.song.setText(s.title+(meta.isEmpty()?"":"\n"+meta));
+                h.song.setText(shortTitle(s.title)+(meta.isEmpty()?"":"\n"+meta));
                 h.bpm.setText(s.bpm.isEmpty()?"":s.bpm+" BPM");
+            }
+
+            if(s!=null){
+                h.stage1.setText(twoDigits(s.stageNum1));
+                h.stage2.setText(twoDigits(s.stageNum2));
+                h.guitarIcon.setAlpha(s.stageGuitar?1f:0.22f);
+                h.keyboardIcon.setAlpha(s.stageKeyboard?1f:0.22f);
+            }else{
+                h.stage1.setText("--");
+                h.stage2.setText("--");
+                h.guitarIcon.setAlpha(0.22f);
+                h.keyboardIcon.setAlpha(0.22f);
             }
 
             boolean current=id.equals(currentSongId);
