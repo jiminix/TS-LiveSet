@@ -46,7 +46,7 @@ public class EditSongActivity extends AppCompatActivity {
         Button arrange=Ui.button(this,"↕ Réarranger les blocs"); arrange.setOnClickListener(v->rearrangeBlocks()); root.addView(arrange);
         outer.addView(sv,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
         LinearLayout actions=Ui.row(this); Button cancel=Ui.button(this,"Annuler"); Button save=Ui.button(this,"Enregistrer"); Ui.weight(cancel,1); Ui.weight(save,1); actions.addView(cancel); actions.addView(save); outer.addView(actions);
-        cancel.setOnClickListener(v->finish()); save.setOnClickListener(v->save()); setContentView(outer);
+        cancel.setOnClickListener(v->finish()); save.setOnClickListener(v->save()); Ui.applySafeArea(outer); setContentView(outer);
     }
 
     private EditText mini(String hint,LinearLayout row){ EditText e=new EditText(this); e.setHint(hint); e.setTextColor(Color.WHITE); e.setHintTextColor(Color.GRAY); e.setSingleLine(true); Ui.weight(e,1); row.addView(e); return e; }
