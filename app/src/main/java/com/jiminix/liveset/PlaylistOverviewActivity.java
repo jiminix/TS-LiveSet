@@ -36,6 +36,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.35
     // Build V0.40 dynamic stage indicators and titles
     // Build V0.41 right-aligned compact metadata and text zoom -3..+2
+    // Build V0.42 direct -/+ zoom controls with 6 levels
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -187,19 +188,23 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         Button addLibrary=Ui.button(this,"＋ Bibliothèque");
         Button importTitles=Ui.button(this,"⇩ Importer");
         Button viewer=Ui.button(this,"▣ Viewer");
-        Button zoom=Ui.button(this,zoomLabel());
+        Button zoomMinus=Ui.button(this,"−");
+        Button zoomPlus=Ui.button(this,"+");
         addLibrary.setTextSize(13);
         importTitles.setTextSize(13);
         viewer.setTextSize(13);
-        zoom.setTextSize(11);
+        zoomMinus.setTextSize(20);
+        zoomPlus.setTextSize(20);
         Ui.weight(addLibrary,1);
         Ui.weight(importTitles,1);
         Ui.weight(viewer,1);
-        zoom.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,66),ViewGroup.LayoutParams.WRAP_CONTENT));
+        Ui.compactHeaderButton(zoomMinus,this,42);
+        Ui.compactHeaderButton(zoomPlus,this,42);
         actions.addView(addLibrary);
         actions.addView(importTitles);
         actions.addView(viewer);
-        actions.addView(zoom);
+        actions.addView(zoomMinus);
+        actions.addView(zoomPlus);
         root.addView(actions);
 
         back.setOnClickListener(v->finish());
@@ -209,7 +214,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         addLibrary.setOnClickListener(v->addSong());
         importTitles.setOnClickListener(v->openImporter());
         viewer.setOnClickListener(v->openViewer());
-        zoom.setOnClickListener(v->showZoomDialog(zoom));
+        zoomMinus.setOnClickListener(v->changeZoom(-1));
+        zoomPlus.setOnClickListener(v->changeZoom(1));
         modeButton.setOnClickListener(v->toggleMode());
 
         Ui.applySafeArea(root);
@@ -332,24 +338,17 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
 
-    private String zoomLabel(){
-        return "Zoom "+(textZoom>0?"+":"")+textZoom;
-    }
-
-    private void showZoomDialog(Button zoomButton){
-        final String[] levels={"−3","−2","−1","0","+1","+2"};
-        int checked=textZoom+3;
-        new AlertDialog.Builder(this)
-            .setTitle("Taille des titres")
-            .setSingleChoiceItems(levels,checked,(d,which)->{
-                textZoom=which-3;
-                getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putInt("text_zoom",textZoom).apply();
-                zoomButton.setText(zoomLabel());
-                adapter.notifyDataSetChanged();
-                d.dismiss();
-            })
-            .setNegativeButton("Annuler",null)
-            .show();
+    private void changeZoom(int delta){
+        int next=Math.max(-3,Math.min(2,textZoom+delta));
+        if(next==textZoom){
+            Toast.makeText(this,
+                delta<0 ? "Zoom minimum" : "Zoom maximum",
+                Toast.LENGTH_SHORT).show();
+            return;
+        }
+        textZoom=next;
+        getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putInt("text_zoom",textZoom).apply();
+        adapter.notifyDataSetChanged();
     }
 
     private void showAddSongMenu(){

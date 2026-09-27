@@ -23,6 +23,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.38
     // Build V0.39
     // Build V0.41 compact right metadata and text zoom -3..+2
+    // Build V0.42 direct -/+ zoom controls with 6 levels
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
@@ -83,9 +84,13 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         appTitle.setLayoutParams(new LinearLayout.LayoutParams(0,dp(44),1));
 
-        Button zoom=Ui.button(this,zoomLabel());
-        zoom.setTextSize(11);
-        Ui.compactHeaderButton(zoom,this,68);
+        Button zoomMinus=Ui.button(this,"−");
+        zoomMinus.setTextSize(20);
+        Ui.compactHeaderButton(zoomMinus,this,42);
+
+        Button zoomPlus=Ui.button(this,"+");
+        zoomPlus.setTextSize(20);
+        Ui.compactHeaderButton(zoomPlus,this,42);
 
         Button cloud=Ui.button(this,"☁ Code");
         cloud.setTextSize(12);
@@ -93,7 +98,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
         top.addView(back);
         top.addView(appTitle);
-        top.addView(zoom);
+        top.addView(zoomMinus);
+        top.addView(zoomPlus);
         top.addView(cloud);
         root.addView(top);
 
@@ -147,32 +153,26 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         root.addView(footer);
 
         back.setOnClickListener(v->finish());
-        zoom.setOnClickListener(v->showZoomDialog(zoom));
+        zoomMinus.setOnClickListener(v->changeZoom(-1));
+        zoomPlus.setOnClickListener(v->changeZoom(1));
         cloud.setOnClickListener(v->showInternetCode());
 
         Ui.applySafeArea(root);
         setContentView(root);
     }
 
-    private String zoomLabel(){
-        return "Zoom "+(textZoom>0?"+":"")+textZoom;
-    }
-
-    private void showZoomDialog(Button zoomButton){
-        final String[] levels={"−3","−2","−1","0","+1","+2"};
-        int checked=textZoom+3;
-        new AlertDialog.Builder(this)
-            .setTitle("Taille des titres")
-            .setSingleChoiceItems(levels,checked,(d,which)->{
-                textZoom=which-3;
-                getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putInt("text_zoom",textZoom).apply();
-                zoomButton.setText(zoomLabel());
-                lastSignature="";
-                refreshPlaylist();
-                d.dismiss();
-            })
-            .setNegativeButton("Annuler",null)
-            .show();
+    private void changeZoom(int delta){
+        int next=Math.max(-3,Math.min(2,textZoom+delta));
+        if(next==textZoom){
+            Toast.makeText(this,
+                delta<0 ? "Zoom minimum" : "Zoom maximum",
+                Toast.LENGTH_SHORT).show();
+            return;
+        }
+        textZoom=next;
+        getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putInt("text_zoom",textZoom).apply();
+        lastSignature="";
+        refreshPlaylist();
     }
 
     private void refreshPlaylist(){
