@@ -372,7 +372,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 n2.setGravity(Gravity.CENTER);
                 n2.setPadding(zdp(2),0,zdp(2),0);
                 stageBox.addView(n2,new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
+                    ViewGroup.LayoutParams.WRAP_CONTENT,zdp(24)
                 ));
             }
 
@@ -383,7 +383,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 guitar.setGravity(Gravity.CENTER);
                 guitar.setPadding(zdp(1),0,zdp(1),0);
                 stageBox.addView(guitar,new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
+                    ViewGroup.LayoutParams.WRAP_CONTENT,zdp(24)
                 ));
             }
 
@@ -394,7 +394,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 keyboard.setGravity(Gravity.CENTER);
                 keyboard.setPadding(zdp(1),0,zdp(1),0);
                 stageBox.addView(keyboard,new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
+                    ViewGroup.LayoutParams.WRAP_CONTENT,zdp(24)
                 ));
             }
 
@@ -428,7 +428,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         View sep=new View(this);
         sep.setBackgroundColor(Color.rgb(45,45,45));
         songsBox.addView(sep,new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,dp(1)
+            ViewGroup.LayoutParams.MATCH_PARENT,Math.max(1,zdp(1))
         ));
     }
 }
