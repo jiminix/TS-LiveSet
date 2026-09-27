@@ -1,5 +1,6 @@
 package com.jiminix.livesetviewer;
 
+import android.app.AlertDialog;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
@@ -8,27 +9,38 @@ import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends AppCompatActivity {
-    // Viewer V0.1 build 2
-    // Viewer V0.2
-    // Viewer V0.3
+    // Viewer V0.4 Internet sync
+    private static final String API="https://jsonblob.com/api/jsonBlob";
+    private static final String PREFS="viewer_cloud";
+    private static final String K_CODE="sync_code";
+    private static final String K_CACHE="cached_payload";
+
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView playlistTitle;
     private TextView info;
     private LinearLayout songsBox;
     private String lastSignature="";
+    private volatile boolean cloudBusy=false;
 
     private final Runnable refreshLoop=new Runnable(){
         @Override public void run(){
             refreshPlaylist();
-            handler.postDelayed(this,1200);
+            handler.postDelayed(this,2500);
         }
     };
 
@@ -76,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         root.addView(slogan,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
 
         playlistTitle=new TextView(this);
-        playlistTitle.setText("Aucune playlist sélectionnée");
+        playlistTitle.setText("Connexion Viewer");
         playlistTitle.setTextColor(Color.WHITE);
         playlistTitle.setTextSize(25);
         playlistTitle.setGravity(Gravity.CENTER);
@@ -85,12 +97,18 @@ public class MainActivity extends AppCompatActivity {
         root.addView(playlistTitle);
 
         info=new TextView(this);
-        info.setText("Ouvre TS Playlist Manager et appuie sur « Viewer » dans une playlist.");
+        info.setText("Connexion au Manager…");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(12);
         info.setGravity(Gravity.CENTER);
-        info.setPadding(dp(8),0,dp(8),dp(10));
+        info.setPadding(dp(8),0,dp(8),dp(6));
         root.addView(info);
+
+        Button internet= new Button(this);
+        internet.setText("🌐 Connexion Internet");
+        internet.setTextSize(13);
+        internet.setOnClickListener(v->configureInternet());
+        root.addView(internet,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
 
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);
@@ -108,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
         ));
 
         TextView footer=new TextView(this);
-        footer.setText("Lecture seule · mise à jour automatique");
+        footer.setText("Lecture seule · synchronisation Internet automatique");
         footer.setTextColor(Color.DKGRAY);
         footer.setTextSize(10);
         footer.setGravity(Gravity.CENTER);
@@ -119,6 +137,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshPlaylist(){
+        if(tryLocalManager())return;
+
+        String code=getCode();
+        if(code.isEmpty()){
+            showEmpty("Connexion Viewer",
+                "Appuie sur « Connexion Internet » et entre le code affiché par TS Playlist Manager.");
+            return;
+        }
+
+        refreshCloud(code);
+    }
+
+    private boolean tryLocalManager(){
         try{
             Bundle b=getContentResolver().call(
                 Uri.parse("content://com.jiminix.liveset.playlists"),
@@ -127,31 +158,143 @@ public class MainActivity extends AppCompatActivity {
                 null
             );
 
-            if(b==null || !b.getBoolean("available",false)){
-                showEmpty("Aucune playlist sélectionnée",
-                    "Dans TS Playlist Manager, ouvre une playlist puis appuie sur « Viewer ».");
-                return;
-            }
+            if(b==null || !b.getBoolean("available",false))return false;
 
             String name=b.getString("playlist_name","Playlist");
-            String json=b.getString("songs_json","[]");
-            String signature=name+"|"+json;
-            if(signature.equals(lastSignature))return;
-            lastSignature=signature;
-
-            JSONArray songs=new JSONArray(json);
-            playlistTitle.setText(name);
-            info.setText(songs.length()+" titre"+(songs.length()>1?"s":"")+" · synchronisé avec TS Playlist Manager");
-            songsBox.removeAllViews();
-
-            for(int i=0;i<songs.length();i++){
-                JSONObject s=songs.getJSONObject(i);
-                addSongRow(i+1,s.optString("title",""),s.optString("bpm",""));
-            }
-        }catch(Exception e){
-            showEmpty("TS Playlist Manager non accessible",
-                "Installe la version Manager compatible sur ce téléphone, puis sélectionne une playlist avec « Viewer ».");
+            JSONArray songs=new JSONArray(b.getString("songs_json","[]"));
+            renderPlaylist(name,songs,"Local · synchronisé avec TS Playlist Manager");
+            return true;
+        }catch(Exception ignored){
+            return false;
         }
+    }
+
+    private void refreshCloud(String code){
+        if(cloudBusy)return;
+        cloudBusy=true;
+
+        new Thread(()->{
+            try{
+                HttpURLConnection con=(HttpURLConnection)new URL(API+"/"+code).openConnection();
+                con.setRequestMethod("GET");
+                con.setConnectTimeout(8000);
+                con.setReadTimeout(10000);
+                con.setRequestProperty("Accept","application/json");
+                con.setRequestProperty("User-Agent","TS-Playlist-Viewer/0.4");
+
+                int status=con.getResponseCode();
+                if(status<200 || status>=300)throw new Exception("HTTP "+status);
+
+                String raw=readResponse(con);
+                con.disconnect();
+
+                JSONObject payload=new JSONObject(raw);
+                getSharedPreferences(PREFS,MODE_PRIVATE).edit().putString(K_CACHE,raw).apply();
+
+                runOnUiThread(()->renderCloudPayload(payload,false));
+            }catch(Exception e){
+                String cached=getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_CACHE,"");
+                runOnUiThread(()->{
+                    if(!cached.isEmpty()){
+                        try{
+                            renderCloudPayload(new JSONObject(cached),true);
+                        }catch(Exception ignored){
+                            showEmpty("Connexion Internet impossible","Vérifie le code Viewer et la connexion Internet.");
+                        }
+                    }else{
+                        showEmpty("Connexion Internet impossible","Vérifie le code Viewer et la connexion Internet.");
+                    }
+                });
+            }finally{
+                cloudBusy=false;
+            }
+        },"TS-Viewer-Cloud").start();
+    }
+
+    private void renderCloudPayload(JSONObject payload,boolean cached){
+        if(payload==null || !payload.optBoolean("available",false)){
+            showEmpty("Aucune playlist publiée",
+                "Dans le Manager, ouvre la playlist voulue puis appuie sur « Viewer ».");
+            return;
+        }
+
+        String name=payload.optString("playlist_name","Playlist");
+        JSONArray songs=payload.optJSONArray("songs");
+        if(songs==null)songs=new JSONArray();
+
+        renderPlaylist(name,songs,cached?"Internet · dernière copie enregistrée":"Internet · à jour");
+    }
+
+    private void renderPlaylist(String name,JSONArray songs,String source){
+        String signature=name+"|"+songs.toString()+"|"+source;
+        if(signature.equals(lastSignature))return;
+        lastSignature=signature;
+
+        playlistTitle.setText(name);
+        info.setText(songs.length()+" titre"+(songs.length()>1?"s":"")+" · "+source);
+        songsBox.removeAllViews();
+
+        for(int i=0;i<songs.length();i++){
+            JSONObject s=songs.optJSONObject(i);
+            if(s==null)continue;
+            addSongRow(i+1,s.optString("title",""),s.optString("bpm",""));
+        }
+    }
+
+    private void configureInternet(){
+        EditText input=new EditText(this);
+        input.setHint("Code Internet du Manager");
+        input.setSingleLine(true);
+        input.setText(getCode());
+        input.selectAll();
+
+        new AlertDialog.Builder(this)
+            .setTitle("Connexion Internet")
+            .setMessage("Entre le code affiché dans TS Playlist Manager. Les téléphones peuvent être sur des réseaux différents.")
+            .setView(input)
+            .setPositiveButton("Connecter",(d,w)->{
+                String code=cleanCode(input.getText().toString());
+                if(code.isEmpty())return;
+                getSharedPreferences(PREFS,MODE_PRIVATE).edit()
+                    .putString(K_CODE,code)
+                    .remove(K_CACHE)
+                    .apply();
+                lastSignature="";
+                refreshPlaylist();
+            })
+            .setNeutralButton("Effacer",(d,w)->{
+                getSharedPreferences(PREFS,MODE_PRIVATE).edit()
+                    .remove(K_CODE)
+                    .remove(K_CACHE)
+                    .apply();
+                lastSignature="";
+                showEmpty("Connexion Viewer","Aucun Manager Internet configuré.");
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private String cleanCode(String raw){
+        if(raw==null)return "";
+        String code=raw.trim();
+        while(code.endsWith("/"))code=code.substring(0,code.length()-1);
+        int slash=code.lastIndexOf('/');
+        if(slash>=0)code=code.substring(slash+1);
+        code=code.replaceAll("[^A-Za-z0-9_-]","");
+        return code;
+    }
+
+    private String getCode(){
+        return getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_CODE,"").trim();
+    }
+
+    private String readResponse(HttpURLConnection con) throws Exception{
+        BufferedReader br=new BufferedReader(new InputStreamReader(con.getInputStream(),StandardCharsets.UTF_8));
+        StringBuilder sb=new StringBuilder();
+        String line;
+        while((line=br.readLine())!=null)sb.append(line).append('\n');
+        br.close();
+        return sb.toString();
     }
 
     private void showEmpty(String title,String message){
