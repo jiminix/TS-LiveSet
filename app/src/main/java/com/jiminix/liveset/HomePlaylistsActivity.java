@@ -31,7 +31,6 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
-        PlaylistLanServer.start(this);
         buildUi();
         loadLists();
     }
