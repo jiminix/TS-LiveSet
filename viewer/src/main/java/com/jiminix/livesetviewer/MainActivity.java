@@ -27,6 +27,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
+    // Build V0.8 denser viewer rows
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -359,8 +360,8 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(8),dp(4),dp(8),dp(4));
-        row.setMinimumHeight(dp(46));
+        row.setPadding(dp(6),dp(1),dp(6),dp(1));
+        row.setMinimumHeight(dp(36));
         row.setBackgroundColor(number%2==1?Color.rgb(28,28,28):Color.BLACK);
 
         TextView num=new TextView(this);
@@ -369,7 +370,7 @@ public class MainActivity extends AppCompatActivity {
         num.setTextSize(14);
         num.setGravity(Gravity.CENTER);
         num.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        row.addView(num,new LinearLayout.LayoutParams(dp(42),ViewGroup.LayoutParams.MATCH_PARENT));
+        row.addView(num,new LinearLayout.LayoutParams(dp(36),ViewGroup.LayoutParams.MATCH_PARENT));
 
         TextView name=new TextView(this);
         name.setText(title);
@@ -388,8 +389,8 @@ public class MainActivity extends AppCompatActivity {
         bpmView.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         bpmView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         bpmView.setSingleLine(true);
-        bpmView.setPadding(dp(8),0,dp(2),0);
-        row.addView(bpmView,new LinearLayout.LayoutParams(dp(74),ViewGroup.LayoutParams.MATCH_PARENT));
+        bpmView.setPadding(dp(4),0,0,0);
+        row.addView(bpmView,new LinearLayout.LayoutParams(dp(62),ViewGroup.LayoutParams.MATCH_PARENT));
 
         songsBox.addView(row,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,

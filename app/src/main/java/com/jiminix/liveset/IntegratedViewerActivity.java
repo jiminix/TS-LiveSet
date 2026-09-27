@@ -25,6 +25,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.41 compact right metadata and text zoom -3..+2
     // Build V0.42 direct -/+ zoom controls with 6 levels
     // Build V0.43 zoom -5..+2, compact top bar and corrected slogan
+    // Build V0.44 denser viewer rows
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
@@ -137,7 +138,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
         songsBox=new LinearLayout(this);
         songsBox.setOrientation(LinearLayout.VERTICAL);
-        songsBox.setPadding(0,dp(4),0,dp(24));
+        songsBox.setPadding(0,dp(1),0,dp(10));
         scroll.addView(songsBox,new ScrollView.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -268,8 +269,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(8),dp(4),dp(8),dp(4));
-        row.setMinimumHeight(dp(46));
+        row.setPadding(dp(6),dp(1),dp(6),dp(1));
+        row.setMinimumHeight(dp(36));
         row.setBackgroundColor(number%2==1?Color.rgb(28,28,28):Color.BLACK);
 
         TextView num=new TextView(this);
@@ -318,7 +319,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 n1.setGravity(Gravity.CENTER);
                 n1.setPadding(dp(2),0,dp(2),0);
                 stageBox.addView(n1,new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(28)
+                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
                 ));
             }
 
@@ -330,7 +331,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 n2.setGravity(Gravity.CENTER);
                 n2.setPadding(dp(2),0,dp(2),0);
                 stageBox.addView(n2,new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(28)
+                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
                 ));
             }
 
@@ -341,7 +342,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 guitar.setGravity(Gravity.CENTER);
                 guitar.setPadding(dp(1),0,dp(1),0);
                 stageBox.addView(guitar,new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(28)
+                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
                 ));
             }
 
@@ -352,13 +353,13 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 keyboard.setGravity(Gravity.CENTER);
                 keyboard.setPadding(dp(1),0,dp(1),0);
                 stageBox.addView(keyboard,new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(28)
+                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
                 ));
             }
 
             row.addView(stageBox,new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                dp(30)
+                dp(26)
             ));
         }
 
