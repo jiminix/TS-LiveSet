@@ -40,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.15 compact slogan/info on one row
     // Build V0.16 fit full slogan on one line
     // Build V0.17 Meryl title and count-only info line
+    // Build V0.18 playlist name in top header and centered title count
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -63,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView playlistTitle;
+    private TextView appTitle;
     private TextView info;
     private LinearLayout songsBox;
     private ScrollView scroll;
@@ -102,8 +104,8 @@ public class MainActivity extends AppCompatActivity {
         root.setBackgroundColor(Color.BLACK);
         root.setPadding(dp(10),dp(12),dp(10),dp(10));
 
-        TextView appTitle=new TextView(this);
-        appTitle.setText("Meryl");
+        appTitle=new TextView(this);
+        appTitle.setText("Playlist");
         appTitle.setTextColor(Color.rgb(255,196,30));
         appTitle.setTextSize(22);
         appTitle.setGravity(Gravity.CENTER);
@@ -117,8 +119,6 @@ public class MainActivity extends AppCompatActivity {
         playlistTitle.setGravity(Gravity.CENTER);
         playlistTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         playlistTitle.setPadding(dp(6),dp(8),dp(6),dp(4));
-        root.addView(playlistTitle);
-
         LinearLayout infoRow=new LinearLayout(this);
         infoRow.setOrientation(LinearLayout.HORIZONTAL);
         infoRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         info.setTextSize(9);
         info.setSingleLine(true);
         info.setHorizontallyScrolling(false);
-        info.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+        info.setGravity(Gravity.CENTER);
         info.setPadding(dp(1),0,dp(1),0);
         infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(26),0.6f));
 
@@ -325,6 +325,7 @@ public class MainActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(name);
+        appTitle.setText((name==null || name.trim().isEmpty()) ? "Playlist" : name.trim());
         info.setText(songs.length()+" titre"+(songs.length()>1?"s":""));
         songsBox.removeAllViews();
 
@@ -505,6 +506,7 @@ public class MainActivity extends AppCompatActivity {
 
         lastSignature=signature;
         playlistTitle.setText(title);
+        appTitle.setText("Meryl");
         info.setText(message);
         songsBox.removeAllViews();
     }
