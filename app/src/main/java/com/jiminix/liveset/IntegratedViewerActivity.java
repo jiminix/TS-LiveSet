@@ -36,6 +36,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
+    private TextView appTitle;
     private TextView info;
     private LinearLayout songsBox;
     private ScrollView scroll;
@@ -98,8 +99,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         back.setTextSize(21);
         Ui.compactHeaderButton(back,this,32);
 
-        TextView appTitle=new TextView(this);
-        appTitle.setText("Meryl");
+        appTitle=new TextView(this);
+        appTitle.setText("Playlist");
         appTitle.setTextColor(Color.rgb(255,196,30));
         appTitle.setTextSize(15);
         appTitle.setSingleLine(true);
@@ -151,7 +152,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         info.setTextSize(9);
         info.setSingleLine(true);
         info.setHorizontallyScrolling(false);
-        info.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+        info.setGravity(Gravity.CENTER);
         info.setPadding(dp(1),0,dp(1),0);
         infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(26),0.6f));
 
@@ -247,6 +248,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(list.name);
+        appTitle.setText((list.name==null || list.name.trim().isEmpty()) ? "Playlist" : list.name.trim());
         info.setText(songs.size()+" titre"+(songs.size()>1?"s":""));
         songsBox.removeAllViews();
 
@@ -261,6 +263,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         if(signature.equals(lastSignature))return;
         lastSignature=signature;
         playlistTitle.setText(title);
+        appTitle.setText("Meryl");
         info.setText(title);
         songsBox.removeAllViews();
     }
