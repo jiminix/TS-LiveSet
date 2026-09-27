@@ -26,6 +26,7 @@ public class AppStore {
         JSONArray a = new JSONArray();
         for (Song s : songs) try { a.put(s.toJson()); } catch (Exception ignored) {}
         prefs(c).edit().putString(K_SONGS, a.toString()).apply();
+        PlaylistCloudSync.maybePublish(c);
     }
 
     public static List<SetListModel> loadSetlists(Context c) {
@@ -42,6 +43,7 @@ public class AppStore {
         JSONArray a = new JSONArray();
         for (SetListModel s : setlists) try { a.put(s.toJson()); } catch (Exception ignored) {}
         prefs(c).edit().putString(K_SETLISTS, a.toString()).apply();
+        PlaylistCloudSync.maybePublish(c);
     }
 
     public static Song findSong(Context c, String id) {
