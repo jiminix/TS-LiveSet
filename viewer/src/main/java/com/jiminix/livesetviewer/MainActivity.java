@@ -29,6 +29,7 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
     // Build V0.8 denser viewer rows
     // Build V0.9 page up/down navigation
+    // Build V0.10 TS 2026 info line with page arrows
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -111,23 +112,17 @@ public class MainActivity extends AppCompatActivity {
         playlistTitle.setPadding(dp(6),dp(8),dp(6),dp(4));
         root.addView(playlistTitle);
 
+        LinearLayout infoRow=new LinearLayout(this);
+        infoRow.setOrientation(LinearLayout.HORIZONTAL);
+        infoRow.setGravity(Gravity.CENTER_VERTICAL);
+
         info=new TextView(this);
-        info.setText("Connexion au Manager…");
+        info.setText("TS 2026");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(12);
         info.setGravity(Gravity.CENTER);
-        info.setPadding(dp(8),0,dp(8),dp(6));
-        root.addView(info);
-
-        LinearLayout controls=new LinearLayout(this);
-        controls.setOrientation(LinearLayout.HORIZONTAL);
-        controls.setGravity(Gravity.CENTER_VERTICAL);
-
-        Button internet=new Button(this);
-        internet.setText("🌐 Connexion Internet");
-        internet.setTextSize(13);
-        internet.setOnClickListener(v->configureInternet());
-        controls.addView(internet,new LinearLayout.LayoutParams(0,dp(44),1));
+        info.setPadding(dp(4),0,dp(4),0);
+        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(32),1));
 
         Button pageUp=new Button(this);
         pageUp.setText("↑");
@@ -135,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
         pageUp.setMinWidth(0);
         pageUp.setMinimumWidth(0);
         pageUp.setPadding(0,0,0,0);
-        controls.addView(pageUp,new LinearLayout.LayoutParams(dp(42),dp(44)));
+        infoRow.addView(pageUp,new LinearLayout.LayoutParams(dp(34),dp(32)));
 
         Button pageDown=new Button(this);
         pageDown.setText("↓");
@@ -143,9 +138,15 @@ public class MainActivity extends AppCompatActivity {
         pageDown.setMinWidth(0);
         pageDown.setMinimumWidth(0);
         pageDown.setPadding(0,0,0,0);
-        controls.addView(pageDown,new LinearLayout.LayoutParams(dp(42),dp(44)));
+        infoRow.addView(pageDown,new LinearLayout.LayoutParams(dp(34),dp(32)));
 
-        root.addView(controls,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
+        root.addView(infoRow,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(32)));
+
+        Button internet=new Button(this);
+        internet.setText("🌐 Connexion Internet");
+        internet.setTextSize(12);
+        internet.setOnClickListener(v->configureInternet());
+        root.addView(internet,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(38)));
 
         scroll=new ScrollView(this);
         scroll.setFillViewport(true);
@@ -301,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(name);
-        info.setText(songs.length()+" titre"+(songs.length()>1?"s":"")+" · "+source);
+        info.setText("TS 2026 · "+songs.length()+" titre"+(songs.length()>1?"s":""));
         songsBox.removeAllViews();
 
         for(int i=0;i<songs.length();i++){
