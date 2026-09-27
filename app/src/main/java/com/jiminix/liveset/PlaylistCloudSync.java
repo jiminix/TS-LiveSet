@@ -15,9 +15,10 @@ import java.nio.charset.StandardCharsets;
 
 public final class PlaylistCloudSync {
     // Build Internet sync V0.34
+    // Build Internet sync V0.36
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
-    private static final String API="https://jsonblob.com/api/jsonBlob";
+    private static final String API="https://api.jsonstorage.net/v1/json";
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static Runnable pendingPublish;
 
@@ -59,14 +60,16 @@ public final class PlaylistCloudSync {
                     int status=con.getResponseCode();
                     if(status<200 || status>=300)throw new Exception("HTTP "+status);
 
-                    String location=con.getHeaderField("Location");
-                    if(location==null || location.trim().isEmpty())location=con.getHeaderField("X-Jsonblob-Id");
-                    if(location==null || location.trim().isEmpty())throw new Exception("Code de synchronisation introuvable");
+                    String raw=readResponse(con);
+                    JSONObject created=new JSONObject(raw);
+                    String uri=created.optString("uri","").trim();
+                    if(uri.isEmpty())throw new Exception("Code de synchronisation introuvable");
 
-                    id=location.trim();
-                    int slash=id.lastIndexOf('/');
-                    if(slash>=0)id=id.substring(slash+1);
-                    if(id.isEmpty())throw new Exception("Code vide");
+                    String prefix=API+"/";
+                    id=uri.startsWith(prefix)?uri.substring(prefix.length()):uri;
+                    while(id.startsWith("/"))id=id.substring(1);
+                    while(id.endsWith("/"))id=id.substring(0,id.length()-1);
+                    if(id.isEmpty() || !id.contains("/"))throw new Exception("Code Internet invalide");
 
                     prefs(app).edit().putString(K_BLOB_ID,id).apply();
                     con.disconnect();
@@ -96,7 +99,7 @@ public final class PlaylistCloudSync {
         con.setReadTimeout(12000);
         con.setRequestProperty("Content-Type","application/json");
         con.setRequestProperty("Accept","application/json");
-        con.setRequestProperty("User-Agent","TS-LiveSet/0.34");
+        con.setRequestProperty("User-Agent","TS-LiveSet/0.36");
         con.setDoInput(true);
         if("POST".equals(method)||"PUT".equals(method))con.setDoOutput(true);
         return con;
@@ -110,13 +113,22 @@ public final class PlaylistCloudSync {
         }
     }
 
+    private static String readResponse(HttpURLConnection con) throws Exception{
+        BufferedReader br=new BufferedReader(new InputStreamReader(con.getInputStream(),StandardCharsets.UTF_8));
+        StringBuilder sb=new StringBuilder();
+        String line;
+        while((line=br.readLine())!=null)sb.append(line).append('\n');
+        br.close();
+        return sb.toString();
+    }
+
     private static JSONObject selectedPlaylistJson(Context c) throws Exception{
         JSONObject out=new JSONObject();
         String id=AppStore.getViewerSetlistId(c);
         SetListModel list=(id==null||id.isEmpty())?null:AppStore.findSetlist(c,id);
 
         out.put("schema",1);
-        out.put("managerVersion","0.34");
+        out.put("managerVersion","0.36");
         out.put("updatedAt",System.currentTimeMillis());
 
         if(list==null){
