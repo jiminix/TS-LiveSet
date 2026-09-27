@@ -28,6 +28,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.44 denser viewer rows
     // Build V0.45 page up/down navigation
     // Build V0.46 TS 2026 info line with page arrows
+    // Build V0.48 force TS 2026, title count and page arrows onto one line
     // Build V0.47 proportional zoom for stage info and row spacing
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
@@ -149,6 +150,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         info.setText("TS 2026");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(12);
+        info.setSingleLine(true);
+        info.setHorizontallyScrolling(false);
         info.setGravity(Gravity.CENTER);
         info.setPadding(dp(4),0,dp(4),0);
         infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(32),1));
