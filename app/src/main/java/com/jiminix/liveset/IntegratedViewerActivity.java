@@ -22,12 +22,14 @@ import java.util.List;
 public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.38
     // Build V0.39
+    // Build V0.41 compact right metadata and text zoom -3..+2
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
     private TextView info;
     private LinearLayout songsBox;
     private String lastSignature="";
+    private int textZoom=0;
 
     private final Runnable refreshLoop=new Runnable(){
         @Override public void run(){
@@ -40,6 +42,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         super.onCreate(b);
         setlistId=getIntent().getStringExtra("setlist_id");
         if(setlistId==null || setlistId.isEmpty())setlistId=AppStore.getViewerSetlistId(this);
+        textZoom=Math.max(-3,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
         buildUi();
     }
 
@@ -80,12 +83,17 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         appTitle.setLayoutParams(new LinearLayout.LayoutParams(0,dp(44),1));
 
+        Button zoom=Ui.button(this,zoomLabel());
+        zoom.setTextSize(11);
+        Ui.compactHeaderButton(zoom,this,68);
+
         Button cloud=Ui.button(this,"☁ Code");
         cloud.setTextSize(12);
         Ui.compactHeaderButton(cloud,this,76);
 
         top.addView(back);
         top.addView(appTitle);
+        top.addView(zoom);
         top.addView(cloud);
         root.addView(top);
 
@@ -139,10 +147,32 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         root.addView(footer);
 
         back.setOnClickListener(v->finish());
+        zoom.setOnClickListener(v->showZoomDialog(zoom));
         cloud.setOnClickListener(v->showInternetCode());
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private String zoomLabel(){
+        return "Zoom "+(textZoom>0?"+":"")+textZoom;
+    }
+
+    private void showZoomDialog(Button zoomButton){
+        final String[] levels={"−3","−2","−1","0","+1","+2"};
+        int checked=textZoom+3;
+        new AlertDialog.Builder(this)
+            .setTitle("Taille des titres")
+            .setSingleChoiceItems(levels,checked,(d,which)->{
+                textZoom=which-3;
+                getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putInt("text_zoom",textZoom).apply();
+                zoomButton.setText(zoomLabel());
+                lastSignature="";
+                refreshPlaylist();
+                d.dismiss();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
     }
 
     private void refreshPlaylist(){
@@ -242,17 +272,17 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         TextView num=new TextView(this);
         num.setText(String.format("%02d",number));
         num.setTextColor(Color.LTGRAY);
-        num.setTextSize(14);
+        num.setTextSize(14+textZoom);
         num.setGravity(Gravity.CENTER);
         num.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        row.addView(num,new LinearLayout.LayoutParams(dp(42),ViewGroup.LayoutParams.MATCH_PARENT));
+        row.addView(num,new LinearLayout.LayoutParams(dp(34),ViewGroup.LayoutParams.MATCH_PARENT));
 
         TextView name=new TextView(this);
         String title=song==null?"":song.title;
         String bpm=song==null?"":song.bpm;
         name.setText(title==null?"":title);
         name.setTextColor(Color.WHITE);
-        name.setTextSize(20);
+        name.setTextSize(20+textZoom);
         name.setGravity(Gravity.CENTER_VERTICAL);
         name.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         name.setSingleLine(true);
@@ -268,8 +298,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         if(hasStageInfo){
             LinearLayout stageBox=new LinearLayout(this);
             stageBox.setOrientation(LinearLayout.HORIZONTAL);
-            stageBox.setGravity(Gravity.CENTER);
-            stageBox.setPadding(dp(3),0,dp(3),0);
+            stageBox.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+            stageBox.setPadding(dp(2),0,dp(2),0);
 
             GradientDrawable stageBg=new GradientDrawable();
             stageBg.setColor(Color.BLACK);
@@ -281,34 +311,46 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 TextView n1=new TextView(this);
                 n1.setText(twoDigits(song.stageNum1));
                 n1.setTextColor(Color.WHITE);
-                n1.setTextSize(12);
+                n1.setTextSize(12+textZoom);
                 n1.setGravity(Gravity.CENTER);
-                stageBox.addView(n1,new LinearLayout.LayoutParams(dp(22),dp(28)));
+                n1.setPadding(dp(2),0,dp(2),0);
+                stageBox.addView(n1,new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(28)
+                ));
             }
 
             if(song.stageNum2!=null && !song.stageNum2.trim().isEmpty()){
                 TextView n2=new TextView(this);
                 n2.setText(twoDigits(song.stageNum2));
                 n2.setTextColor(Color.RED);
-                n2.setTextSize(12);
+                n2.setTextSize(12+textZoom);
                 n2.setGravity(Gravity.CENTER);
-                stageBox.addView(n2,new LinearLayout.LayoutParams(dp(22),dp(28)));
+                n2.setPadding(dp(2),0,dp(2),0);
+                stageBox.addView(n2,new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(28)
+                ));
             }
 
             if(song.stageGuitar){
                 TextView guitar=new TextView(this);
                 guitar.setText("🎸");
-                guitar.setTextSize(14);
+                guitar.setTextSize(14+textZoom);
                 guitar.setGravity(Gravity.CENTER);
-                stageBox.addView(guitar,new LinearLayout.LayoutParams(dp(28),dp(28)));
+                guitar.setPadding(dp(1),0,dp(1),0);
+                stageBox.addView(guitar,new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(28)
+                ));
             }
 
             if(song.stageKeyboard){
                 TextView keyboard=new TextView(this);
                 keyboard.setText("🎹");
-                keyboard.setTextSize(14);
+                keyboard.setTextSize(14+textZoom);
                 keyboard.setGravity(Gravity.CENTER);
-                stageBox.addView(keyboard,new LinearLayout.LayoutParams(dp(28),dp(28)));
+                keyboard.setPadding(dp(1),0,dp(1),0);
+                stageBox.addView(keyboard,new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(28)
+                ));
             }
 
             row.addView(stageBox,new LinearLayout.LayoutParams(
@@ -320,12 +362,18 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         TextView bpmView=new TextView(this);
         bpmView.setText(bpm==null || bpm.trim().isEmpty() ? "" : bpm.trim());
         bpmView.setTextColor(Color.rgb(255,196,30));
-        bpmView.setTextSize(14);
+        bpmView.setTextSize(14+textZoom);
         bpmView.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         bpmView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         bpmView.setSingleLine(true);
-        bpmView.setPadding(dp(8),0,dp(2),0);
-        row.addView(bpmView,new LinearLayout.LayoutParams(dp(74),ViewGroup.LayoutParams.MATCH_PARENT));
+        bpmView.setPadding(dp(4),0,0,0);
+        if(bpm==null || bpm.trim().isEmpty()){
+            bpmView.setVisibility(View.GONE);
+        }
+        row.addView(bpmView,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ));
 
         songsBox.addView(row,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,

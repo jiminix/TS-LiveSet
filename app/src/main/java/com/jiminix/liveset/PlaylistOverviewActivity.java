@@ -35,10 +35,12 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.34
     // Build V0.35
     // Build V0.40 dynamic stage indicators and titles
+    // Build V0.41 right-aligned compact metadata and text zoom -3..+2
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
     private boolean compact=true;
+    private int textZoom=0;
     private LinearLayout root;
     private Button modeButton;
     private TextView titleView;
@@ -55,6 +57,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         repairMissingLyrics();
         if(currentIndex>=0 && currentIndex<setlist.songIds.size()) currentSongId=setlist.songIds.get(currentIndex);
         compact=getSharedPreferences("playlist_view",MODE_PRIVATE).getBoolean("compact",true);
+        textZoom=Math.max(-3,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
         buildUi();
     }
 
@@ -184,15 +187,19 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         Button addLibrary=Ui.button(this,"＋ Bibliothèque");
         Button importTitles=Ui.button(this,"⇩ Importer");
         Button viewer=Ui.button(this,"▣ Viewer");
+        Button zoom=Ui.button(this,zoomLabel());
         addLibrary.setTextSize(13);
         importTitles.setTextSize(13);
         viewer.setTextSize(13);
+        zoom.setTextSize(11);
         Ui.weight(addLibrary,1);
         Ui.weight(importTitles,1);
         Ui.weight(viewer,1);
+        zoom.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,66),ViewGroup.LayoutParams.WRAP_CONTENT));
         actions.addView(addLibrary);
         actions.addView(importTitles);
         actions.addView(viewer);
+        actions.addView(zoom);
         root.addView(actions);
 
         back.setOnClickListener(v->finish());
@@ -202,6 +209,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         addLibrary.setOnClickListener(v->addSong());
         importTitles.setOnClickListener(v->openImporter());
         viewer.setOnClickListener(v->openViewer());
+        zoom.setOnClickListener(v->showZoomDialog(zoom));
         modeButton.setOnClickListener(v->toggleMode());
 
         Ui.applySafeArea(root);
@@ -322,6 +330,26 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putBoolean("compact",compact).apply();
         modeButton.setText(compact ? "Détail" : "Compact");
         adapter.notifyDataSetChanged();
+    }
+
+    private String zoomLabel(){
+        return "Zoom "+(textZoom>0?"+":"")+textZoom;
+    }
+
+    private void showZoomDialog(Button zoomButton){
+        final String[] levels={"−3","−2","−1","0","+1","+2"};
+        int checked=textZoom+3;
+        new AlertDialog.Builder(this)
+            .setTitle("Taille des titres")
+            .setSingleChoiceItems(levels,checked,(d,which)->{
+                textZoom=which-3;
+                getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putInt("text_zoom",textZoom).apply();
+                zoomButton.setText(zoomLabel());
+                adapter.notifyDataSetChanged();
+                d.dismiss();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
     }
 
     private void showAddSongMenu(){
@@ -525,13 +553,17 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             TextView bpm=new TextView(PlaylistOverviewActivity.this);
             bpm.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
             bpm.setTypeface(Typeface.DEFAULT_BOLD);
-            bpm.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,44));
-            bpm.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
+            bpm.setMinWidth(0);
+            bpm.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,0,0);
+            bpm.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
 
             LinearLayout stageBox=new LinearLayout(PlaylistOverviewActivity.this);
             stageBox.setOrientation(LinearLayout.HORIZONTAL);
-            stageBox.setGravity(Gravity.CENTER_VERTICAL);
-            stageBox.setPadding(Ui.dp(PlaylistOverviewActivity.this,4),0,Ui.dp(PlaylistOverviewActivity.this,4),0);
+            stageBox.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+            stageBox.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
             GradientDrawable stageBg=new GradientDrawable();
             stageBg.setColor(Color.BLACK);
             stageBg.setCornerRadius(Ui.dp(PlaylistOverviewActivity.this,4));
@@ -543,25 +575,29 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             stage1.setTextColor(Color.WHITE);
             stage1.setTextSize(12);
             stage1.setGravity(Gravity.CENTER);
-            stage1.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,22));
+            stage1.setMinWidth(0);
+            stage1.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
 
             TextView stage2=new TextView(PlaylistOverviewActivity.this);
             stage2.setTextColor(Color.RED);
             stage2.setTextSize(12);
             stage2.setGravity(Gravity.CENTER);
-            stage2.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,22));
+            stage2.setMinWidth(0);
+            stage2.setPadding(Ui.dp(PlaylistOverviewActivity.this,2),0,Ui.dp(PlaylistOverviewActivity.this,2),0);
 
             TextView guitarIcon=new TextView(PlaylistOverviewActivity.this);
             guitarIcon.setText("🎸");
             guitarIcon.setTextSize(14);
             guitarIcon.setGravity(Gravity.CENTER);
-            guitarIcon.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,28));
+            guitarIcon.setMinWidth(0);
+            guitarIcon.setPadding(Ui.dp(PlaylistOverviewActivity.this,1),0,Ui.dp(PlaylistOverviewActivity.this,1),0);
 
             TextView keyboardIcon=new TextView(PlaylistOverviewActivity.this);
             keyboardIcon.setText("🎹");
             keyboardIcon.setTextSize(14);
             keyboardIcon.setGravity(Gravity.CENTER);
-            keyboardIcon.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,28));
+            keyboardIcon.setMinWidth(0);
+            keyboardIcon.setPadding(Ui.dp(PlaylistOverviewActivity.this,1),0,Ui.dp(PlaylistOverviewActivity.this,1),0);
 
             stageBox.addView(stage1);
             stageBox.addView(stage2);
@@ -619,9 +655,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             Song s=AppStore.findSong(PlaylistOverviewActivity.this,id);
 
             h.num.setText(String.format("%02d",position+1));
-            h.num.setTextSize(compact?12:16);
-            h.song.setTextSize(compact?13:17);
-            h.bpm.setTextSize(compact?12:15);
+            h.num.setTextSize((compact?12:16)+textZoom);
+            h.song.setTextSize((compact?13:17)+textZoom);
+            h.bpm.setTextSize((compact?12:15)+textZoom);
             h.song.setSingleLine(compact);
 
             boolean hasStageInfo=s!=null && (
@@ -633,15 +669,18 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             if(s==null){
                 h.song.setText("Morceau introuvable");
                 h.bpm.setText("");
+                h.bpm.setVisibility(View.GONE);
             }else if(compact){
                 h.song.setText(s.title);
                 h.bpm.setText(s.bpm.isEmpty()?"":s.bpm);
+                h.bpm.setVisibility(s.bpm.isEmpty()?View.GONE:View.VISIBLE);
             }else{
                 String meta="";
                 if(!s.artist.isEmpty())meta=s.artist;
                 if(!s.key.isEmpty())meta+=(meta.isEmpty()?"":" · ")+s.key;
                 h.song.setText(s.title+(meta.isEmpty()?"":"\n"+meta));
                 h.bpm.setText(s.bpm.isEmpty()?"":s.bpm+" BPM");
+                h.bpm.setVisibility(s.bpm.isEmpty()?View.GONE:View.VISIBLE);
             }
 
             if(s!=null && hasStageInfo){
@@ -668,10 +707,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.keyboardIcon.setVisibility(showKeyboard?View.VISIBLE:View.GONE);
 
                 h.stage1.setTextColor(Color.WHITE);
-                h.stage1.setTextSize(12);
+                h.stage1.setTextSize(12+textZoom);
                 h.stage1.setGravity(Gravity.CENTER);
                 if(showNum1) h.stage1.setText(twoDigits(s.stageNum1));
                 if(showNum2) h.stage2.setText(twoDigits(s.stageNum2));
+                h.stage2.setTextSize(12+textZoom);
+                h.guitarIcon.setTextSize(14+textZoom);
+                h.keyboardIcon.setTextSize(14+textZoom);
                 h.guitarIcon.setAlpha(1f);
                 h.keyboardIcon.setAlpha(1f);
             }else{
