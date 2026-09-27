@@ -41,6 +41,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.46 compact one-line bottom controls
     // Build V0.47 BPM edit, online title suggestions and full-row zoom
     // Build V0.49 playlist top line: TS 2026, title count and page arrows
+    // Build V0.53 single-line playlist header, no drag-help row
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -72,6 +73,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         if(fresh!=null){
             setlist=fresh;
             repairMissingLyrics();
+            if(titleView!=null) titleView.setText(setlist.name+" · "+setlist.songIds.size()+" titres");
             if(adapter!=null) adapter.notifyDataSetChanged();
         }
     }
@@ -94,68 +96,48 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         back.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,34),Ui.dp(this,46)));
 
         titleView=new TextView(this);
-        titleView.setText(setlist.name);
+        titleView.setText(setlist.name+" · "+setlist.songIds.size()+" titres");
         titleView.setTextColor(Color.WHITE);
-        titleView.setTextSize(14);
+        titleView.setTextSize(11);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         titleView.setSingleLine(true);
         titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
         titleView.setGravity(Gravity.CENTER_VERTICAL);
-        titleView.setPadding(Ui.dp(this,3),0,Ui.dp(this,2),0);
-        titleView.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,44),1));
+        titleView.setPadding(Ui.dp(this,2),0,Ui.dp(this,2),0);
+        titleView.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,40),1));
         titleView.setClickable(true);
 
         Button rename=Ui.button(this,"✎");
         rename.setTextSize(14);
-        Ui.compactHeaderButton(rename,this,34);
+        Ui.compactHeaderButton(rename,this,30);
 
         Button add=Ui.button(this,"＋");
         add.setTextSize(18);
-        Ui.compactHeaderButton(add,this,34);
+        Ui.compactHeaderButton(add,this,30);
 
         modeButton=Ui.button(this, compact ? "Détail" : "Compact");
         modeButton.setTextSize(11);
-        Ui.compactHeaderButton(modeButton,this,58);
+        Ui.compactHeaderButton(modeButton,this,50);
+
+        Button pageUp=Ui.button(this,"↑");
+        pageUp.setTextSize(16);
+        Ui.compactHeaderButton(pageUp,this,30);
+
+        Button pageDown=Ui.button(this,"↓");
+        pageDown.setTextSize(16);
+        Ui.compactHeaderButton(pageDown,this,30);
 
         head.addView(back);
         head.addView(titleView);
+        head.addView(pageUp);
+        head.addView(pageDown);
         head.addView(rename);
         head.addView(add);
         head.addView(modeButton);
-        root.addView(head);
-
-        LinearLayout infoRow=Ui.row(this);
-        infoRow.setGravity(Gravity.CENTER_VERTICAL);
-        infoRow.setPadding(Ui.dp(this,3),0,Ui.dp(this,3),0);
-
-        TextView count=new TextView(this);
-        count.setText("TS 2026 · "+setlist.songIds.size()+" titres");
-        count.setTextColor(Color.LTGRAY);
-        count.setTextSize(11);
-        count.setSingleLine(true);
-        count.setGravity(Gravity.CENTER);
-        count.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
-        count.setTag("count");
-        infoRow.addView(count,new LinearLayout.LayoutParams(0,Ui.dp(this,32),1));
-
-        Button pageUp=Ui.button(this,"↑");
-        pageUp.setTextSize(18);
-        Ui.compactHeaderButton(pageUp,this,34);
-        Button pageDown=Ui.button(this,"↓");
-        pageDown.setTextSize(18);
-        Ui.compactHeaderButton(pageDown,this,34);
-        infoRow.addView(pageUp);
-        infoRow.addView(pageDown);
-        root.addView(infoRow,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,32)));
-
-        TextView sub=new TextView(this);
-        sub.setText(compact ? "Maintiens et glisse un titre pour le déplacer" : "Maintiens et glisse un titre pour le déplacer");
-        sub.setTextColor(Color.LTGRAY);
-        sub.setTextSize(10);
-        sub.setGravity(Gravity.CENTER);
-        sub.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),Ui.dp(this,2));
-        sub.setTag("sub");
-        root.addView(sub);
+        root.addView(head,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            Ui.dp(this,44)
+        ));
 
         recycler=new RecyclerView(this);
         recycler.setLayoutManager(new LinearLayoutManager(this));
@@ -354,7 +336,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 if(name.isEmpty())return;
                 setlist.name=name;
                 AppStore.upsertSetlist(this,setlist);
-                titleView.setText(name);
+                titleView.setText(name+" · "+setlist.songIds.size()+" titres");
             })
             .setNegativeButton("Annuler",null)
             .show();
@@ -616,8 +598,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     }
 
     private void updateCount(){
-        TextView count=root.findViewWithTag("count");
-        if(count!=null)count.setText("TS 2026 · "+setlist.songIds.size()+" titres");
+        if(titleView!=null){
+            titleView.setText(setlist.name+" · "+setlist.songIds.size()+" titres");
+        }
     }
 
     private String shortTitle(String title){
