@@ -38,6 +38,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.41 right-aligned compact metadata and text zoom -3..+2
     // Build V0.42 direct -/+ zoom controls with 6 levels
     // Build V0.43 zoom -5..+2 and compact one-line header
+    // Build V0.46 compact one-line bottom controls
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -186,21 +187,21 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         LinearLayout actions=Ui.row(this);
         actions.setPadding(Ui.dp(this,4),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,2));
-        Button addLibrary=Ui.button(this,"＋ Bibliothèque");
-        Button importTitles=Ui.button(this,"⇩ Importer");
+        Button addLibrary=Ui.button(this,"+");
+        Button importTitles=Ui.button(this,"⇩");
         Button viewer=Ui.button(this,"▣ Viewer");
         Button zoomMinus=Ui.button(this,"−");
         Button zoomPlus=Ui.button(this,"+");
-        addLibrary.setTextSize(13);
-        importTitles.setTextSize(13);
-        viewer.setTextSize(13);
-        zoomMinus.setTextSize(20);
-        zoomPlus.setTextSize(20);
-        Ui.weight(addLibrary,1);
-        Ui.weight(importTitles,1);
+        addLibrary.setTextSize(20);
+        importTitles.setTextSize(18);
+        viewer.setTextSize(11);
+        zoomMinus.setTextSize(18);
+        zoomPlus.setTextSize(18);
+        Ui.compactHeaderButton(addLibrary,this,42);
+        Ui.compactHeaderButton(importTitles,this,42);
         Ui.weight(viewer,1);
-        Ui.compactHeaderButton(zoomMinus,this,42);
-        Ui.compactHeaderButton(zoomPlus,this,42);
+        Ui.compactHeaderButton(zoomMinus,this,40);
+        Ui.compactHeaderButton(zoomPlus,this,40);
         actions.addView(addLibrary);
         actions.addView(importTitles);
         actions.addView(viewer);
