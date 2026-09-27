@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.11 force TS 2026, title count and page arrows onto one line
     // Build V0.12 accept compact 22-character connection codes
     // Build V0.13 accept one-letter one-digit A0-Z9 pairing codes
+    // Build V0.14 retry and cache short-code resolution
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -45,6 +46,10 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS="viewer_cloud";
     private static final String K_CODE="sync_code";
     private static final String K_CACHE="cached_payload";
+    private static final String K_RESOLVED_CODE="resolved_pair_code";
+    private static final String K_RESOLVED_BLOB="resolved_blob_id";
+    private static final String BOOTSTRAP_CODE="Y6";
+    private static final String BOOTSTRAP_BLOB="d7e6c82a-82e0-4336-8e66-d49b9d013312";
 
     private static final OkHttpClient CLIENT=new OkHttpClient.Builder()
         .connectTimeout(15,TimeUnit.SECONDS)
@@ -246,7 +251,9 @@ public class MainActivity extends AppCompatActivity {
                         try{
                             renderCloudPayload(new JSONObject(cached),true);
                         }catch(Exception ignored){
-                            showEmpty("Connexion Internet impossible","Vérifie le code Viewer et la connexion Internet.");
+                            String msg=e.getMessage();
+                            if(msg==null || msg.trim().isEmpty())msg="Erreur Internet";
+                            showEmpty("Connexion Internet impossible","Erreur : "+msg);
                         }
                     }else{
                         String msg=e.getMessage();
@@ -392,26 +399,58 @@ public class MainActivity extends AppCompatActivity {
         String code=raw.trim().toUpperCase();
         if(!code.matches("[A-Z][0-9]"))return raw.trim();
 
-        Request req=new Request.Builder()
-            .url(SHORT_REGISTRY_API)
-            .header("Accept","application/json")
-            .header("Accept-Encoding","identity")
-            .header("Connection","close")
-            .header("User-Agent","TS-Playlist-Viewer/0.13")
-            .get()
-            .build();
+        Exception last=null;
+        for(int attempt=0;attempt<3;attempt++){
+            try{
+                Request req=new Request.Builder()
+                    .url(SHORT_REGISTRY_API)
+                    .header("Accept","application/json")
+                    .header("Accept-Encoding","identity")
+                    .header("Connection","close")
+                    .header("User-Agent","TS-Playlist-Viewer/0.14")
+                    .get()
+                    .build();
 
-        try(Response response=CLIENT.newCall(req).execute()){
-            int status=response.code();
-            String body=response.body()==null?"":response.body().string();
-            if(status<200 || status>=300)throw new Exception("Registre HTTP "+status);
-            JSONObject registry=new JSONObject(body);
-            JSONObject slots=registry.optJSONObject("slots");
-            JSONObject entry=slots==null?null:slots.optJSONObject(code);
-            String blob=entry==null?"":entry.optString("blob","").trim();
-            if(blob.isEmpty())throw new Exception("Code "+code+" introuvable");
-            return blob;
+                try(Response response=CLIENT.newCall(req).execute()){
+                    int status=response.code();
+                    String body=response.body()==null?"":response.body().string();
+                    if(status<200 || status>=300)throw new Exception("Registre HTTP "+status);
+                    JSONObject registry=new JSONObject(body);
+                    JSONObject slots=registry.optJSONObject("slots");
+                    JSONObject entry=slots==null?null:slots.optJSONObject(code);
+                    String blob=entry==null?"":entry.optString("blob","").trim();
+                    if(blob.isEmpty())throw new Exception("Code "+code+" introuvable");
+
+                    getSharedPreferences(PREFS,MODE_PRIVATE).edit()
+                        .putString(K_RESOLVED_CODE,code)
+                        .putString(K_RESOLVED_BLOB,blob)
+                        .apply();
+                    return blob;
+                }
+            }catch(Exception e){
+                last=e;
+                if(attempt<2){
+                    try{Thread.sleep(650);}catch(InterruptedException ignored){}
+                }
+            }
         }
+
+        String savedCode=getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_RESOLVED_CODE,"");
+        String savedBlob=getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_RESOLVED_BLOB,"");
+        if(code.equalsIgnoreCase(savedCode) && savedBlob!=null && !savedBlob.trim().isEmpty()){
+            return savedBlob.trim();
+        }
+
+        // Emergency bootstrap for the current TS 2026 pairing.
+        if(BOOTSTRAP_CODE.equals(code)){
+            getSharedPreferences(PREFS,MODE_PRIVATE).edit()
+                .putString(K_RESOLVED_CODE,code)
+                .putString(K_RESOLVED_BLOB,BOOTSTRAP_BLOB)
+                .apply();
+            return BOOTSTRAP_BLOB;
+        }
+
+        throw last==null?new Exception("Code "+code+" introuvable"):last;
     }
 
     private String shortCode(String raw){
