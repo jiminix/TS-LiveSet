@@ -4,12 +4,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
-import java.nio.ByteBuffer;
-import java.util.UUID;
 import java.util.Collections;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -22,9 +19,13 @@ public final class PlaylistCloudSync {
     // Build Internet sync V0.36
     // Build Internet sync V0.37
     // Build Internet sync V0.51 compact 22-character share code
+    // Build Internet sync V0.52 two-character A0-Z9 pairing codes
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
+    private static final String K_SHORT_CODE="short_code";
     private static final String API="https://superjsonblob.com/api/jsonBlob";
+    private static final String SHORT_REGISTRY_ID="95af90a8-317b-4588-b7ab-5153db677527";
+    private static final String SHORT_REGISTRY_API=API+"/"+SHORT_REGISTRY_ID;
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static final MediaType JSON=MediaType.parse("application/json; charset=utf-8");
 
@@ -55,25 +56,69 @@ public final class PlaylistCloudSync {
         return code;
     }
 
-    public static String toShareCode(String code){
-        if(code==null)return "";
-        String raw=code.trim();
-        try{
-            UUID uuid=UUID.fromString(raw);
-            ByteBuffer b=ByteBuffer.allocate(16);
-            b.putLong(uuid.getMostSignificantBits());
-            b.putLong(uuid.getLeastSignificantBits());
-            return Base64.encodeToString(
-                b.array(),
-                Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING
-            );
-        }catch(Exception ignored){
-            return raw;
-        }
+    public static String getShareCode(Context c){
+        String shortCode=prefs(c).getString(K_SHORT_CODE,"");
+        shortCode=shortCode==null?"":shortCode.trim().toUpperCase();
+        return shortCode.matches("[A-Z][0-9]")?shortCode:"";
     }
 
-    public static String getShareCode(Context c){
-        return toShareCode(getCode(c));
+    private static String codeAt(int index){
+        int safe=Math.floorMod(index,260);
+        char letter=(char)('A'+(safe/10));
+        char digit=(char)('0'+(safe%10));
+        return ""+letter+digit;
+    }
+
+    private static String ensureShortCode(Context c,String blobId) throws Exception{
+        String current=getShareCode(c);
+        if(!current.isEmpty())return current;
+
+        JSONObject registry=getJson(SHORT_REGISTRY_API);
+        JSONObject slots=registry.optJSONObject("slots");
+        if(slots==null)slots=new JSONObject();
+
+        java.util.Iterator<String> keys=slots.keys();
+        while(keys.hasNext()){
+            String key=keys.next();
+            JSONObject entry=slots.optJSONObject(key);
+            if(entry!=null && blobId.equals(entry.optString("blob","")) && key.matches("[A-Z][0-9]")){
+                String found=key.toUpperCase();
+                prefs(c).edit().putString(K_SHORT_CODE,found).apply();
+                return found;
+            }
+        }
+
+        int start=Math.floorMod(blobId.hashCode(),260);
+        String chosen="";
+        String oldestCode="";
+        long oldestTime=Long.MAX_VALUE;
+
+        for(int i=0;i<260;i++){
+            String candidate=codeAt(start+i);
+            JSONObject entry=slots.optJSONObject(candidate);
+            if(entry==null || entry.optString("blob","").trim().isEmpty()){
+                chosen=candidate;
+                break;
+            }
+            long t=entry.optLong("updatedAt",0L);
+            if(t<oldestTime){
+                oldestTime=t;
+                oldestCode=candidate;
+            }
+        }
+
+        if(chosen.isEmpty())chosen=oldestCode.isEmpty()?codeAt(start):oldestCode;
+
+        JSONObject entry=new JSONObject();
+        entry.put("blob",blobId);
+        entry.put("updatedAt",System.currentTimeMillis());
+        slots.put(chosen,entry);
+        registry.put("schema",1);
+        registry.put("slots",slots);
+        requestJson("PUT",SHORT_REGISTRY_API,registry);
+
+        prefs(c).edit().putString(K_SHORT_CODE,chosen).apply();
+        return chosen;
     }
 
     public static boolean isConfigured(Context c){
@@ -104,7 +149,7 @@ public final class PlaylistCloudSync {
                     requestJson("PUT",API+"/"+code,payload);
                 }
 
-                final String resultCode=code;
+                final String resultCode=ensureShortCode(app,code);
                 if(listener!=null)MAIN.post(()->listener.onSuccess(resultCode));
             }catch(Exception e){
                 if(listener!=null){
@@ -168,6 +213,38 @@ public final class PlaylistCloudSync {
         }
 
         throw last==null?new Exception("Erreur de connexion Internet"):last;
+    }
+
+    private static JSONObject getJson(String url) throws Exception{
+        Exception last=null;
+        for(int attempt=0;attempt<2;attempt++){
+            try{
+                Request req=new Request.Builder()
+                    .url(url)
+                    .header("Accept","application/json")
+                    .header("Accept-Encoding","identity")
+                    .header("Connection","close")
+                    .header("User-Agent","TS-LiveSet/0.52")
+                    .get()
+                    .build();
+
+                try(Response response=CLIENT.newCall(req).execute()){
+                    int status=response.code();
+                    String raw=response.body()==null?"":response.body().string();
+                    if(status<200 || status>=300){
+                        throw new Exception("HTTP "+status+(raw.isEmpty()?"":" · "+shortMessage(raw)));
+                    }
+                    if(raw.trim().isEmpty())return new JSONObject();
+                    return new JSONObject(raw);
+                }
+            }catch(Exception e){
+                last=e;
+                if(attempt==0){
+                    try{Thread.sleep(500);}catch(InterruptedException ignored){}
+                }
+            }
+        }
+        throw last==null?new Exception("Erreur registre code"):last;
     }
 
     private static JSONObject requestJson(String method,String url,JSONObject payload) throws Exception{
