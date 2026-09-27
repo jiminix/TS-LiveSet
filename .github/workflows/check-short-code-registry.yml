@@ -1,0 +1,23 @@
+name: Check short-code registry
+
+on:
+  push:
+    paths:
+      - '.github/workflows/check-short-code-registry.yml'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch registry
+        run: |
+          set -euo pipefail
+          curl -fsS 'https://superjsonblob.com/api/jsonBlob/95af90a8-317b-4588-b7ab-5153db677527' -o registry.json
+          cat registry.json
+
+      - name: Upload registry snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: TS-short-code-registry-snapshot
+          path: registry.json
