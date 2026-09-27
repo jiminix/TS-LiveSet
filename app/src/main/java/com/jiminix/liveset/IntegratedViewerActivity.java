@@ -27,6 +27,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.43 zoom -5..+2, compact top bar and corrected slogan
     // Build V0.44 denser viewer rows
     // Build V0.45 page up/down navigation
+    // Build V0.46 TS 2026 info line with page arrows
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
@@ -132,19 +133,19 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         infoRow.setGravity(Gravity.CENTER_VERTICAL);
 
         info=new TextView(this);
-        info.setText("Lecture locale");
+        info.setText("TS 2026");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(12);
         info.setGravity(Gravity.CENTER);
-        info.setPadding(dp(4),0,dp(4),dp(2));
-        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(34),1));
+        info.setPadding(dp(4),0,dp(4),0);
+        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(32),1));
 
         Button pageUp=Ui.button(this,"↑");
         pageUp.setTextSize(18);
-        Ui.compactHeaderButton(pageUp,this,38);
+        Ui.compactHeaderButton(pageUp,this,34);
         Button pageDown=Ui.button(this,"↓");
         pageDown.setTextSize(18);
-        Ui.compactHeaderButton(pageDown,this,38);
+        Ui.compactHeaderButton(pageDown,this,34);
         infoRow.addView(pageUp);
         infoRow.addView(pageDown);
         root.addView(infoRow);
@@ -229,7 +230,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(list.name);
-        info.setText(songs.size()+" titre"+(songs.size()>1?"s":"")+" · Manager");
+        info.setText("TS 2026 · "+songs.size()+" titre"+(songs.size()>1?"s":""));
         songsBox.removeAllViews();
 
         for(int i=0;i<songs.size();i++){
