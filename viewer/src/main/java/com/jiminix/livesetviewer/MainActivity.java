@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.14 retry and cache short-code resolution
     // Build V0.15 compact slogan/info on one row
     // Build V0.16 fit full slogan on one line
+    // Build V0.17 Meryl title and count-only info line
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -102,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
         root.setPadding(dp(10),dp(12),dp(10),dp(10));
 
         TextView appTitle=new TextView(this);
-        appTitle.setText("TS PLAYLIST VIEWER");
+        appTitle.setText("Meryl");
         appTitle.setTextColor(Color.rgb(255,196,30));
         appTitle.setTextSize(22);
         appTitle.setGravity(Gravity.CENTER);
@@ -134,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
         infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(26),1.5f));
 
         info=new TextView(this);
-        info.setText("TS 2026");
+        info.setText("0 titres");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(9);
         info.setSingleLine(true);
@@ -324,7 +325,7 @@ public class MainActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(name);
-        info.setText("TS 2026 · "+songs.length()+" titre"+(songs.length()>1?"s":""));
+        info.setText(songs.length()+" titre"+(songs.length()>1?"s":""));
         songsBox.removeAllViews();
 
         for(int i=0;i<songs.length();i++){
