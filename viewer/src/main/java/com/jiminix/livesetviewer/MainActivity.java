@@ -18,13 +18,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
+import java.util.Collections;
 import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     // Viewer V0.5 Internet sync
-    private static final String API="https://api.jsonstorage.net/v1/json";
+    // Viewer V0.6 SuperJSONBlob
+    private static final String API="https://superjsonblob.com/api/jsonBlob";
     private static final String PREFS="viewer_cloud";
     private static final String K_CODE="sync_code";
     private static final String K_CACHE="cached_payload";
@@ -33,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
         .connectTimeout(15,TimeUnit.SECONDS)
         .readTimeout(15,TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
+        .protocols(Collections.singletonList(Protocol.HTTP_1_1))
         .build();
 
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -213,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
                     .header("Accept","application/json")
                     .header("Accept-Encoding","identity")
                     .header("Connection","close")
-                    .header("User-Agent","TS-Playlist-Viewer/0.5")
+                    .header("User-Agent","TS-Playlist-Viewer/0.6")
                     .get()
                     .build();
 
@@ -311,21 +315,17 @@ public class MainActivity extends AppCompatActivity {
         String prefix=API+"/";
         if(code.startsWith(prefix))code=code.substring(prefix.length());
 
-        while(code.startsWith("/"))code=code.substring(1);
         while(code.endsWith("/"))code=code.substring(0,code.length()-1);
 
-        code=code.replaceAll("[^A-Za-z0-9_\\-/]","");
-        if(!code.contains("/"))return "";
+        int slash=code.lastIndexOf('/');
+        if(slash>=0)code=code.substring(slash+1);
+
+        code=code.replaceAll("[^A-Za-z0-9_-]","");
         return code;
     }
 
     private String getCode(){
-        String code=getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_CODE,"").trim();
-        if(!code.isEmpty() && !code.contains("/")){
-            getSharedPreferences(PREFS,MODE_PRIVATE).edit().remove(K_CODE).remove(K_CACHE).apply();
-            return "";
-        }
-        return code;
+        return getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_CODE,"").trim();
     }
 
     private void showEmpty(String title,String message){
