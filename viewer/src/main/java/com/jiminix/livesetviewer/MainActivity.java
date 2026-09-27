@@ -17,19 +17,23 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
-    // Viewer V0.4 Internet sync
-    // Viewer V0.5 Internet sync backend
+    // Viewer V0.5 Internet sync
     private static final String API="https://api.jsonstorage.net/v1/json";
     private static final String PREFS="viewer_cloud";
     private static final String K_CODE="sync_code";
     private static final String K_CACHE="cached_payload";
+
+    private static final OkHttpClient CLIENT=new OkHttpClient.Builder()
+        .connectTimeout(15,TimeUnit.SECONDS)
+        .readTimeout(15,TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .build();
 
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView playlistTitle;
@@ -105,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
         info.setPadding(dp(8),0,dp(8),dp(6));
         root.addView(info);
 
-        Button internet= new Button(this);
+        Button internet=new Button(this);
         internet.setText("🌐 Connexion Internet");
         internet.setTextSize(13);
         internet.setOnClickListener(v->configureInternet());
@@ -176,22 +180,9 @@ public class MainActivity extends AppCompatActivity {
 
         new Thread(()->{
             try{
-                HttpURLConnection con=(HttpURLConnection)new URL(API+"/"+code).openConnection();
-                con.setRequestMethod("GET");
-                con.setConnectTimeout(8000);
-                con.setReadTimeout(10000);
-                con.setRequestProperty("Accept","application/json");
-                con.setRequestProperty("User-Agent","TS-Playlist-Viewer/0.5");
-
-                int status=con.getResponseCode();
-                if(status<200 || status>=300)throw new Exception("HTTP "+status);
-
-                String raw=readResponse(con);
-                con.disconnect();
-
+                String raw=getCloudJson(code);
                 JSONObject payload=new JSONObject(raw);
                 getSharedPreferences(PREFS,MODE_PRIVATE).edit().putString(K_CACHE,raw).apply();
-
                 runOnUiThread(()->renderCloudPayload(payload,false));
             }catch(Exception e){
                 String cached=getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_CACHE,"");
@@ -210,6 +201,38 @@ public class MainActivity extends AppCompatActivity {
                 cloudBusy=false;
             }
         },"TS-Viewer-Cloud").start();
+    }
+
+    private String getCloudJson(String code) throws Exception{
+        Exception last=null;
+
+        for(int attempt=0;attempt<2;attempt++){
+            try{
+                Request req=new Request.Builder()
+                    .url(API+"/"+code)
+                    .header("Accept","application/json")
+                    .header("Accept-Encoding","identity")
+                    .header("Connection","close")
+                    .header("User-Agent","TS-Playlist-Viewer/0.5")
+                    .get()
+                    .build();
+
+                try(Response response=CLIENT.newCall(req).execute()){
+                    int status=response.code();
+                    String raw=response.body()==null?"":response.body().string();
+                    if(status<200 || status>=300)throw new Exception("HTTP "+status);
+                    if(raw.trim().isEmpty())throw new Exception("Réponse Internet vide");
+                    return raw;
+                }
+            }catch(Exception e){
+                last=e;
+                if(attempt==0){
+                    try{Thread.sleep(700);}catch(InterruptedException ignored){}
+                }
+            }
+        }
+
+        throw last==null?new Exception("Erreur Internet"):last;
     }
 
     private void renderCloudPayload(JSONObject payload,boolean cached){
@@ -255,11 +278,16 @@ public class MainActivity extends AppCompatActivity {
             .setView(input)
             .setPositiveButton("Connecter",(d,w)->{
                 String code=cleanCode(input.getText().toString());
-                if(code.isEmpty())return;
+                if(code.isEmpty()){
+                    showEmpty("Code Internet invalide","Recopie le code complet affiché par le Manager.");
+                    return;
+                }
+
                 getSharedPreferences(PREFS,MODE_PRIVATE).edit()
                     .putString(K_CODE,code)
                     .remove(K_CACHE)
                     .apply();
+
                 lastSignature="";
                 refreshPlaylist();
             })
@@ -268,6 +296,7 @@ public class MainActivity extends AppCompatActivity {
                     .remove(K_CODE)
                     .remove(K_CACHE)
                     .apply();
+
                 lastSignature="";
                 showEmpty("Connexion Viewer","Aucun Manager Internet configuré.");
             })
@@ -299,18 +328,10 @@ public class MainActivity extends AppCompatActivity {
         return code;
     }
 
-    private String readResponse(HttpURLConnection con) throws Exception{
-        BufferedReader br=new BufferedReader(new InputStreamReader(con.getInputStream(),StandardCharsets.UTF_8));
-        StringBuilder sb=new StringBuilder();
-        String line;
-        while((line=br.readLine())!=null)sb.append(line).append('\n');
-        br.close();
-        return sb.toString();
-    }
-
     private void showEmpty(String title,String message){
         String signature=title+"|"+message;
         if(signature.equals(lastSignature))return;
+
         lastSignature=signature;
         playlistTitle.setText(title);
         info.setText(message);
