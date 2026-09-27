@@ -31,6 +31,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.48 force TS 2026, title count and page arrows onto one line
     // Build V0.50 remove duplicate playlist title and keep name/count/arrows on one row
     // Build V0.51 show compact 22-character Internet code
+    // Build V0.52 show one-letter one-digit Internet code
     // Build V0.47 proportional zoom for stage info and row spacing
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
@@ -267,16 +268,16 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     }
 
     private void showInternetCode(){
-        String code=PlaylistCloudSync.getCode(this);
+        String code=PlaylistCloudSync.getShareCode(this);
         if(code!=null && !code.isEmpty()){
-            showCodeDialog(PlaylistCloudSync.toShareCode(code));
+            showCodeDialog(code);
             return;
         }
 
         Toast.makeText(this,"Création du code Internet…",Toast.LENGTH_SHORT).show();
         PlaylistCloudSync.publishSelected(this,new PlaylistCloudSync.Listener(){
             @Override public void onSuccess(String newCode){
-                showCodeDialog(PlaylistCloudSync.toShareCode(newCode));
+                showCodeDialog(newCode);
             }
 
             @Override public void onError(String message){
