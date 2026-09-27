@@ -34,6 +34,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.33
     // Build V0.34
     // Build V0.35
+    // Build V0.40 dynamic stage indicators and titles
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -633,56 +634,48 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.song.setText("Morceau introuvable");
                 h.bpm.setText("");
             }else if(compact){
-                h.song.setText(hasStageInfo ? shortTitle(s.title) : s.title);
+                h.song.setText(s.title);
                 h.bpm.setText(s.bpm.isEmpty()?"":s.bpm);
             }else{
                 String meta="";
                 if(!s.artist.isEmpty())meta=s.artist;
                 if(!s.key.isEmpty())meta+=(meta.isEmpty()?"":" · ")+s.key;
-                h.song.setText((hasStageInfo ? shortTitle(s.title) : s.title)+(meta.isEmpty()?"":"\n"+meta));
+                h.song.setText(s.title+(meta.isEmpty()?"":"\n"+meta));
                 h.bpm.setText(s.bpm.isEmpty()?"":s.bpm+" BPM");
             }
 
             if(s!=null && hasStageInfo){
+                boolean showNum1=s.stageNum1!=null && !s.stageNum1.trim().isEmpty();
+                boolean showNum2=s.stageNum2!=null && !s.stageNum2.trim().isEmpty();
+                boolean showGuitar=s.stageGuitar;
+                boolean showKeyboard=s.stageKeyboard;
+
                 h.stageBox.setVisibility(View.VISIBLE);
-                h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,116),Ui.dp(PlaylistOverviewActivity.this,28)));
+                h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Ui.dp(PlaylistOverviewActivity.this,28)
+                ));
+
                 GradientDrawable stageBg=new GradientDrawable();
                 stageBg.setColor(Color.BLACK);
                 stageBg.setCornerRadius(Ui.dp(PlaylistOverviewActivity.this,4));
                 stageBg.setStroke(Ui.dp(PlaylistOverviewActivity.this,1),Color.rgb(70,70,70));
                 h.stageBox.setBackground(stageBg);
 
-                h.stage1.setVisibility(View.VISIBLE);
-                h.stage2.setVisibility(View.VISIBLE);
-                h.guitarIcon.setVisibility(View.VISIBLE);
-                h.keyboardIcon.setVisibility(View.VISIBLE);
+                h.stage1.setVisibility(showNum1?View.VISIBLE:View.GONE);
+                h.stage2.setVisibility(showNum2?View.VISIBLE:View.GONE);
+                h.guitarIcon.setVisibility(showGuitar?View.VISIBLE:View.GONE);
+                h.keyboardIcon.setVisibility(showKeyboard?View.VISIBLE:View.GONE);
 
                 h.stage1.setTextColor(Color.WHITE);
                 h.stage1.setTextSize(12);
                 h.stage1.setGravity(Gravity.CENTER);
-                h.stage1.setText(twoDigits(s.stageNum1));
-                h.stage2.setText(twoDigits(s.stageNum2));
-                h.guitarIcon.setAlpha(s.stageGuitar?1f:0.22f);
-                h.keyboardIcon.setAlpha(s.stageKeyboard?1f:0.22f);
+                if(showNum1) h.stage1.setText(twoDigits(s.stageNum1));
+                if(showNum2) h.stage2.setText(twoDigits(s.stageNum2));
+                h.guitarIcon.setAlpha(1f);
+                h.keyboardIcon.setAlpha(1f);
             }else{
-                h.stageBox.setVisibility(View.VISIBLE);
-                h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,34),Ui.dp(PlaylistOverviewActivity.this,28)));
-
-                GradientDrawable emptyBg=new GradientDrawable();
-                emptyBg.setColor(Color.TRANSPARENT);
-                emptyBg.setCornerRadius(Ui.dp(PlaylistOverviewActivity.this,4));
-                emptyBg.setStroke(Ui.dp(PlaylistOverviewActivity.this,1),Color.rgb(90,90,90));
-                h.stageBox.setBackground(emptyBg);
-
-                h.stage1.setVisibility(View.VISIBLE);
-                h.stage1.setText("＋");
-                h.stage1.setTextColor(Color.LTGRAY);
-                h.stage1.setTextSize(18);
-                h.stage1.setGravity(Gravity.CENTER);
-
-                h.stage2.setVisibility(View.GONE);
-                h.guitarIcon.setVisibility(View.GONE);
-                h.keyboardIcon.setVisibility(View.GONE);
+                h.stageBox.setVisibility(View.GONE);
             }
 
             boolean current=id.equals(currentSongId);

@@ -277,33 +277,44 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             stageBg.setStroke(dp(1),Color.rgb(70,70,70));
             stageBox.setBackground(stageBg);
 
-            TextView n1=new TextView(this);
-            n1.setText(twoDigits(song.stageNum1));
-            n1.setTextColor(Color.WHITE);
-            n1.setTextSize(12);
-            n1.setGravity(Gravity.CENTER);
-            stageBox.addView(n1,new LinearLayout.LayoutParams(dp(22),dp(28)));
+            if(song.stageNum1!=null && !song.stageNum1.trim().isEmpty()){
+                TextView n1=new TextView(this);
+                n1.setText(twoDigits(song.stageNum1));
+                n1.setTextColor(Color.WHITE);
+                n1.setTextSize(12);
+                n1.setGravity(Gravity.CENTER);
+                stageBox.addView(n1,new LinearLayout.LayoutParams(dp(22),dp(28)));
+            }
 
-            TextView n2=new TextView(this);
-            n2.setText(twoDigits(song.stageNum2));
-            n2.setTextColor(Color.RED);
-            n2.setTextSize(12);
-            n2.setGravity(Gravity.CENTER);
-            stageBox.addView(n2,new LinearLayout.LayoutParams(dp(22),dp(28)));
+            if(song.stageNum2!=null && !song.stageNum2.trim().isEmpty()){
+                TextView n2=new TextView(this);
+                n2.setText(twoDigits(song.stageNum2));
+                n2.setTextColor(Color.RED);
+                n2.setTextSize(12);
+                n2.setGravity(Gravity.CENTER);
+                stageBox.addView(n2,new LinearLayout.LayoutParams(dp(22),dp(28)));
+            }
 
-            TextView guitar=new TextView(this);
-            guitar.setText(song.stageGuitar?"🎸":"");
-            guitar.setTextSize(14);
-            guitar.setGravity(Gravity.CENTER);
-            stageBox.addView(guitar,new LinearLayout.LayoutParams(dp(28),dp(28)));
+            if(song.stageGuitar){
+                TextView guitar=new TextView(this);
+                guitar.setText("🎸");
+                guitar.setTextSize(14);
+                guitar.setGravity(Gravity.CENTER);
+                stageBox.addView(guitar,new LinearLayout.LayoutParams(dp(28),dp(28)));
+            }
 
-            TextView keyboard=new TextView(this);
-            keyboard.setText(song.stageKeyboard?"🎹":"");
-            keyboard.setTextSize(14);
-            keyboard.setGravity(Gravity.CENTER);
-            stageBox.addView(keyboard,new LinearLayout.LayoutParams(dp(28),dp(28)));
+            if(song.stageKeyboard){
+                TextView keyboard=new TextView(this);
+                keyboard.setText("🎹");
+                keyboard.setTextSize(14);
+                keyboard.setGravity(Gravity.CENTER);
+                stageBox.addView(keyboard,new LinearLayout.LayoutParams(dp(28),dp(28)));
+            }
 
-            row.addView(stageBox,new LinearLayout.LayoutParams(dp(106),dp(30)));
+            row.addView(stageBox,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                dp(30)
+            ));
         }
 
         TextView bpmView=new TextView(this);
