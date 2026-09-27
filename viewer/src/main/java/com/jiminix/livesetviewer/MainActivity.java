@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,6 +19,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
+import java.nio.ByteBuffer;
+import java.util.UUID;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.9 page up/down navigation
     // Build V0.10 TS 2026 info line with page arrows
     // Build V0.11 force TS 2026, title count and page arrows onto one line
+    // Build V0.12 accept compact 22-character connection codes
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -319,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
         EditText input=new EditText(this);
         input.setHint("Code Internet du Manager");
         input.setSingleLine(true);
-        input.setText(getCode());
+        input.setText(shortCode(getCode()));
         input.selectAll();
 
         new AlertDialog.Builder(this)
@@ -374,7 +378,38 @@ public class MainActivity extends AppCompatActivity {
         }
 
         code=code.trim().replaceAll("[^A-Za-z0-9_-]","");
-        return code;
+        String expanded=expandShortCode(code);
+        return expanded.isEmpty()?code:expanded;
+    }
+
+    private String shortCode(String raw){
+        if(raw==null || raw.trim().isEmpty())return "";
+        try{
+            UUID uuid=UUID.fromString(raw.trim());
+            ByteBuffer b=ByteBuffer.allocate(16);
+            b.putLong(uuid.getMostSignificantBits());
+            b.putLong(uuid.getLeastSignificantBits());
+            return Base64.encodeToString(
+                b.array(),
+                Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING
+            );
+        }catch(Exception ignored){
+            return raw.trim();
+        }
+    }
+
+    private String expandShortCode(String raw){
+        if(raw==null)return "";
+        String code=raw.trim();
+        if(!code.matches("[A-Za-z0-9_-]{22}"))return "";
+        try{
+            byte[] bytes=Base64.decode(code+"==",Base64.URL_SAFE|Base64.NO_WRAP);
+            if(bytes.length!=16)return "";
+            ByteBuffer b=ByteBuffer.wrap(bytes);
+            return new UUID(b.getLong(),b.getLong()).toString();
+        }catch(Exception ignored){
+            return "";
+        }
     }
 
     private String getCode(){
