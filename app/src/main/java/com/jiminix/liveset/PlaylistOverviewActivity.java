@@ -31,6 +31,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.26
     // Build V0.27
     // Build V0.32
+    // Build V0.33
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -194,7 +195,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         back.setOnClickListener(v->finish());
         titleView.setOnClickListener(v->renameList());
         rename.setOnClickListener(v->renameList());
-        add.setOnClickListener(v->addSong());
+        add.setOnClickListener(v->showAddSongMenu());
         addLibrary.setOnClickListener(v->addSong());
         importTitles.setOnClickListener(v->openImporter());
         viewer.setOnClickListener(v->openViewer());
@@ -287,6 +288,25 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putBoolean("compact",compact).apply();
         modeButton.setText(compact ? "Détail" : "Compact");
         adapter.notifyDataSetChanged();
+    }
+
+    private void showAddSongMenu(){
+        String[] choices={"Depuis la bibliothèque","Nouveau morceau"};
+        new AlertDialog.Builder(this)
+            .setTitle("Ajouter un morceau")
+            .setItems(choices,(d,which)->{
+                if(which==0) addSong();
+                else createNewSong();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private void createNewSong(){
+        Intent i=new Intent(this,EditSongActivity.class);
+        i.putExtra("target_setlist_id",setlist.id);
+        i.putExtra("new_song",true);
+        startActivity(i);
     }
 
     private void addSong(){
