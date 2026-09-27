@@ -43,7 +43,12 @@ public final class PlaylistCloudSync {
 
     public static String getCode(Context c){
         String code=prefs(c).getString(K_BLOB_ID,"");
-        return code==null?"":code.trim();
+        code=code==null?"":code.trim();
+        if(code.contains("/")){
+            prefs(c).edit().remove(K_BLOB_ID).apply();
+            return "";
+        }
+        return code;
     }
 
     public static boolean isConfigured(Context c){
