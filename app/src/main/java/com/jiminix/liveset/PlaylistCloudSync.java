@@ -14,6 +14,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public final class PlaylistCloudSync {
+    // Build Internet sync V0.34
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
     private static final String API="https://jsonblob.com/api/jsonBlob";
