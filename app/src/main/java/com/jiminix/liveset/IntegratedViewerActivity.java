@@ -268,13 +268,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     }
 
     private void showInternetCode(){
-        String code=PlaylistCloudSync.getShareCode(this);
-        if(code!=null && !code.isEmpty()){
-            showCodeDialog(code);
-            return;
-        }
-
-        Toast.makeText(this,"Création du code Internet…",Toast.LENGTH_SHORT).show();
+        Toast.makeText(this,"Vérification du code Internet…",Toast.LENGTH_SHORT).show();
         PlaylistCloudSync.publishSelected(this,new PlaylistCloudSync.Listener(){
             @Override public void onSuccess(String newCode){
                 showCodeDialog(newCode);
