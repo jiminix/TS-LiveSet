@@ -1,0 +1,31 @@
+name: Provision short-code registry
+
+on:
+  push:
+    paths:
+      - '.github/workflows/provision-short-code.yml'
+  workflow_dispatch:
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create shared short-code registry
+        run: |
+          set -euo pipefail
+          response=$(curl -fsS -D headers.txt -X POST 'https://superjsonblob.com/api/jsonBlob' \
+            -H 'content-type: application/json' \
+            -d '{"schema":1,"slots":{}}')
+          id=$(printf '%s' "$response" | jq -r '.id // ._id // empty')
+          if [ -z "$id" ]; then
+            location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {gsub("\\r","",$2); print $2}' headers.txt | tail -1)
+            id="${location##*/}"
+          fi
+          test -n "$id"
+          printf '%s\n' "$id" > short-code-registry-id.txt
+
+      - name: Upload registry id
+        uses: actions/upload-artifact@v4
+        with:
+          name: TS-short-code-registry-id
+          path: short-code-registry-id.txt
