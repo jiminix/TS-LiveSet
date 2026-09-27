@@ -325,7 +325,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getCode(){
-        return getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_CODE,"").trim();
+        String code=getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_CODE,"").trim();
+        if(code.contains("/")){
+            getSharedPreferences(PREFS,MODE_PRIVATE).edit().remove(K_CODE).remove(K_CACHE).apply();
+            return "";
+        }
+        return code;
     }
 
     private void showEmpty(String title,String message){
