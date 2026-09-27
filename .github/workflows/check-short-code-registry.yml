@@ -10,14 +10,20 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch registry
+      - name: Fetch registry and Y6 target
         run: |
           set -euo pipefail
           curl -fsS 'https://superjsonblob.com/api/jsonBlob/95af90a8-317b-4588-b7ab-5153db677527' -o registry.json
+          blob=$(jq -r '.slots.Y6.blob // empty' registry.json)
+          test -n "$blob"
+          curl -fsS "https://superjsonblob.com/api/jsonBlob/$blob" -o target.json
           cat registry.json
+          cat target.json
 
-      - name: Upload registry snapshot
+      - name: Upload diagnostic
         uses: actions/upload-artifact@v4
         with:
-          name: TS-short-code-registry-snapshot
-          path: registry.json
+          name: TS-short-code-diagnostic
+          path: |
+            registry.json
+            target.json
