@@ -4,9 +4,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
+import java.nio.ByteBuffer;
+import java.util.UUID;
 import java.util.Collections;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -18,6 +21,7 @@ import okhttp3.Response;
 public final class PlaylistCloudSync {
     // Build Internet sync V0.36
     // Build Internet sync V0.37
+    // Build Internet sync V0.51 compact 22-character share code
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
     private static final String API="https://superjsonblob.com/api/jsonBlob";
@@ -49,6 +53,27 @@ public final class PlaylistCloudSync {
             return "";
         }
         return code;
+    }
+
+    public static String toShareCode(String code){
+        if(code==null)return "";
+        String raw=code.trim();
+        try{
+            UUID uuid=UUID.fromString(raw);
+            ByteBuffer b=ByteBuffer.allocate(16);
+            b.putLong(uuid.getMostSignificantBits());
+            b.putLong(uuid.getLeastSignificantBits());
+            return Base64.encodeToString(
+                b.array(),
+                Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING
+            );
+        }catch(Exception ignored){
+            return raw;
+        }
+    }
+
+    public static String getShareCode(Context c){
+        return toShareCode(getCode(c));
     }
 
     public static boolean isConfigured(Context c){
