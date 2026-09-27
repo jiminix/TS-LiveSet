@@ -95,30 +95,30 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         Button back=Ui.button(this,"‹");
-        back.setTextSize(24);
-        Ui.compactHeaderButton(back,this,36);
+        back.setTextSize(21);
+        Ui.compactHeaderButton(back,this,32);
 
         TextView appTitle=new TextView(this);
         appTitle.setText("TS PLAYLIST VIEWER");
         appTitle.setTextColor(Color.rgb(255,196,30));
-        appTitle.setTextSize(17);
+        appTitle.setTextSize(15);
         appTitle.setSingleLine(true);
         appTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
         appTitle.setGravity(Gravity.CENTER);
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        appTitle.setLayoutParams(new LinearLayout.LayoutParams(0,dp(40),1));
+        appTitle.setLayoutParams(new LinearLayout.LayoutParams(0,dp(36),1));
 
         Button zoomMinus=Ui.button(this,"−");
-        zoomMinus.setTextSize(18);
-        Ui.compactHeaderButton(zoomMinus,this,34);
+        zoomMinus.setTextSize(16);
+        Ui.compactHeaderButton(zoomMinus,this,30);
 
         Button zoomPlus=Ui.button(this,"+");
-        zoomPlus.setTextSize(18);
-        Ui.compactHeaderButton(zoomPlus,this,34);
+        zoomPlus.setTextSize(16);
+        Ui.compactHeaderButton(zoomPlus,this,30);
 
         Button cloud=Ui.button(this,"☁ Code");
-        cloud.setTextSize(10);
-        Ui.compactHeaderButton(cloud,this,62);
+        cloud.setTextSize(9);
+        Ui.compactHeaderButton(cloud,this,56);
 
         top.addView(back);
         top.addView(appTitle);
@@ -127,46 +127,45 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         top.addView(cloud);
         root.addView(top);
 
-        TextView slogan=new TextView(this);
-        slogan.setText("Un pour tous, tous pour la même playlist.");
-        slogan.setTextColor(Color.WHITE);
-        slogan.setTextSize(13);
-        slogan.setGravity(Gravity.CENTER);
-        slogan.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        slogan.setPadding(dp(4),0,dp(4),dp(6));
-        root.addView(slogan);
-
         playlistTitle=new TextView(this);
         playlistTitle.setText("Playlist");
-        playlistTitle.setTextColor(Color.WHITE);
-        playlistTitle.setTextSize(25);
-        playlistTitle.setGravity(Gravity.CENTER);
-        playlistTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        playlistTitle.setPadding(dp(6),dp(8),dp(6),dp(4));
 
         LinearLayout infoRow=new LinearLayout(this);
         infoRow.setOrientation(LinearLayout.HORIZONTAL);
         infoRow.setGravity(Gravity.CENTER_VERTICAL);
+        infoRow.setPadding(dp(2),0,dp(2),0);
+
+        TextView slogan=new TextView(this);
+        slogan.setText("Un pour tous, tous pour la même playlist.");
+        slogan.setTextColor(Color.WHITE);
+        slogan.setTextSize(9);
+        slogan.setSingleLine(true);
+        slogan.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
+        slogan.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        slogan.setPadding(dp(2),0,dp(3),0);
+        infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(28),1.2f));
 
         info=new TextView(this);
         info.setText("TS 2026");
         info.setTextColor(Color.LTGRAY);
-        info.setTextSize(12);
+        info.setTextSize(10);
         info.setSingleLine(true);
         info.setHorizontallyScrolling(false);
-        info.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
-        info.setPadding(dp(6),0,dp(4),0);
-        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(32),1));
+        info.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+        info.setPadding(dp(2),0,dp(3),0);
+        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(28),0.8f));
 
         Button pageUp=Ui.button(this,"↑");
-        pageUp.setTextSize(18);
-        Ui.compactHeaderButton(pageUp,this,34);
+        pageUp.setTextSize(15);
+        Ui.compactHeaderButton(pageUp,this,28);
         Button pageDown=Ui.button(this,"↓");
-        pageDown.setTextSize(18);
-        Ui.compactHeaderButton(pageDown,this,34);
+        pageDown.setTextSize(15);
+        Ui.compactHeaderButton(pageDown,this,28);
         infoRow.addView(pageUp);
         infoRow.addView(pageDown);
-        root.addView(infoRow);
+        root.addView(infoRow,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,dp(28)
+        ));
 
         scroll=new ScrollView(this);
         scroll.setFillViewport(true);
