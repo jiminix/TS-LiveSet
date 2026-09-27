@@ -25,7 +25,8 @@ import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends AppCompatActivity {
     // Viewer V0.4 Internet sync
-    private static final String API="https://jsonblob.com/api/jsonBlob";
+    // Viewer V0.5 Internet sync backend
+    private static final String API="https://api.jsonstorage.net/v1/json";
     private static final String PREFS="viewer_cloud";
     private static final String K_CODE="sync_code";
     private static final String K_CACHE="cached_payload";
@@ -180,7 +181,7 @@ public class MainActivity extends AppCompatActivity {
                 con.setConnectTimeout(8000);
                 con.setReadTimeout(10000);
                 con.setRequestProperty("Accept","application/json");
-                con.setRequestProperty("User-Agent","TS-Playlist-Viewer/0.4");
+                con.setRequestProperty("User-Agent","TS-Playlist-Viewer/0.5");
 
                 int status=con.getResponseCode();
                 if(status<200 || status>=300)throw new Exception("HTTP "+status);
@@ -277,10 +278,15 @@ public class MainActivity extends AppCompatActivity {
     private String cleanCode(String raw){
         if(raw==null)return "";
         String code=raw.trim();
+
+        String prefix=API+"/";
+        if(code.startsWith(prefix))code=code.substring(prefix.length());
+
+        while(code.startsWith("/"))code=code.substring(1);
         while(code.endsWith("/"))code=code.substring(0,code.length()-1);
-        int slash=code.lastIndexOf('/');
-        if(slash>=0)code=code.substring(slash+1);
-        code=code.replaceAll("[^A-Za-z0-9_-]","");
+
+        code=code.replaceAll("[^A-Za-z0-9_\\-/]","");
+        if(!code.contains("/"))return "";
         return code;
     }
 
