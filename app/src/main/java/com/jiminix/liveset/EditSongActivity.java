@@ -36,7 +36,9 @@ public class EditSongActivity extends AppCompatActivity {
         targetSetlistId=getIntent().getStringExtra("target_setlist_id");
         song=id==null?new Song():AppStore.findSong(this,id);
         if(song==null) song=new Song();
-        buildUi(); fill();
+        buildUi();
+        fill();
+        applyPrefill();
     }
 
     private EditText field(LinearLayout root,String hint){
@@ -49,6 +51,9 @@ public class EditSongActivity extends AppCompatActivity {
         LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,getIntent().getBooleanExtra("new_song",false)?"Nouveau morceau":"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
         ScrollView sv=new ScrollView(this); LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),Ui.dp(this,30)); sv.addView(root);
         title=field(root,"Titre"); artist=field(root,"Artiste");
+        Button findSong=Ui.button(this,"⌕ Trouver titre / artiste");
+        findSong.setOnClickListener(v->searchSongIdentity());
+        root.addView(findSong);
         LinearLayout r1=Ui.row(this); key=mini("Tonalité",r1); bpm=mini("BPM",r1); capo=mini("Capo",r1); root.addView(r1);
         tuning=field(root,"Accordage"); duration=field(root,"Durée"); singer=field(root,"Chanteur / chanteuse"); guitar=field(root,"Guitare / instrument");
         notes=field(root,"Notes live : intro, fin, départ…"); media=field(root,"Lien YouTube ou autre média");
@@ -65,6 +70,55 @@ public class EditSongActivity extends AppCompatActivity {
     }
 
     private EditText mini(String hint,LinearLayout row){ EditText e=new EditText(this); e.setHint(hint); e.setTextColor(Color.WHITE); e.setHintTextColor(Color.GRAY); e.setSingleLine(true); Ui.weight(e,1); row.addView(e); return e; }
+
+    private void applyPrefill(){
+        if(!getIntent().getBooleanExtra("new_song",false))return;
+        String t=getIntent().getStringExtra("prefill_title");
+        String a=getIntent().getStringExtra("prefill_artist");
+        if(t!=null && !t.trim().isEmpty())title.setText(t.trim());
+        if(a!=null && !a.trim().isEmpty())artist.setText(a.trim());
+    }
+
+    private void searchSongIdentity(){
+        String q=(artist.getText().toString().trim()+" "+title.getText().toString().trim()).trim();
+        if(q.isEmpty()){
+            title.setError("Entre au moins un titre ou un artiste");
+            return;
+        }
+
+        android.widget.Toast.makeText(this,"Recherche du morceau…",android.widget.Toast.LENGTH_SHORT).show();
+
+        new Thread(()->{
+            try{
+                List<SongCatalogLookup.Result> results=SongCatalogLookup.search(q,10);
+                runOnUiThread(()->showSongIdentityResults(results));
+            }catch(Exception e){
+                runOnUiThread(()->android.widget.Toast.makeText(this,
+                    "Recherche impossible : "+e.getMessage(),
+                    android.widget.Toast.LENGTH_LONG).show());
+            }
+        },"TS-Song-Identity").start();
+    }
+
+    private void showSongIdentityResults(List<SongCatalogLookup.Result> results){
+        if(results==null || results.isEmpty()){
+            android.widget.Toast.makeText(this,"Aucun résultat trouvé.",android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String[] labels=new String[results.size()];
+        for(int i=0;i<results.size();i++)labels[i]=results.get(i).toString();
+
+        new AlertDialog.Builder(this)
+            .setTitle("Choisir le bon morceau")
+            .setItems(labels,(d,which)->{
+                SongCatalogLookup.Result r=results.get(which);
+                title.setText(r.title);
+                artist.setText(r.artist);
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
 
     private void fill(){ title.setText(song.title); artist.setText(song.artist); key.setText(song.key); bpm.setText(song.bpm); tuning.setText(song.tuning); capo.setText(song.capo); duration.setText(song.duration); singer.setText(song.singer); guitar.setText(song.guitar); notes.setText(song.notes); media.setText(song.mediaUrl); lyrics.setText(song.lyrics); }
 
