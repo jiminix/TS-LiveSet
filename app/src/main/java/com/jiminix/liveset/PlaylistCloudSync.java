@@ -20,6 +20,7 @@ public final class PlaylistCloudSync {
     // Build Internet sync V0.37
     // Build Internet sync V0.51 compact 22-character share code
     // Build Internet sync V0.52 two-character A0-Z9 pairing codes
+    // Build Internet sync V0.54 refresh short-code mapping
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
     private static final String K_SHORT_CODE="short_code";
@@ -71,11 +72,26 @@ public final class PlaylistCloudSync {
 
     private static String ensureShortCode(Context c,String blobId) throws Exception{
         String current=getShareCode(c);
-        if(!current.isEmpty())return current;
 
         JSONObject registry=getJson(SHORT_REGISTRY_API);
         JSONObject slots=registry.optJSONObject("slots");
         if(slots==null)slots=new JSONObject();
+
+        if(!current.isEmpty()){
+            JSONObject existing=slots.optJSONObject(current);
+            String mapped=existing==null?"":existing.optString("blob","").trim();
+            if(mapped.isEmpty() || blobId.equals(mapped)){
+                JSONObject refreshed=new JSONObject();
+                refreshed.put("blob",blobId);
+                refreshed.put("updatedAt",System.currentTimeMillis());
+                slots.put(current,refreshed);
+                registry.put("schema",1);
+                registry.put("slots",slots);
+                requestJson("PUT",SHORT_REGISTRY_API,registry);
+                return current;
+            }
+            prefs(c).edit().remove(K_SHORT_CODE).apply();
+        }
 
         java.util.Iterator<String> keys=slots.keys();
         while(keys.hasNext()){
