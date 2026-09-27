@@ -28,6 +28,7 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     // Build V0.8 denser viewer rows
+    // Build V0.9 page up/down navigation
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -47,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView playlistTitle;
     private TextView info;
     private LinearLayout songsBox;
+    private ScrollView scroll;
     private String lastSignature="";
     private volatile boolean cloudBusy=false;
 
@@ -92,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
         root.addView(appTitle,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
 
         TextView slogan=new TextView(this);
-        slogan.setText("1 pour tous, tous pour la même playlist.");
+        slogan.setText("Un pour tous, tous pour la même playlist.");
         slogan.setTextColor(Color.WHITE);
         slogan.setTextSize(13);
         slogan.setGravity(Gravity.CENTER);
@@ -117,13 +119,35 @@ public class MainActivity extends AppCompatActivity {
         info.setPadding(dp(8),0,dp(8),dp(6));
         root.addView(info);
 
+        LinearLayout controls=new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        controls.setGravity(Gravity.CENTER_VERTICAL);
+
         Button internet=new Button(this);
         internet.setText("🌐 Connexion Internet");
         internet.setTextSize(13);
         internet.setOnClickListener(v->configureInternet());
-        root.addView(internet,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
+        controls.addView(internet,new LinearLayout.LayoutParams(0,dp(44),1));
 
-        ScrollView scroll=new ScrollView(this);
+        Button pageUp=new Button(this);
+        pageUp.setText("↑");
+        pageUp.setTextSize(18);
+        pageUp.setMinWidth(0);
+        pageUp.setMinimumWidth(0);
+        pageUp.setPadding(0,0,0,0);
+        controls.addView(pageUp,new LinearLayout.LayoutParams(dp(42),dp(44)));
+
+        Button pageDown=new Button(this);
+        pageDown.setText("↓");
+        pageDown.setTextSize(18);
+        pageDown.setMinWidth(0);
+        pageDown.setMinimumWidth(0);
+        pageDown.setPadding(0,0,0,0);
+        controls.addView(pageDown,new LinearLayout.LayoutParams(dp(42),dp(44)));
+
+        root.addView(controls,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
+
+        scroll=new ScrollView(this);
         scroll.setFillViewport(true);
 
         songsBox=new LinearLayout(this);
@@ -146,7 +170,19 @@ public class MainActivity extends AppCompatActivity {
         footer.setPadding(0,dp(5),0,dp(2));
         root.addView(footer);
 
+        pageUp.setOnClickListener(v->pageScroll(-1));
+        pageDown.setOnClickListener(v->pageScroll(1));
+
         setContentView(root);
+    }
+
+    private void pageScroll(int direction){
+        if(scroll==null)return;
+        int page=Math.max(1,scroll.getHeight());
+        int max=Math.max(0,songsBox.getHeight()-scroll.getHeight());
+        int target=scroll.getScrollY()+(direction*page);
+        target=Math.max(0,Math.min(max,target));
+        scroll.smoothScrollTo(0,target);
     }
 
     private void refreshPlaylist(){

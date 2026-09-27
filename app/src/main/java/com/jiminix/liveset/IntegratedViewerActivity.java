@@ -26,11 +26,13 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.42 direct -/+ zoom controls with 6 levels
     // Build V0.43 zoom -5..+2, compact top bar and corrected slogan
     // Build V0.44 denser viewer rows
+    // Build V0.45 page up/down navigation
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
     private TextView info;
     private LinearLayout songsBox;
+    private ScrollView scroll;
     private String lastSignature="";
     private int textZoom=0;
 
@@ -125,15 +127,29 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         playlistTitle.setPadding(dp(6),dp(8),dp(6),dp(4));
         root.addView(playlistTitle);
 
+        LinearLayout infoRow=new LinearLayout(this);
+        infoRow.setOrientation(LinearLayout.HORIZONTAL);
+        infoRow.setGravity(Gravity.CENTER_VERTICAL);
+
         info=new TextView(this);
         info.setText("Lecture locale");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(12);
         info.setGravity(Gravity.CENTER);
-        info.setPadding(dp(8),0,dp(8),dp(8));
-        root.addView(info);
+        info.setPadding(dp(4),0,dp(4),dp(2));
+        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(34),1));
 
-        ScrollView scroll=new ScrollView(this);
+        Button pageUp=Ui.button(this,"↑");
+        pageUp.setTextSize(18);
+        Ui.compactHeaderButton(pageUp,this,38);
+        Button pageDown=Ui.button(this,"↓");
+        pageDown.setTextSize(18);
+        Ui.compactHeaderButton(pageDown,this,38);
+        infoRow.addView(pageUp);
+        infoRow.addView(pageDown);
+        root.addView(infoRow);
+
+        scroll=new ScrollView(this);
         scroll.setFillViewport(true);
 
         songsBox=new LinearLayout(this);
@@ -159,10 +175,21 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         back.setOnClickListener(v->finish());
         zoomMinus.setOnClickListener(v->changeZoom(-1));
         zoomPlus.setOnClickListener(v->changeZoom(1));
+        pageUp.setOnClickListener(v->pageScroll(-1));
+        pageDown.setOnClickListener(v->pageScroll(1));
         cloud.setOnClickListener(v->showInternetCode());
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private void pageScroll(int direction){
+        if(scroll==null)return;
+        int page=Math.max(1,scroll.getHeight());
+        int max=Math.max(0,songsBox.getHeight()-scroll.getHeight());
+        int target=scroll.getScrollY()+(direction*page);
+        target=Math.max(0,Math.min(max,target));
+        scroll.smoothScrollTo(0,target);
     }
 
     private void changeZoom(int delta){
