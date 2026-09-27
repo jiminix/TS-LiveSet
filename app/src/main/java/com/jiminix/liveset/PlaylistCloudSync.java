@@ -6,20 +6,28 @@ import android.os.Handler;
 import android.os.Looper;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public final class PlaylistCloudSync {
-    // Build Internet sync V0.34
     // Build Internet sync V0.36
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
     private static final String API="https://api.jsonstorage.net/v1/json";
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
+    private static final MediaType JSON=MediaType.parse("application/json; charset=utf-8");
+
+    private static final OkHttpClient CLIENT=new OkHttpClient.Builder()
+        .connectTimeout(15,TimeUnit.SECONDS)
+        .readTimeout(15,TimeUnit.SECONDS)
+        .writeTimeout(15,TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .build();
+
     private static Runnable pendingPublish;
 
     public interface Listener {
@@ -57,74 +65,79 @@ public final class PlaylistCloudSync {
         new Thread(()->{
             try{
                 JSONObject payload=selectedPlaylistJson(app);
-                String id=getCode(app);
+                String code=getCode(app);
 
-                if(id.isEmpty()){
-                    HttpURLConnection con=open(API,"POST");
-                    writeJson(con,payload);
-                    int status=con.getResponseCode();
-                    if(status<200 || status>=300)throw new Exception("HTTP "+status);
-
-                    String raw=readResponse(con);
-                    JSONObject created=new JSONObject(raw);
+                if(code.isEmpty()){
+                    JSONObject created=requestJson("POST",API,payload);
                     String uri=created.optString("uri","").trim();
                     if(uri.isEmpty())throw new Exception("Code de synchronisation introuvable");
 
                     String prefix=API+"/";
-                    id=uri.startsWith(prefix)?uri.substring(prefix.length()):uri;
-                    while(id.startsWith("/"))id=id.substring(1);
-                    while(id.endsWith("/"))id=id.substring(0,id.length()-1);
-                    if(id.isEmpty() || !id.contains("/"))throw new Exception("Code Internet invalide");
+                    code=uri.startsWith(prefix)?uri.substring(prefix.length()):uri;
+                    while(code.startsWith("/"))code=code.substring(1);
+                    while(code.endsWith("/"))code=code.substring(0,code.length()-1);
 
-                    prefs(app).edit().putString(K_BLOB_ID,id).apply();
-                    con.disconnect();
+                    if(code.isEmpty() || !code.contains("/")){
+                        throw new Exception("Code Internet invalide");
+                    }
+
+                    prefs(app).edit().putString(K_BLOB_ID,code).apply();
                 }else{
-                    HttpURLConnection con=open(API+"/"+id,"PUT");
-                    writeJson(con,payload);
-                    int status=con.getResponseCode();
-                    if(status<200 || status>=300)throw new Exception("HTTP "+status);
-                    con.disconnect();
+                    requestJson("PUT",API+"/"+code,payload);
                 }
 
-                final String code=id;
-                if(listener!=null)MAIN.post(()->listener.onSuccess(code));
+                final String resultCode=code;
+                if(listener!=null)MAIN.post(()->listener.onSuccess(resultCode));
             }catch(Exception e){
                 if(listener!=null){
-                    String msg=e.getMessage()==null?"Erreur Internet":e.getMessage();
-                    MAIN.post(()->listener.onError(msg));
+                    String msg=e.getMessage();
+                    if(msg==null || msg.trim().isEmpty())msg="Erreur de connexion Internet";
+                    final String out=msg;
+                    MAIN.post(()->listener.onError(out));
                 }
             }
         },"TS-Playlist-Cloud").start();
     }
 
-    private static HttpURLConnection open(String url,String method) throws Exception{
-        HttpURLConnection con=(HttpURLConnection)new URL(url).openConnection();
-        con.setRequestMethod(method);
-        con.setConnectTimeout(10000);
-        con.setReadTimeout(12000);
-        con.setRequestProperty("Content-Type","application/json");
-        con.setRequestProperty("Accept","application/json");
-        con.setRequestProperty("User-Agent","TS-LiveSet/0.36");
-        con.setDoInput(true);
-        if("POST".equals(method)||"PUT".equals(method))con.setDoOutput(true);
-        return con;
-    }
+    private static JSONObject requestJson(String method,String url,JSONObject payload) throws Exception{
+        Exception last=null;
 
-    private static void writeJson(HttpURLConnection con,JSONObject payload) throws Exception{
-        byte[] data=payload.toString().getBytes(StandardCharsets.UTF_8);
-        con.setFixedLengthStreamingMode(data.length);
-        try(OutputStream os=con.getOutputStream()){
-            os.write(data);
+        for(int attempt=0;attempt<2;attempt++){
+            try{
+                RequestBody body=RequestBody.create(JSON,payload.toString());
+                Request.Builder b=new Request.Builder()
+                    .url(url)
+                    .header("Accept","application/json")
+                    .header("Accept-Encoding","identity")
+                    .header("Connection","close")
+                    .header("User-Agent","TS-LiveSet/0.36");
+
+                if("POST".equals(method))b.post(body);
+                else b.put(body);
+
+                try(Response response=CLIENT.newCall(b.build()).execute()){
+                    int status=response.code();
+                    String raw=response.body()==null?"":response.body().string();
+                    if(status<200 || status>=300){
+                        throw new Exception("HTTP "+status+(raw.isEmpty()?"":" · "+shortMessage(raw)));
+                    }
+                    if(raw.trim().isEmpty())return new JSONObject();
+                    return new JSONObject(raw);
+                }
+            }catch(Exception e){
+                last=e;
+                if(attempt==0){
+                    try{Thread.sleep(700);}catch(InterruptedException ignored){}
+                }
+            }
         }
+
+        throw last==null?new Exception("Erreur de connexion Internet"):last;
     }
 
-    private static String readResponse(HttpURLConnection con) throws Exception{
-        BufferedReader br=new BufferedReader(new InputStreamReader(con.getInputStream(),StandardCharsets.UTF_8));
-        StringBuilder sb=new StringBuilder();
-        String line;
-        while((line=br.readLine())!=null)sb.append(line).append('\n');
-        br.close();
-        return sb.toString();
+    private static String shortMessage(String raw){
+        String s=raw.replaceAll("\\s+"," ").trim();
+        return s.length()>100?s.substring(0,100):s;
     }
 
     private static JSONObject selectedPlaylistJson(Context c) throws Exception{
@@ -160,6 +173,7 @@ public final class PlaylistCloudSync {
             o.put("stageKeyboard",s.stageKeyboard);
             songs.put(o);
         }
+
         out.put("songs",songs);
         return out;
     }
