@@ -29,6 +29,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.45 page up/down navigation
     // Build V0.46 TS 2026 info line with page arrows
     // Build V0.48 force TS 2026, title count and page arrows onto one line
+    // Build V0.50 remove duplicate playlist title and keep name/count/arrows on one row
     // Build V0.47 proportional zoom for stage info and row spacing
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
@@ -140,7 +141,6 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         playlistTitle.setGravity(Gravity.CENTER);
         playlistTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         playlistTitle.setPadding(dp(6),dp(8),dp(6),dp(4));
-        root.addView(playlistTitle);
 
         LinearLayout infoRow=new LinearLayout(this);
         infoRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -152,8 +152,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         info.setTextSize(12);
         info.setSingleLine(true);
         info.setHorizontallyScrolling(false);
-        info.setGravity(Gravity.CENTER);
-        info.setPadding(dp(4),0,dp(4),0);
+        info.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
+        info.setPadding(dp(6),0,dp(4),0);
         infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(32),1));
 
         Button pageUp=Ui.button(this,"↑");
@@ -246,7 +246,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(list.name);
-        info.setText("TS 2026 · "+songs.size()+" titre"+(songs.size()>1?"s":""));
+        String displayName=(list.name==null || list.name.trim().isEmpty()) ? "TS 2026" : list.name.trim();
+        info.setText(displayName+" · "+songs.size()+" titre"+(songs.size()>1?"s":""));
         songsBox.removeAllViews();
 
         for(int i=0;i<songs.size();i++){
@@ -260,7 +261,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         if(signature.equals(lastSignature))return;
         lastSignature=signature;
         playlistTitle.setText(title);
-        info.setText(message);
+        info.setText(title);
         songsBox.removeAllViews();
     }
 
