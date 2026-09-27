@@ -35,10 +35,13 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.10 TS 2026 info line with page arrows
     // Build V0.11 force TS 2026, title count and page arrows onto one line
     // Build V0.12 accept compact 22-character connection codes
+    // Build V0.13 accept one-letter one-digit A0-Z9 pairing codes
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
     private static final String API="https://superjsonblob.com/api/jsonBlob";
+    private static final String SHORT_REGISTRY_ID="95af90a8-317b-4588-b7ab-5153db677527";
+    private static final String SHORT_REGISTRY_API=API+"/"+SHORT_REGISTRY_ID;
     private static final String PREFS="viewer_cloud";
     private static final String K_CODE="sync_code";
     private static final String K_CACHE="cached_payload";
@@ -258,12 +261,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getCloudJson(String code) throws Exception{
+        String resolved=resolvePairCode(code);
         Exception last=null;
 
         for(int attempt=0;attempt<2;attempt++){
             try{
                 Request req=new Request.Builder()
-                    .url(API+"/"+code)
+                    .url(API+"/"+resolved)
                     .header("Accept","application/json")
                     .header("Accept-Encoding","identity")
                     .header("Connection","close")
@@ -321,19 +325,19 @@ public class MainActivity extends AppCompatActivity {
 
     private void configureInternet(){
         EditText input=new EditText(this);
-        input.setHint("Code Internet du Manager");
+        input.setHint("Exemple : A7");
         input.setSingleLine(true);
         input.setText(shortCode(getCode()));
         input.selectAll();
 
         new AlertDialog.Builder(this)
             .setTitle("Connexion Internet")
-            .setMessage("Entre le code affiché dans TS Playlist Manager. Les téléphones peuvent être sur des réseaux différents.")
+            .setMessage("Entre le code à 2 caractères affiché dans TS Playlist Manager, par exemple A7.")
             .setView(input)
             .setPositiveButton("Connecter",(d,w)->{
                 String code=cleanCode(input.getText().toString());
                 if(code.isEmpty()){
-                    showEmpty("Code Internet invalide","Recopie le code complet affiché par le Manager.");
+                    showEmpty("Code Internet invalide","Entre le code à 2 caractères affiché par le Manager.");
                     return;
                 }
 
@@ -378,14 +382,44 @@ public class MainActivity extends AppCompatActivity {
         }
 
         code=code.trim().replaceAll("[^A-Za-z0-9_-]","");
+        if(code.matches("(?i)[A-Z][0-9]"))return code.toUpperCase();
         String expanded=expandShortCode(code);
         return expanded.isEmpty()?code:expanded;
     }
 
+    private String resolvePairCode(String raw) throws Exception{
+        if(raw==null)return "";
+        String code=raw.trim().toUpperCase();
+        if(!code.matches("[A-Z][0-9]"))return raw.trim();
+
+        Request req=new Request.Builder()
+            .url(SHORT_REGISTRY_API)
+            .header("Accept","application/json")
+            .header("Accept-Encoding","identity")
+            .header("Connection","close")
+            .header("User-Agent","TS-Playlist-Viewer/0.13")
+            .get()
+            .build();
+
+        try(Response response=CLIENT.newCall(req).execute()){
+            int status=response.code();
+            String body=response.body()==null?"":response.body().string();
+            if(status<200 || status>=300)throw new Exception("Registre HTTP "+status);
+            JSONObject registry=new JSONObject(body);
+            JSONObject slots=registry.optJSONObject("slots");
+            JSONObject entry=slots==null?null:slots.optJSONObject(code);
+            String blob=entry==null?"":entry.optString("blob","").trim();
+            if(blob.isEmpty())throw new Exception("Code "+code+" introuvable");
+            return blob;
+        }
+    }
+
     private String shortCode(String raw){
         if(raw==null || raw.trim().isEmpty())return "";
+        String trimmed=raw.trim();
+        if(trimmed.matches("(?i)[A-Z][0-9]"))return trimmed.toUpperCase();
         try{
-            UUID uuid=UUID.fromString(raw.trim());
+            UUID uuid=UUID.fromString(trimmed);
             ByteBuffer b=ByteBuffer.allocate(16);
             b.putLong(uuid.getMostSignificantBits());
             b.putLong(uuid.getLeastSignificantBits());
@@ -394,7 +428,7 @@ public class MainActivity extends AppCompatActivity {
                 Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING
             );
         }catch(Exception ignored){
-            return raw.trim();
+            return trimmed;
         }
     }
 
