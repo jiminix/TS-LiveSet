@@ -33,6 +33,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.32
     // Build V0.33
     // Build V0.34
+    // Build V0.35
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -251,16 +252,18 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
     private void openViewer(){
         AppStore.selectViewerSetlist(this,setlist.id);
-        Toast.makeText(this,"Publication de la playlist sur Internet…",Toast.LENGTH_SHORT).show();
 
+        Intent viewer=new Intent(this,IntegratedViewerActivity.class);
+        viewer.putExtra("setlist_id",setlist.id);
+        startActivity(viewer);
+
+        // Keep the Internet copy updated for the remote Viewer phones.
         PlaylistCloudSync.publishSelected(this,new PlaylistCloudSync.Listener(){
-            @Override public void onSuccess(String code){
-                showViewerInternetDialog(code);
-            }
+            @Override public void onSuccess(String code){}
 
             @Override public void onError(String message){
                 Toast.makeText(PlaylistOverviewActivity.this,
-                    "Impossible de publier la playlist : "+message,
+                    "Viewer local ouvert. Synchronisation Internet indisponible : "+message,
                     Toast.LENGTH_LONG).show();
             }
         });
