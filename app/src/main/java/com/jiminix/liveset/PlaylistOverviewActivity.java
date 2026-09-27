@@ -383,6 +383,182 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         startActivity(i);
     }
 
+    private void searchOnlineSongForInsert(){
+        EditText input=new EditText(this);
+        input.setHint("Titre ou artiste");
+        input.setSingleLine(true);
+
+        new AlertDialog.Builder(this)
+            .setTitle("Rechercher un morceau")
+            .setView(input)
+            .setPositiveButton("Chercher",(d,w)->{
+                String q=input.getText().toString().trim();
+                if(q.isEmpty())return;
+                Toast.makeText(this,"Recherche en ligne…",Toast.LENGTH_SHORT).show();
+                new Thread(()->{
+                    try{
+                        List<SongCatalogLookup.Result> results=SongCatalogLookup.search(q,12);
+                        runOnUiThread(()->showOnlineInsertResults(results));
+                    }catch(Exception e){
+                        runOnUiThread(()->Toast.makeText(this,"Recherche impossible : "+e.getMessage(),Toast.LENGTH_LONG).show());
+                    }
+                },"TS-Song-Search").start();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private void showOnlineInsertResults(List<SongCatalogLookup.Result> results){
+        if(results==null || results.isEmpty()){
+            Toast.makeText(this,"Aucun morceau trouvé.",Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String[] labels=new String[results.size()];
+        for(int i=0;i<results.size();i++)labels[i]=results.get(i).toString();
+
+        new AlertDialog.Builder(this)
+            .setTitle("Choisir le morceau")
+            .setItems(labels,(d,which)->{
+                SongCatalogLookup.Result r=results.get(which);
+                Intent i=new Intent(this,EditSongActivity.class);
+                i.putExtra("target_setlist_id",setlist.id);
+                i.putExtra("new_song",true);
+                i.putExtra("prefill_title",r.title);
+                i.putExtra("prefill_artist",r.artist);
+                startActivity(i);
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private static class TitleCorrection {
+        final String songId;
+        final String oldTitle;
+        final String oldArtist;
+        final SongCatalogLookup.Result result;
+        TitleCorrection(String songId,String oldTitle,String oldArtist,SongCatalogLookup.Result result){
+            this.songId=songId;
+            this.oldTitle=oldTitle==null?"":oldTitle;
+            this.oldArtist=oldArtist==null?"":oldArtist;
+            this.result=result;
+        }
+    }
+
+    private void findCorrectTitles(){
+        if(setlist.songIds.isEmpty()){
+            Toast.makeText(this,"Playlist vide.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this,"Recherche des titres et artistes…",Toast.LENGTH_LONG).show();
+
+        new Thread(()->{
+            List<TitleCorrection> corrections=new ArrayList<>();
+
+            for(String id:setlist.songIds){
+                Song s=AppStore.findSong(this,id);
+                if(s==null || s.title==null || s.title.trim().isEmpty())continue;
+
+                String query=((s.artist==null?"":s.artist)+" "+s.title).trim();
+                try{
+                    List<SongCatalogLookup.Result> results=SongCatalogLookup.search(query,3);
+                    if(results.isEmpty())continue;
+
+                    SongCatalogLookup.Result best=results.get(0);
+                    boolean titleChanged=!s.title.trim().equals(best.title);
+                    boolean artistChanged=!((s.artist==null?"":s.artist.trim()).equals(best.artist));
+                    if(titleChanged || artistChanged){
+                        corrections.add(new TitleCorrection(s.id,s.title,s.artist,best));
+                    }
+                    try{Thread.sleep(120);}catch(InterruptedException ignored){}
+                }catch(Exception ignored){}
+            }
+
+            runOnUiThread(()->showTitleCorrections(corrections));
+        },"TS-Playlist-Title-Fix").start();
+    }
+
+    private void showTitleCorrections(List<TitleCorrection> corrections){
+        if(corrections==null || corrections.isEmpty()){
+            Toast.makeText(this,"Aucune correction à proposer.",Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String[] labels=new String[corrections.size()];
+        boolean[] checked=new boolean[corrections.size()];
+        for(int i=0;i<corrections.size();i++){
+            TitleCorrection x=corrections.get(i);
+            labels[i]=x.oldTitle+"  →  "+x.result.title+
+                (x.result.artist.isEmpty()?"":" — "+x.result.artist);
+            checked[i]=true;
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Corrections proposées")
+            .setMultiChoiceItems(labels,checked,(d,which,isChecked)->checked[which]=isChecked)
+            .setPositiveButton("Appliquer",(d,w)->{
+                int changed=0;
+                for(int i=0;i<corrections.size();i++){
+                    if(!checked[i])continue;
+                    TitleCorrection x=corrections.get(i);
+                    Song s=AppStore.findSong(this,x.songId);
+                    if(s==null)continue;
+                    s.title=x.result.title;
+                    s.artist=x.result.artist;
+                    AppStore.upsertSong(this,s);
+                    changed++;
+                }
+                adapter.notifyDataSetChanged();
+                Toast.makeText(this,changed+" morceau"+(changed>1?"x":"")+" corrigé"+(changed>1?"s":""),Toast.LENGTH_LONG).show();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private void editBpm(int pos){
+        if(pos<0 || pos>=setlist.songIds.size())return;
+        Song s=AppStore.findSong(this,setlist.songIds.get(pos));
+        if(s==null)return;
+
+        EditText input=new EditText(this);
+        input.setHint("BPM");
+        input.setSingleLine(true);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setText(s.bpm==null?"":s.bpm);
+        input.selectAll();
+
+        new AlertDialog.Builder(this)
+            .setTitle("BPM — "+s.title)
+            .setView(input)
+            .setPositiveButton("Enregistrer",(d,w)->{
+                String value=input.getText().toString().replaceAll("[^0-9]","");
+                if(value.length()>3)value=value.substring(0,3);
+                s.bpm=value;
+                AppStore.upsertSong(this,s);
+                adapter.notifyItemChanged(pos);
+            })
+            .setNeutralButton("Effacer",(d,w)->{
+                s.bpm="";
+                AppStore.upsertSong(this,s);
+                adapter.notifyItemChanged(pos);
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private float zoomScale(){
+        return Math.max(0.62f,Math.min(1.18f,1f+(textZoom*0.076f)));
+    }
+
+    private int zdp(int base){
+        return Ui.dp(this,Math.max(1,Math.round(base*zoomScale())));
+    }
+
+    private float zsp(float base){
+        return Math.max(7f,base*zoomScale());
+    }
+
     private void addSong(){
         List<Song> all=AppStore.loadSongs(this);
         List<Song> available=new ArrayList<>();
