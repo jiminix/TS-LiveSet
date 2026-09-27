@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
         TextView head = Ui.title(this, "LIVESET");
         Ui.compactHeaderTitle(head,this);
         TextView version = new TextView(this);
-        version.setText("v0.34");
+        version.setText("v0.35");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(12);
         version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
