@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.12 accept compact 22-character connection codes
     // Build V0.13 accept one-letter one-digit A0-Z9 pairing codes
     // Build V0.14 retry and cache short-code resolution
+    // Build V0.15 compact slogan/info on one row
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -107,15 +108,6 @@ public class MainActivity extends AppCompatActivity {
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         root.addView(appTitle,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
 
-        TextView slogan=new TextView(this);
-        slogan.setText("Un pour tous, tous pour la même playlist.");
-        slogan.setTextColor(Color.WHITE);
-        slogan.setTextSize(13);
-        slogan.setGravity(Gravity.CENTER);
-        slogan.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        slogan.setPadding(dp(4),0,dp(4),dp(6));
-        root.addView(slogan,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
-
         playlistTitle=new TextView(this);
         playlistTitle.setText("Connexion Viewer");
         playlistTitle.setTextColor(Color.WHITE);
@@ -128,34 +120,45 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout infoRow=new LinearLayout(this);
         infoRow.setOrientation(LinearLayout.HORIZONTAL);
         infoRow.setGravity(Gravity.CENTER_VERTICAL);
+        infoRow.setPadding(dp(2),0,dp(2),0);
+
+        TextView slogan=new TextView(this);
+        slogan.setText("Un pour tous, tous pour la même playlist.");
+        slogan.setTextColor(Color.WHITE);
+        slogan.setTextSize(9);
+        slogan.setSingleLine(true);
+        slogan.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
+        slogan.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        slogan.setPadding(dp(2),0,dp(3),0);
+        infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(28),1.2f));
 
         info=new TextView(this);
         info.setText("TS 2026");
         info.setTextColor(Color.LTGRAY);
-        info.setTextSize(12);
+        info.setTextSize(10);
         info.setSingleLine(true);
         info.setHorizontallyScrolling(false);
-        info.setGravity(Gravity.CENTER);
-        info.setPadding(dp(4),0,dp(4),0);
-        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(32),1));
+        info.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+        info.setPadding(dp(2),0,dp(3),0);
+        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(28),0.8f));
 
         Button pageUp=new Button(this);
         pageUp.setText("↑");
-        pageUp.setTextSize(18);
+        pageUp.setTextSize(15);
         pageUp.setMinWidth(0);
         pageUp.setMinimumWidth(0);
         pageUp.setPadding(0,0,0,0);
-        infoRow.addView(pageUp,new LinearLayout.LayoutParams(dp(34),dp(32)));
+        infoRow.addView(pageUp,new LinearLayout.LayoutParams(dp(28),dp(28)));
 
         Button pageDown=new Button(this);
         pageDown.setText("↓");
-        pageDown.setTextSize(18);
+        pageDown.setTextSize(15);
         pageDown.setMinWidth(0);
         pageDown.setMinimumWidth(0);
         pageDown.setPadding(0,0,0,0);
-        infoRow.addView(pageDown,new LinearLayout.LayoutParams(dp(34),dp(32)));
+        infoRow.addView(pageDown,new LinearLayout.LayoutParams(dp(28),dp(28)));
 
-        root.addView(infoRow,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(32)));
+        root.addView(infoRow,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(28)));
 
         Button internet=new Button(this);
         internet.setText("🌐 Connexion Internet");
