@@ -1,6 +1,8 @@
 package com.jiminix.liveset;
 
 import android.app.AlertDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
@@ -14,14 +16,24 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class EditSongActivity extends AppCompatActivity {
     private Song song;
+    private String targetSetlistId;
     private EditText title, artist, key, bpm, tuning, capo, duration, singer, guitar, notes, media, lyrics;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         String id=getIntent().getStringExtra("song_id");
+        targetSetlistId=getIntent().getStringExtra("target_setlist_id");
         song=id==null?new Song():AppStore.findSong(this,id);
         if(song==null) song=new Song();
         buildUi(); fill();
@@ -34,13 +46,16 @@ public class EditSongActivity extends AppCompatActivity {
 
     private void buildUi(){
         LinearLayout outer=new LinearLayout(this); outer.setOrientation(LinearLayout.VERTICAL); outer.setBackgroundColor(Color.rgb(18,18,18));
-        LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
+        LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,getIntent().getBooleanExtra("new_song",false)?"Nouveau morceau":"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
         ScrollView sv=new ScrollView(this); LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),Ui.dp(this,30)); sv.addView(root);
         title=field(root,"Titre"); artist=field(root,"Artiste");
         LinearLayout r1=Ui.row(this); key=mini("Tonalité",r1); bpm=mini("BPM",r1); capo=mini("Capo",r1); root.addView(r1);
         tuning=field(root,"Accordage"); duration=field(root,"Durée"); singer=field(root,"Chanteur / chanteuse"); guitar=field(root,"Guitare / instrument");
         notes=field(root,"Notes live : intro, fin, départ…"); media=field(root,"Lien YouTube ou autre média");
         TextView lh=Ui.title(this,"Paroles / structure"); lh.setTextSize(18); root.addView(lh);
+        Button findLyrics=Ui.button(this,"🌐 Chercher les paroles sur le web");
+        findLyrics.setOnClickListener(v->searchLyricsWeb());
+        root.addView(findLyrics);
         lyrics=new EditText(this); lyrics.setHint("INTRO\n...\n\nCOUPLET 1\n...\n\nREFRAIN\n..."); lyrics.setGravity(android.view.Gravity.TOP); lyrics.setMinLines(14); lyrics.setTextColor(Color.WHITE); lyrics.setHintTextColor(Color.GRAY); lyrics.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         root.addView(lyrics,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,360)));
         Button arrange=Ui.button(this,"↕ Réarranger les blocs"); arrange.setOnClickListener(v->rearrangeBlocks()); root.addView(arrange);
@@ -56,7 +71,116 @@ public class EditSongActivity extends AppCompatActivity {
     private void save(){
         song.title=title.getText().toString().trim(); song.artist=artist.getText().toString().trim(); song.key=key.getText().toString().trim(); song.bpm=bpm.getText().toString().trim(); song.tuning=tuning.getText().toString().trim(); song.capo=capo.getText().toString().trim(); song.duration=duration.getText().toString().trim(); song.singer=singer.getText().toString().trim(); song.guitar=guitar.getText().toString().trim(); song.notes=notes.getText().toString().trim(); song.mediaUrl=media.getText().toString().trim(); song.lyrics=lyrics.getText().toString();
         if(song.title.isEmpty()){ title.setError("Titre obligatoire"); return; }
-        AppStore.upsertSong(this,song); finish();
+        AppStore.upsertSong(this,song);
+        if(targetSetlistId!=null && !targetSetlistId.isEmpty()){
+            SetListModel sl=AppStore.findSetlist(this,targetSetlistId);
+            if(sl!=null && !sl.songIds.contains(song.id)){
+                sl.songIds.add(song.id);
+                AppStore.upsertSetlist(this,sl);
+            }
+        }
+        finish();
+    }
+
+    private void searchLyricsWeb(){
+        String t=title.getText().toString().trim();
+        String a=artist.getText().toString().trim();
+
+        if(t.isEmpty()){
+            title.setError("Titre obligatoire");
+            return;
+        }
+        if(a.isEmpty()){
+            artist.setError("Artiste nécessaire pour la recherche");
+            return;
+        }
+
+        android.widget.Toast.makeText(this,"Recherche des paroles…",android.widget.Toast.LENGTH_SHORT).show();
+
+        new Thread(()->{
+            String found=null;
+            String source=null;
+
+            try{
+                String q=URLEncoder.encode(a+" "+t,StandardCharsets.UTF_8.toString());
+                URL url=new URL("https://lrclib.net/api/search?q="+q);
+                HttpURLConnection con=(HttpURLConnection)url.openConnection();
+                con.setConnectTimeout(10000);
+                con.setReadTimeout(12000);
+                con.setRequestProperty("Accept","application/json");
+                con.setRequestProperty("User-Agent","TS-LiveSet/0.33");
+                if(con.getResponseCode()>=200 && con.getResponseCode()<300){
+                    String raw=readResponse(con);
+                    JSONArray arr=new JSONArray(raw);
+                    for(int i=0;i<arr.length();i++){
+                        JSONObject o=arr.optJSONObject(i);
+                        if(o==null)continue;
+                        String plain=o.optString("plainLyrics","");
+                        if(plain!=null && !plain.trim().isEmpty()){
+                            found=plain.trim();
+                            source="LRCLIB";
+                            break;
+                        }
+                    }
+                }
+                con.disconnect();
+            }catch(Exception ignored){}
+
+            if(found==null || found.isEmpty()){
+                try{
+                    String ea=URLEncoder.encode(a,StandardCharsets.UTF_8.toString()).replace("+","%20");
+                    String et=URLEncoder.encode(t,StandardCharsets.UTF_8.toString()).replace("+","%20");
+                    URL url=new URL("https://api.lyrics.ovh/v1/"+ea+"/"+et);
+                    HttpURLConnection con=(HttpURLConnection)url.openConnection();
+                    con.setConnectTimeout(10000);
+                    con.setReadTimeout(12000);
+                    con.setRequestProperty("Accept","application/json");
+                    con.setRequestProperty("User-Agent","TS-LiveSet/0.33");
+                    if(con.getResponseCode()>=200 && con.getResponseCode()<300){
+                        JSONObject o=new JSONObject(readResponse(con));
+                        String plain=o.optString("lyrics","");
+                        if(plain!=null && !plain.trim().isEmpty()){
+                            found=plain.trim();
+                            source="lyrics.ovh";
+                        }
+                    }
+                    con.disconnect();
+                }catch(Exception ignored){}
+            }
+
+            final String result=found;
+            final String resultSource=source;
+            runOnUiThread(()->{
+                if(result!=null && !result.isEmpty()){
+                    lyrics.setText(result);
+                    android.widget.Toast.makeText(this,"Paroles trouvées via "+resultSource,android.widget.Toast.LENGTH_LONG).show();
+                }else{
+                    new AlertDialog.Builder(this)
+                        .setTitle("Paroles non trouvées automatiquement")
+                        .setMessage("Je peux ouvrir une recherche web pour ce titre afin que tu puisses copier les paroles.")
+                        .setPositiveButton("Ouvrir le web",(d,w)->openLyricsWebSearch())
+                        .setNegativeButton("Fermer",null)
+                        .show();
+                }
+            });
+        }).start();
+    }
+
+    private String readResponse(HttpURLConnection con) throws Exception{
+        BufferedReader br=new BufferedReader(new InputStreamReader(con.getInputStream(),StandardCharsets.UTF_8));
+        StringBuilder sb=new StringBuilder();
+        String line;
+        while((line=br.readLine())!=null) sb.append(line).append('\n');
+        br.close();
+        return sb.toString();
+    }
+
+    private void openLyricsWebSearch(){
+        String t=title.getText().toString().trim();
+        String a=artist.getText().toString().trim();
+        String q=Uri.encode(a+" "+t+" paroles lyrics");
+        Intent i=new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/search?q="+q));
+        startActivity(i);
     }
 
     private void rearrangeBlocks(){
