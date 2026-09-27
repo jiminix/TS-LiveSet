@@ -3,6 +3,7 @@ package com.jiminix.liveset;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -20,6 +21,7 @@ import java.util.List;
 
 public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.38
+    // Build V0.39
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
@@ -156,7 +158,9 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             Song s=AppStore.findSong(this,id);
             if(s==null)continue;
             songs.add(s);
-            sig.append(s.id).append(':').append(s.title).append(':').append(s.bpm).append('|');
+            sig.append(s.id).append(':').append(s.title).append(':').append(s.bpm)
+                .append(':').append(s.stageNum1).append(':').append(s.stageNum2)
+                .append(':').append(s.stageGuitar).append(':').append(s.stageKeyboard).append('|');
         }
 
         String signature=sig.toString();
@@ -169,7 +173,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
         for(int i=0;i<songs.size();i++){
             Song s=songs.get(i);
-            addSongRow(i+1,s.title,s.bpm);
+            addSongRow(i+1,s);
         }
     }
 
@@ -219,7 +223,15 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(send,"Partager le code"));
     }
 
-    private void addSongRow(int number,String title,String bpm){
+    private String twoDigits(String value){
+        if(value==null || value.trim().isEmpty())return "--";
+        String d=value.replaceAll("[^0-9]","");
+        if(d.isEmpty())return "--";
+        if(d.length()>2)d=d.substring(0,2);
+        return d.length()==1?"0"+d:d;
+    }
+
+    private void addSongRow(int number,Song song){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -236,6 +248,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         row.addView(num,new LinearLayout.LayoutParams(dp(42),ViewGroup.LayoutParams.MATCH_PARENT));
 
         TextView name=new TextView(this);
+        String title=song==null?"":song.title;
+        String bpm=song==null?"":song.bpm;
         name.setText(title==null?"":title);
         name.setTextColor(Color.WHITE);
         name.setTextSize(20);
@@ -244,6 +258,53 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         row.addView(name,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1));
+
+        boolean hasStageInfo=song!=null && (
+            (song.stageNum1!=null && !song.stageNum1.trim().isEmpty()) ||
+            (song.stageNum2!=null && !song.stageNum2.trim().isEmpty()) ||
+            song.stageGuitar || song.stageKeyboard
+        );
+
+        if(hasStageInfo){
+            LinearLayout stageBox=new LinearLayout(this);
+            stageBox.setOrientation(LinearLayout.HORIZONTAL);
+            stageBox.setGravity(Gravity.CENTER);
+            stageBox.setPadding(dp(3),0,dp(3),0);
+
+            GradientDrawable stageBg=new GradientDrawable();
+            stageBg.setColor(Color.BLACK);
+            stageBg.setCornerRadius(dp(4));
+            stageBg.setStroke(dp(1),Color.rgb(70,70,70));
+            stageBox.setBackground(stageBg);
+
+            TextView n1=new TextView(this);
+            n1.setText(twoDigits(song.stageNum1));
+            n1.setTextColor(Color.WHITE);
+            n1.setTextSize(12);
+            n1.setGravity(Gravity.CENTER);
+            stageBox.addView(n1,new LinearLayout.LayoutParams(dp(22),dp(28)));
+
+            TextView n2=new TextView(this);
+            n2.setText(twoDigits(song.stageNum2));
+            n2.setTextColor(Color.RED);
+            n2.setTextSize(12);
+            n2.setGravity(Gravity.CENTER);
+            stageBox.addView(n2,new LinearLayout.LayoutParams(dp(22),dp(28)));
+
+            TextView guitar=new TextView(this);
+            guitar.setText(song.stageGuitar?"🎸":"");
+            guitar.setTextSize(14);
+            guitar.setGravity(Gravity.CENTER);
+            stageBox.addView(guitar,new LinearLayout.LayoutParams(dp(28),dp(28)));
+
+            TextView keyboard=new TextView(this);
+            keyboard.setText(song.stageKeyboard?"🎹":"");
+            keyboard.setTextSize(14);
+            keyboard.setGravity(Gravity.CENTER);
+            stageBox.addView(keyboard,new LinearLayout.LayoutParams(dp(28),dp(28)));
+
+            row.addView(stageBox,new LinearLayout.LayoutParams(dp(106),dp(30)));
+        }
 
         TextView bpmView=new TextView(this);
         bpmView.setText(bpm==null || bpm.trim().isEmpty() ? "" : bpm.trim());
