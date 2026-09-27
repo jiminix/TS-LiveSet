@@ -39,6 +39,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.42 direct -/+ zoom controls with 6 levels
     // Build V0.43 zoom -5..+2 and compact one-line header
     // Build V0.46 compact one-line bottom controls
+    // Build V0.47 BPM edit, online title suggestions and full-row zoom
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -186,24 +187,32 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         touchHelper.attachToRecyclerView(recycler);
 
         LinearLayout actions=Ui.row(this);
-        actions.setPadding(Ui.dp(this,4),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,2));
-        Button addLibrary=Ui.button(this,"+");
+        actions.setPadding(Ui.dp(this,2),Ui.dp(this,1),Ui.dp(this,2),Ui.dp(this,1));
+        Button addLibrary=Ui.button(this,"＋");
         Button importTitles=Ui.button(this,"⇩");
-        Button viewer=Ui.button(this,"▣ Viewer");
+        Button fixTitles=Ui.button(this,"⌕");
+        Button viewer=Ui.button(this,"▣");
         Button zoomMinus=Ui.button(this,"−");
         Button zoomPlus=Ui.button(this,"+");
-        addLibrary.setTextSize(20);
-        importTitles.setTextSize(18);
-        viewer.setTextSize(11);
-        zoomMinus.setTextSize(18);
-        zoomPlus.setTextSize(18);
-        Ui.compactHeaderButton(addLibrary,this,42);
-        Ui.compactHeaderButton(importTitles,this,42);
+        addLibrary.setTextSize(16);
+        importTitles.setTextSize(15);
+        fixTitles.setTextSize(17);
+        viewer.setTextSize(15);
+        zoomMinus.setTextSize(16);
+        zoomPlus.setTextSize(16);
+        Ui.compactHeaderButton(addLibrary,this,34);
+        Ui.compactHeaderButton(importTitles,this,34);
+        Ui.compactHeaderButton(fixTitles,this,34);
         Ui.weight(viewer,1);
-        Ui.compactHeaderButton(zoomMinus,this,40);
-        Ui.compactHeaderButton(zoomPlus,this,40);
+        Ui.compactHeaderButton(zoomMinus,this,32);
+        Ui.compactHeaderButton(zoomPlus,this,32);
+        addLibrary.setContentDescription("Ajouter depuis la bibliothèque");
+        importTitles.setContentDescription("Importer");
+        fixTitles.setContentDescription("Trouver les titres et artistes corrects");
+        viewer.setContentDescription("Viewer");
         actions.addView(addLibrary);
         actions.addView(importTitles);
+        actions.addView(fixTitles);
         actions.addView(viewer);
         actions.addView(zoomMinus);
         actions.addView(zoomPlus);
@@ -215,6 +224,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         add.setOnClickListener(v->showAddSongMenu());
         addLibrary.setOnClickListener(v->addSong());
         importTitles.setOnClickListener(v->openImporter());
+        fixTitles.setOnClickListener(v->findCorrectTitles());
         viewer.setOnClickListener(v->openViewer());
         zoomMinus.setOnClickListener(v->changeZoom(-1));
         zoomPlus.setOnClickListener(v->changeZoom(1));
@@ -354,11 +364,12 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     }
 
     private void showAddSongMenu(){
-        String[] choices={"Depuis la bibliothèque","Nouveau morceau"};
+        String[] choices={"Depuis la bibliothèque","Recherche en ligne","Nouveau morceau"};
         new AlertDialog.Builder(this)
             .setTitle("Ajouter un morceau")
             .setItems(choices,(d,which)->{
                 if(which==0) addSong();
+                else if(which==1) searchOnlineSongForInsert();
                 else createNewSong();
             })
             .setNegativeButton("Annuler",null)
@@ -634,6 +645,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             stageBox.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p!=RecyclerView.NO_POSITION)editStageInfo(p);
+            });
+
+            bpm.setOnClickListener(v->{
+                int p=h.getBindingAdapterPosition();
+                if(p!=RecyclerView.NO_POSITION)editBpm(p);
             });
 
             delete.setOnClickListener(v->{
