@@ -19,6 +19,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
 import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
 import okhttp3.Request;
@@ -27,6 +29,7 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
+    // Viewer V0.7 raw code parsing
     private static final String API="https://superjsonblob.com/api/jsonBlob";
     private static final String PREFS="viewer_cloud";
     private static final String K_CODE="sync_code";
@@ -198,7 +201,9 @@ public class MainActivity extends AppCompatActivity {
                             showEmpty("Connexion Internet impossible","Vérifie le code Viewer et la connexion Internet.");
                         }
                     }else{
-                        showEmpty("Connexion Internet impossible","Vérifie le code Viewer et la connexion Internet.");
+                        String msg=e.getMessage();
+                        if(msg==null || msg.trim().isEmpty())msg="Erreur Internet";
+                        showEmpty("Connexion Internet impossible","Erreur : "+msg);
                     }
                 });
             }finally{
@@ -312,6 +317,9 @@ public class MainActivity extends AppCompatActivity {
         if(raw==null)return "";
         String code=raw.trim();
 
+        Matcher uuid=Pattern.compile("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").matcher(code);
+        if(uuid.find())return uuid.group();
+
         String prefix=API+"/";
         if(code.startsWith(prefix))code=code.substring(prefix.length());
 
@@ -320,7 +328,11 @@ public class MainActivity extends AppCompatActivity {
         int slash=code.lastIndexOf('/');
         if(slash>=0)code=code.substring(slash+1);
 
-        code=code.replaceAll("[^A-Za-z0-9_-]","");
+        if(code.contains(":")){
+            code=code.substring(code.lastIndexOf(':')+1);
+        }
+
+        code=code.trim().replaceAll("[^A-Za-z0-9_-]","");
         return code;
     }
 
