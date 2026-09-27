@@ -32,6 +32,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.27
     // Build V0.32
     // Build V0.33
+    // Build V0.34
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -250,12 +251,41 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
     private void openViewer(){
         AppStore.selectViewerSetlist(this,setlist.id);
-        Intent launch=getPackageManager().getLaunchIntentForPackage("com.jiminix.livesetviewer");
-        if(launch!=null){
-            startActivity(launch);
-        }else{
-            Toast.makeText(this,"Playlist sélectionnée pour TS Playlist Viewer. Installe maintenant l’appli Viewer.",Toast.LENGTH_LONG).show();
-        }
+        Toast.makeText(this,"Publication de la playlist sur Internet…",Toast.LENGTH_SHORT).show();
+
+        PlaylistCloudSync.publishSelected(this,new PlaylistCloudSync.Listener(){
+            @Override public void onSuccess(String code){
+                showViewerInternetDialog(code);
+            }
+
+            @Override public void onError(String message){
+                Toast.makeText(PlaylistOverviewActivity.this,
+                    "Impossible de publier la playlist : "+message,
+                    Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void showViewerInternetDialog(String code){
+        new AlertDialog.Builder(this)
+            .setTitle("Viewer Internet")
+            .setMessage("Playlist publiée.\n\nCode de connexion :\n"+code+
+                "\n\nEntre ce code une seule fois dans Viewer sur l’autre téléphone.")
+            .setPositiveButton("Ouvrir Viewer",(d,w)->{
+                Intent launch=getPackageManager().getLaunchIntentForPackage("com.jiminix.livesetviewer");
+                if(launch!=null)startActivity(launch);
+                else Toast.makeText(this,"Viewer n’est pas installé sur ce téléphone.",Toast.LENGTH_SHORT).show();
+            })
+            .setNeutralButton("Partager le code",(d,w)->shareViewerCode(code))
+            .setNegativeButton("Fermer",null)
+            .show();
+    }
+
+    private void shareViewerCode(String code){
+        Intent send=new Intent(Intent.ACTION_SEND);
+        send.setType("text/plain");
+        send.putExtra(Intent.EXTRA_TEXT,"TS Playlist Viewer\nCode Internet : "+code);
+        startActivity(Intent.createChooser(send,"Partager le code Viewer"));
     }
 
     private void openImporter(){
