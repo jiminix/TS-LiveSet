@@ -56,7 +56,7 @@ jobs:
       - name: Upload Manager APK
         uses: actions/upload-artifact@v4
         with:
-          name: TS-LiveSet-Manager-V0.46-debug
+          name: TS-LiveSet-Manager-V0.47-debug
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload Viewer APK
