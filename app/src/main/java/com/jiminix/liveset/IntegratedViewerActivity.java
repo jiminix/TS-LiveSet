@@ -99,7 +99,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         Ui.compactHeaderButton(back,this,32);
 
         TextView appTitle=new TextView(this);
-        appTitle.setText("TS PLAYLIST VIEWER");
+        appTitle.setText("Meryl");
         appTitle.setTextColor(Color.rgb(255,196,30));
         appTitle.setTextSize(15);
         appTitle.setSingleLine(true);
@@ -146,7 +146,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(26),1.5f));
 
         info=new TextView(this);
-        info.setText("TS 2026");
+        info.setText("0 titres");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(9);
         info.setSingleLine(true);
@@ -247,8 +247,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(list.name);
-        String displayName=(list.name==null || list.name.trim().isEmpty()) ? "TS 2026" : list.name.trim();
-        info.setText(displayName+" · "+songs.size()+" titre"+(songs.size()>1?"s":""));
+        info.setText(songs.size()+" titre"+(songs.size()>1?"s":""));
         songsBox.removeAllViews();
 
         for(int i=0;i<songs.size();i++){
