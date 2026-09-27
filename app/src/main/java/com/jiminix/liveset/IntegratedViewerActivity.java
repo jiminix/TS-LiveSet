@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class IntegratedViewerActivity extends AppCompatActivity {
+    // Build V0.38
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
@@ -204,9 +205,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
     private void showCodeDialog(String code){
         new AlertDialog.Builder(this)
-            .setTitle("Viewer Internet")
-            .setMessage("Code pour les autres téléphones :\n\n"+code+
-                "\n\nIls entrent ce code une seule fois dans leur TS Playlist Viewer.")
+            .setTitle("Code Internet")
+            .setMessage(code)
             .setPositiveButton("Partager",(d,w)->shareCode(code))
             .setNegativeButton("Fermer",null)
             .show();
@@ -215,8 +215,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     private void shareCode(String code){
         Intent send=new Intent(Intent.ACTION_SEND);
         send.setType("text/plain");
-        send.putExtra(Intent.EXTRA_TEXT,"TS Playlist Viewer\nCode Internet : "+code);
-        startActivity(Intent.createChooser(send,"Partager le code Viewer"));
+        send.putExtra(Intent.EXTRA_TEXT,code);
+        startActivity(Intent.createChooser(send,"Partager le code"));
     }
 
     private void addSongRow(int number,String title,String bpm){
