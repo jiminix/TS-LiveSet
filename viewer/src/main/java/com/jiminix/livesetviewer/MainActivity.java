@@ -30,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.8 denser viewer rows
     // Build V0.9 page up/down navigation
     // Build V0.10 TS 2026 info line with page arrows
+    // Build V0.11 force TS 2026, title count and page arrows onto one line
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -120,6 +121,8 @@ public class MainActivity extends AppCompatActivity {
         info.setText("TS 2026");
         info.setTextColor(Color.LTGRAY);
         info.setTextSize(12);
+        info.setSingleLine(true);
+        info.setHorizontallyScrolling(false);
         info.setGravity(Gravity.CENTER);
         info.setPadding(dp(4),0,dp(4),0);
         infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(32),1));
