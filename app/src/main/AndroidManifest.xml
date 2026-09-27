@@ -15,6 +15,7 @@
             android:authorities="com.jiminix.liveset.playlists"
             android:exported="true"
             android:readPermission="com.jiminix.liveset.permission.READ_VIEWER" />
+        <activity android:name=".IntegratedViewerActivity" />
         <activity android:name=".PlaylistOverviewActivity" />
         <activity android:name=".PlayerActivity" />
         <activity android:name=".LiveSongActivity" />
