@@ -56,11 +56,11 @@ jobs:
       - name: Upload Manager APK
         uses: actions/upload-artifact@v4
         with:
-          name: TS-LiveSet-Manager-V0.35-debug
+          name: TS-LiveSet-Manager-V0.36-debug
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload Viewer APK
         uses: actions/upload-artifact@v4
         with:
-          name: TS-Playlist-Viewer-V0.4-debug
+          name: TS-Playlist-Viewer-V0.5-debug
           path: viewer/build/outputs/apk/debug/viewer-debug.apk
