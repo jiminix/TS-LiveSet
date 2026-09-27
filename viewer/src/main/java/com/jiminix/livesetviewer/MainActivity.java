@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.13 accept one-letter one-digit A0-Z9 pairing codes
     // Build V0.14 retry and cache short-code resolution
     // Build V0.15 compact slogan/info on one row
+    // Build V0.16 fit full slogan on one line
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -125,40 +126,40 @@ public class MainActivity extends AppCompatActivity {
         TextView slogan=new TextView(this);
         slogan.setText("Un pour tous, tous pour la même playlist.");
         slogan.setTextColor(Color.WHITE);
-        slogan.setTextSize(9);
+        slogan.setTextSize(7.5f);
         slogan.setSingleLine(true);
         slogan.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
         slogan.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        slogan.setPadding(dp(2),0,dp(3),0);
-        infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(28),1.2f));
+        slogan.setPadding(dp(1),0,dp(1),0);
+        infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(26),1.5f));
 
         info=new TextView(this);
         info.setText("TS 2026");
         info.setTextColor(Color.LTGRAY);
-        info.setTextSize(10);
+        info.setTextSize(9);
         info.setSingleLine(true);
         info.setHorizontallyScrolling(false);
         info.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
-        info.setPadding(dp(2),0,dp(3),0);
-        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(28),0.8f));
+        info.setPadding(dp(1),0,dp(1),0);
+        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(26),0.6f));
 
         Button pageUp=new Button(this);
         pageUp.setText("↑");
-        pageUp.setTextSize(15);
+        pageUp.setTextSize(14);
         pageUp.setMinWidth(0);
         pageUp.setMinimumWidth(0);
         pageUp.setPadding(0,0,0,0);
-        infoRow.addView(pageUp,new LinearLayout.LayoutParams(dp(28),dp(28)));
+        infoRow.addView(pageUp,new LinearLayout.LayoutParams(dp(26),dp(26)));
 
         Button pageDown=new Button(this);
         pageDown.setText("↓");
-        pageDown.setTextSize(15);
+        pageDown.setTextSize(14);
         pageDown.setMinWidth(0);
         pageDown.setMinimumWidth(0);
         pageDown.setPadding(0,0,0,0);
-        infoRow.addView(pageDown,new LinearLayout.LayoutParams(dp(28),dp(28)));
+        infoRow.addView(pageDown,new LinearLayout.LayoutParams(dp(26),dp(26)));
 
-        root.addView(infoRow,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(28)));
+        root.addView(infoRow,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(26)));
 
         Button internet=new Button(this);
         internet.setText("🌐 Connexion Internet");
