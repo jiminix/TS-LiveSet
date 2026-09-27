@@ -7,17 +7,20 @@ import android.os.Looper;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
+import java.util.Collections;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public final class PlaylistCloudSync {
     // Build Internet sync V0.36
+    // Build Internet sync V0.37
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
-    private static final String API="https://api.jsonstorage.net/v1/json";
+    private static final String API="https://superjsonblob.com/api/jsonBlob";
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static final MediaType JSON=MediaType.parse("application/json; charset=utf-8");
 
@@ -26,6 +29,7 @@ public final class PlaylistCloudSync {
         .readTimeout(15,TimeUnit.SECONDS)
         .writeTimeout(15,TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
+        .protocols(Collections.singletonList(Protocol.HTTP_1_1))
         .build();
 
     private static Runnable pendingPublish;
@@ -39,11 +43,7 @@ public final class PlaylistCloudSync {
 
     public static String getCode(Context c){
         String code=prefs(c).getString(K_BLOB_ID,"");
-        if(code!=null && !code.isEmpty() && !code.contains("/")){
-            prefs(c).edit().remove(K_BLOB_ID).apply();
-            return "";
-        }
-        return code==null?"":code;
+        return code==null?"":code.trim();
     }
 
     public static boolean isConfigured(Context c){
@@ -68,19 +68,7 @@ public final class PlaylistCloudSync {
                 String code=getCode(app);
 
                 if(code.isEmpty()){
-                    JSONObject created=requestJson("POST",API,payload);
-                    String uri=created.optString("uri","").trim();
-                    if(uri.isEmpty())throw new Exception("Code de synchronisation introuvable");
-
-                    String prefix=API+"/";
-                    code=uri.startsWith(prefix)?uri.substring(prefix.length()):uri;
-                    while(code.startsWith("/"))code=code.substring(1);
-                    while(code.endsWith("/"))code=code.substring(0,code.length()-1);
-
-                    if(code.isEmpty() || !code.contains("/")){
-                        throw new Exception("Code Internet invalide");
-                    }
-
+                    code=createRemote(payload);
                     prefs(app).edit().putString(K_BLOB_ID,code).apply();
                 }else{
                     requestJson("PUT",API+"/"+code,payload);
@@ -99,6 +87,59 @@ public final class PlaylistCloudSync {
         },"TS-Playlist-Cloud").start();
     }
 
+    private static String createRemote(JSONObject payload) throws Exception{
+        Exception last=null;
+
+        for(int attempt=0;attempt<2;attempt++){
+            try{
+                RequestBody body=RequestBody.create(JSON,payload.toString());
+                Request req=new Request.Builder()
+                    .url(API)
+                    .header("Accept","application/json")
+                    .header("Accept-Encoding","identity")
+                    .header("Connection","close")
+                    .header("User-Agent","TS-LiveSet/0.37")
+                    .post(body)
+                    .build();
+
+                try(Response response=CLIENT.newCall(req).execute()){
+                    int status=response.code();
+                    String raw=response.body()==null?"":response.body().string();
+                    if(status<200 || status>=300){
+                        throw new Exception("HTTP "+status+(raw.isEmpty()?"":" · "+shortMessage(raw)));
+                    }
+
+                    String location=response.header("Location","");
+                    if(location==null || location.trim().isEmpty()){
+                        location=response.header("X-Jsonblob-Id","");
+                    }
+
+                    String code=location==null?"":location.trim();
+                    if(code.startsWith(API+"/"))code=code.substring((API+"/").length());
+                    int slash=code.lastIndexOf('/');
+                    if(slash>=0)code=code.substring(slash+1);
+
+                    if(code.isEmpty() && !raw.trim().isEmpty()){
+                        try{
+                            JSONObject o=new JSONObject(raw);
+                            code=o.optString("id",o.optString("_id","")).trim();
+                        }catch(Exception ignored){}
+                    }
+
+                    if(code.isEmpty())throw new Exception("Code Internet introuvable");
+                    return code;
+                }
+            }catch(Exception e){
+                last=e;
+                if(attempt==0){
+                    try{Thread.sleep(800);}catch(InterruptedException ignored){}
+                }
+            }
+        }
+
+        throw last==null?new Exception("Erreur de connexion Internet"):last;
+    }
+
     private static JSONObject requestJson(String method,String url,JSONObject payload) throws Exception{
         Exception last=null;
 
@@ -110,7 +151,7 @@ public final class PlaylistCloudSync {
                     .header("Accept","application/json")
                     .header("Accept-Encoding","identity")
                     .header("Connection","close")
-                    .header("User-Agent","TS-LiveSet/0.36");
+                    .header("User-Agent","TS-LiveSet/0.37");
 
                 if("POST".equals(method))b.post(body);
                 else b.put(body);
@@ -146,7 +187,7 @@ public final class PlaylistCloudSync {
         SetListModel list=(id==null||id.isEmpty())?null:AppStore.findSetlist(c,id);
 
         out.put("schema",1);
-        out.put("managerVersion","0.36");
+        out.put("managerVersion","0.37");
         out.put("updatedAt",System.currentTimeMillis());
 
         if(list==null){
