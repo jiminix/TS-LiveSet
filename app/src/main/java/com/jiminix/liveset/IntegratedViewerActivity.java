@@ -138,33 +138,33 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         TextView slogan=new TextView(this);
         slogan.setText("Un pour tous, tous pour la même playlist.");
         slogan.setTextColor(Color.WHITE);
-        slogan.setTextSize(9);
+        slogan.setTextSize(7.5f);
         slogan.setSingleLine(true);
         slogan.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
         slogan.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        slogan.setPadding(dp(2),0,dp(3),0);
-        infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(28),1.2f));
+        slogan.setPadding(dp(1),0,dp(1),0);
+        infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(26),1.5f));
 
         info=new TextView(this);
         info.setText("TS 2026");
         info.setTextColor(Color.LTGRAY);
-        info.setTextSize(10);
+        info.setTextSize(9);
         info.setSingleLine(true);
         info.setHorizontallyScrolling(false);
         info.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
-        info.setPadding(dp(2),0,dp(3),0);
-        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(28),0.8f));
+        info.setPadding(dp(1),0,dp(1),0);
+        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(26),0.6f));
 
         Button pageUp=Ui.button(this,"↑");
-        pageUp.setTextSize(15);
-        Ui.compactHeaderButton(pageUp,this,28);
+        pageUp.setTextSize(14);
+        Ui.compactHeaderButton(pageUp,this,26);
         Button pageDown=Ui.button(this,"↓");
-        pageDown.setTextSize(15);
-        Ui.compactHeaderButton(pageDown,this,28);
+        pageDown.setTextSize(14);
+        Ui.compactHeaderButton(pageDown,this,26);
         infoRow.addView(pageUp);
         infoRow.addView(pageDown);
         root.addView(infoRow,new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,dp(28)
+            ViewGroup.LayoutParams.MATCH_PARENT,dp(26)
         ));
 
         scroll=new ScrollView(this);
