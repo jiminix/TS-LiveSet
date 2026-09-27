@@ -847,11 +847,20 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             String id=setlist.songIds.get(position);
             Song s=AppStore.findSong(PlaylistOverviewActivity.this,id);
 
+            h.itemView.setMinimumHeight(zdp(compact?32:42));
+            h.num.setMinWidth(zdp(28));
             h.num.setText(String.format("%02d",position+1));
-            h.num.setTextSize((compact?12:16)+textZoom);
-            h.song.setTextSize((compact?13:17)+textZoom);
-            h.bpm.setTextSize((compact?12:15)+textZoom);
+            h.num.setTextSize(zsp(compact?12:16));
+            h.song.setTextSize(zsp(compact?13:17));
+            h.song.setPadding(zdp(2),0,zdp(2),0);
+            h.bpm.setTextSize(zsp(compact?12:15));
+            h.bpm.setPadding(zdp(2),0,0,0);
             h.song.setSingleLine(compact);
+
+            h.delete.setTextSize(zsp(16));
+            h.delete.setLayoutParams(new LinearLayout.LayoutParams(zdp(34),zdp(compact?32:40)));
+            h.handle.setTextSize(zsp(20));
+            h.handle.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
 
             boolean hasStageInfo=s!=null && (
                 (s.stageNum1!=null && !s.stageNum1.trim().isEmpty()) ||
@@ -865,15 +874,15 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.bpm.setVisibility(View.GONE);
             }else if(compact){
                 h.song.setText(s.title);
-                h.bpm.setText(s.bpm.isEmpty()?"":s.bpm);
-                h.bpm.setVisibility(s.bpm.isEmpty()?View.GONE:View.VISIBLE);
+                h.bpm.setText(s.bpm.isEmpty()?"＋":s.bpm);
+                h.bpm.setVisibility(View.VISIBLE);
             }else{
                 String meta="";
                 if(!s.artist.isEmpty())meta=s.artist;
                 if(!s.key.isEmpty())meta+=(meta.isEmpty()?"":" · ")+s.key;
                 h.song.setText(s.title+(meta.isEmpty()?"":"\n"+meta));
-                h.bpm.setText(s.bpm.isEmpty()?"":s.bpm+" BPM");
-                h.bpm.setVisibility(s.bpm.isEmpty()?View.GONE:View.VISIBLE);
+                h.bpm.setText(s.bpm.isEmpty()?"＋":s.bpm+" BPM");
+                h.bpm.setVisibility(View.VISIBLE);
             }
 
             if(s!=null && hasStageInfo){
@@ -885,13 +894,14 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.stageBox.setVisibility(View.VISIBLE);
                 h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
-                    Ui.dp(PlaylistOverviewActivity.this,28)
+                    zdp(28)
                 ));
+                h.stageBox.setPadding(zdp(2),0,zdp(2),0);
 
                 GradientDrawable stageBg=new GradientDrawable();
                 stageBg.setColor(Color.BLACK);
-                stageBg.setCornerRadius(Ui.dp(PlaylistOverviewActivity.this,4));
-                stageBg.setStroke(Ui.dp(PlaylistOverviewActivity.this,1),Color.rgb(70,70,70));
+                stageBg.setCornerRadius(zdp(4));
+                stageBg.setStroke(Math.max(1,zdp(1)),Color.rgb(70,70,70));
                 h.stageBox.setBackground(stageBg);
 
                 h.stage1.setVisibility(showNum1?View.VISIBLE:View.GONE);
@@ -900,13 +910,17 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.keyboardIcon.setVisibility(showKeyboard?View.VISIBLE:View.GONE);
 
                 h.stage1.setTextColor(Color.WHITE);
-                h.stage1.setTextSize(12+textZoom);
+                h.stage1.setTextSize(zsp(12));
                 h.stage1.setGravity(Gravity.CENTER);
+                h.stage1.setPadding(zdp(2),0,zdp(2),0);
+                h.stage2.setPadding(zdp(2),0,zdp(2),0);
+                h.guitarIcon.setPadding(zdp(1),0,zdp(1),0);
+                h.keyboardIcon.setPadding(zdp(1),0,zdp(1),0);
                 if(showNum1) h.stage1.setText(twoDigits(s.stageNum1));
                 if(showNum2) h.stage2.setText(twoDigits(s.stageNum2));
-                h.stage2.setTextSize(12+textZoom);
-                h.guitarIcon.setTextSize(14+textZoom);
-                h.keyboardIcon.setTextSize(14+textZoom);
+                h.stage2.setTextSize(zsp(12));
+                h.guitarIcon.setTextSize(zsp(14));
+                h.keyboardIcon.setTextSize(zsp(14));
                 h.guitarIcon.setAlpha(1f);
                 h.keyboardIcon.setAlpha(1f);
             }else{
@@ -916,7 +930,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             boolean current=id.equals(currentSongId);
             int fg=current ? Color.rgb(255,193,7) : Color.WHITE;
             h.song.setTextColor(fg);
-            h.bpm.setTextColor(fg);
+            h.bpm.setTextColor(s!=null && (s.bpm==null || s.bpm.isEmpty()) ? Color.GRAY : fg);
             h.num.setTextColor(current ? Color.rgb(255,193,7) : Color.LTGRAY);
 
             // Odd-numbered titles (1,3,5...) use a dark grey stripe.
