@@ -28,6 +28,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.44 denser viewer rows
     // Build V0.45 page up/down navigation
     // Build V0.46 TS 2026 info line with page arrows
+    // Build V0.47 proportional zoom for stage info and row spacing
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
@@ -65,6 +66,18 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
     private int dp(int v){
         return Math.round(v*getResources().getDisplayMetrics().density);
+    }
+
+    private float zoomScale(){
+        return Math.max(0.62f,Math.min(1.18f,1f+(textZoom*0.076f)));
+    }
+
+    private int zdp(int base){
+        return dp(Math.max(1,Math.round(base*zoomScale())));
+    }
+
+    private float zsp(float base){
+        return Math.max(7f,base*zoomScale());
     }
 
     private void buildUi(){
@@ -297,24 +310,24 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(6),dp(1),dp(6),dp(1));
-        row.setMinimumHeight(dp(36));
+        row.setPadding(zdp(6),zdp(1),zdp(6),zdp(1));
+        row.setMinimumHeight(zdp(36));
         row.setBackgroundColor(number%2==1?Color.rgb(28,28,28):Color.BLACK);
 
         TextView num=new TextView(this);
         num.setText(String.format("%02d",number));
         num.setTextColor(Color.LTGRAY);
-        num.setTextSize(14+textZoom);
+        num.setTextSize(zsp(14));
         num.setGravity(Gravity.CENTER);
         num.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        row.addView(num,new LinearLayout.LayoutParams(dp(34),ViewGroup.LayoutParams.MATCH_PARENT));
+        row.addView(num,new LinearLayout.LayoutParams(zdp(34),ViewGroup.LayoutParams.MATCH_PARENT));
 
         TextView name=new TextView(this);
         String title=song==null?"":song.title;
         String bpm=song==null?"":song.bpm;
         name.setText(title==null?"":title);
         name.setTextColor(Color.WHITE);
-        name.setTextSize(20+textZoom);
+        name.setTextSize(zsp(20));
         name.setGravity(Gravity.CENTER_VERTICAL);
         name.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         name.setSingleLine(true);
@@ -331,23 +344,23 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             LinearLayout stageBox=new LinearLayout(this);
             stageBox.setOrientation(LinearLayout.HORIZONTAL);
             stageBox.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
-            stageBox.setPadding(dp(2),0,dp(2),0);
+            stageBox.setPadding(zdp(2),0,zdp(2),0);
 
             GradientDrawable stageBg=new GradientDrawable();
             stageBg.setColor(Color.BLACK);
-            stageBg.setCornerRadius(dp(4));
-            stageBg.setStroke(dp(1),Color.rgb(70,70,70));
+            stageBg.setCornerRadius(zdp(4));
+            stageBg.setStroke(Math.max(1,zdp(1)),Color.rgb(70,70,70));
             stageBox.setBackground(stageBg);
 
             if(song.stageNum1!=null && !song.stageNum1.trim().isEmpty()){
                 TextView n1=new TextView(this);
                 n1.setText(twoDigits(song.stageNum1));
                 n1.setTextColor(Color.WHITE);
-                n1.setTextSize(12+textZoom);
+                n1.setTextSize(zsp(12));
                 n1.setGravity(Gravity.CENTER);
-                n1.setPadding(dp(2),0,dp(2),0);
+                n1.setPadding(zdp(2),0,zdp(2),0);
                 stageBox.addView(n1,new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
+                    ViewGroup.LayoutParams.WRAP_CONTENT,zdp(24)
                 ));
             }
 
@@ -355,9 +368,9 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 TextView n2=new TextView(this);
                 n2.setText(twoDigits(song.stageNum2));
                 n2.setTextColor(Color.RED);
-                n2.setTextSize(12+textZoom);
+                n2.setTextSize(zsp(12));
                 n2.setGravity(Gravity.CENTER);
-                n2.setPadding(dp(2),0,dp(2),0);
+                n2.setPadding(zdp(2),0,zdp(2),0);
                 stageBox.addView(n2,new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
                 ));
@@ -366,9 +379,9 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             if(song.stageGuitar){
                 TextView guitar=new TextView(this);
                 guitar.setText("🎸");
-                guitar.setTextSize(14+textZoom);
+                guitar.setTextSize(zsp(14));
                 guitar.setGravity(Gravity.CENTER);
-                guitar.setPadding(dp(1),0,dp(1),0);
+                guitar.setPadding(zdp(1),0,zdp(1),0);
                 stageBox.addView(guitar,new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
                 ));
@@ -377,9 +390,9 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             if(song.stageKeyboard){
                 TextView keyboard=new TextView(this);
                 keyboard.setText("🎹");
-                keyboard.setTextSize(14+textZoom);
+                keyboard.setTextSize(zsp(14));
                 keyboard.setGravity(Gravity.CENTER);
-                keyboard.setPadding(dp(1),0,dp(1),0);
+                keyboard.setPadding(zdp(1),0,zdp(1),0);
                 stageBox.addView(keyboard,new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,dp(24)
                 ));
@@ -387,18 +400,18 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
             row.addView(stageBox,new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                dp(26)
+                zdp(26)
             ));
         }
 
         TextView bpmView=new TextView(this);
         bpmView.setText(bpm==null || bpm.trim().isEmpty() ? "" : bpm.trim());
         bpmView.setTextColor(Color.rgb(255,196,30));
-        bpmView.setTextSize(14+textZoom);
+        bpmView.setTextSize(zsp(14));
         bpmView.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         bpmView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         bpmView.setSingleLine(true);
-        bpmView.setPadding(dp(4),0,0,0);
+        bpmView.setPadding(zdp(4),0,0,0);
         if(bpm==null || bpm.trim().isEmpty()){
             bpmView.setVisibility(View.GONE);
         }
