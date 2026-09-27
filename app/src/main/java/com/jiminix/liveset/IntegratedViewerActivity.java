@@ -24,6 +24,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.39
     // Build V0.41 compact right metadata and text zoom -3..+2
     // Build V0.42 direct -/+ zoom controls with 6 levels
+    // Build V0.43 zoom -5..+2, compact top bar and corrected slogan
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
     private TextView playlistTitle;
@@ -43,7 +44,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         super.onCreate(b);
         setlistId=getIntent().getStringExtra("setlist_id");
         if(setlistId==null || setlistId.isEmpty())setlistId=AppStore.getViewerSetlistId(this);
-        textZoom=Math.max(-3,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
+        textZoom=Math.max(-5,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
         buildUi();
     }
 
@@ -66,35 +67,37 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
-        root.setPadding(dp(10),dp(8),dp(10),dp(8));
+        root.setPadding(dp(6),dp(6),dp(6),dp(8));
 
         LinearLayout top=new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         Button back=Ui.button(this,"‹");
-        back.setTextSize(28);
-        Ui.compactHeaderButton(back,this,46);
+        back.setTextSize(24);
+        Ui.compactHeaderButton(back,this,36);
 
         TextView appTitle=new TextView(this);
         appTitle.setText("TS PLAYLIST VIEWER");
         appTitle.setTextColor(Color.rgb(255,196,30));
-        appTitle.setTextSize(22);
+        appTitle.setTextSize(17);
+        appTitle.setSingleLine(true);
+        appTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
         appTitle.setGravity(Gravity.CENTER);
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        appTitle.setLayoutParams(new LinearLayout.LayoutParams(0,dp(44),1));
+        appTitle.setLayoutParams(new LinearLayout.LayoutParams(0,dp(40),1));
 
         Button zoomMinus=Ui.button(this,"−");
-        zoomMinus.setTextSize(20);
-        Ui.compactHeaderButton(zoomMinus,this,42);
+        zoomMinus.setTextSize(18);
+        Ui.compactHeaderButton(zoomMinus,this,34);
 
         Button zoomPlus=Ui.button(this,"+");
-        zoomPlus.setTextSize(20);
-        Ui.compactHeaderButton(zoomPlus,this,42);
+        zoomPlus.setTextSize(18);
+        Ui.compactHeaderButton(zoomPlus,this,34);
 
         Button cloud=Ui.button(this,"☁ Code");
-        cloud.setTextSize(12);
-        Ui.compactHeaderButton(cloud,this,76);
+        cloud.setTextSize(10);
+        Ui.compactHeaderButton(cloud,this,62);
 
         top.addView(back);
         top.addView(appTitle);
@@ -104,7 +107,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         root.addView(top);
 
         TextView slogan=new TextView(this);
-        slogan.setText("1 pour tous, tous pour la même playlist.");
+        slogan.setText("Un pour tous, tous pour la même playlist.");
         slogan.setTextColor(Color.WHITE);
         slogan.setTextSize(13);
         slogan.setGravity(Gravity.CENTER);
@@ -162,7 +165,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     }
 
     private void changeZoom(int delta){
-        int next=Math.max(-3,Math.min(2,textZoom+delta));
+        int next=Math.max(-5,Math.min(2,textZoom+delta));
         if(next==textZoom){
             Toast.makeText(this,
                 delta<0 ? "Zoom minimum" : "Zoom maximum",

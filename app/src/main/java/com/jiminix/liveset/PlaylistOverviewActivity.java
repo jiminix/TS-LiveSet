@@ -37,6 +37,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.40 dynamic stage indicators and titles
     // Build V0.41 right-aligned compact metadata and text zoom -3..+2
     // Build V0.42 direct -/+ zoom controls with 6 levels
+    // Build V0.43 zoom -5..+2 and compact one-line header
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -58,7 +59,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         repairMissingLyrics();
         if(currentIndex>=0 && currentIndex<setlist.songIds.size()) currentSongId=setlist.songIds.get(currentIndex);
         compact=getSharedPreferences("playlist_view",MODE_PRIVATE).getBoolean("compact",true);
-        textZoom=Math.max(-3,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
+        textZoom=Math.max(-5,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
         buildUi();
     }
 
@@ -78,48 +79,48 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         root.setBackgroundColor(Color.rgb(10,10,10));
 
         LinearLayout head=Ui.row(this);
-        head.setPadding(Ui.dp(this,6),Ui.dp(this,4),Ui.dp(this,6),Ui.dp(this,4));
+        head.setPadding(Ui.dp(this,2),Ui.dp(this,2),Ui.dp(this,2),Ui.dp(this,2));
 
         TextView back=new TextView(this);
         back.setText("‹");
         back.setTextColor(Color.WHITE);
-        back.setTextSize(30);
+        back.setTextSize(25);
         back.setGravity(Gravity.CENTER);
         back.setClickable(true);
         back.setFocusable(true);
-        back.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,52)));
+        back.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,34),Ui.dp(this,46)));
 
         titleView=new TextView(this);
         titleView.setText(setlist.name);
         titleView.setTextColor(Color.WHITE);
-        titleView.setTextSize(16);
+        titleView.setTextSize(14);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         titleView.setSingleLine(true);
         titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
         titleView.setGravity(Gravity.CENTER_VERTICAL);
-        titleView.setPadding(Ui.dp(this,5),0,Ui.dp(this,4),0);
-        titleView.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,48),1));
+        titleView.setPadding(Ui.dp(this,3),0,Ui.dp(this,2),0);
+        titleView.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,44),1));
         titleView.setClickable(true);
 
         Button rename=Ui.button(this,"✎");
-        rename.setTextSize(16);
-        Ui.compactHeaderButton(rename,this,42);
+        rename.setTextSize(14);
+        Ui.compactHeaderButton(rename,this,34);
 
         Button add=Ui.button(this,"＋");
-        add.setTextSize(20);
-        Ui.compactHeaderButton(add,this,44);
+        add.setTextSize(18);
+        Ui.compactHeaderButton(add,this,34);
 
         modeButton=Ui.button(this, compact ? "Détail" : "Compact");
-        modeButton.setTextSize(13);
-        Ui.compactHeaderButton(modeButton,this,74);
+        modeButton.setTextSize(11);
+        Ui.compactHeaderButton(modeButton,this,58);
 
         TextView count=new TextView(this);
         count.setText(setlist.songIds.size()+" titres");
         count.setTextColor(Color.LTGRAY);
-        count.setTextSize(11);
+        count.setTextSize(9);
         count.setSingleLine(true);
         count.setGravity(Gravity.CENTER);
-        count.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,58),Ui.dp(this,44)));
+        count.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,46),Ui.dp(this,42)));
         count.setTag("count");
 
         head.addView(back);
@@ -339,7 +340,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     }
 
     private void changeZoom(int delta){
-        int next=Math.max(-3,Math.min(2,textZoom+delta));
+        int next=Math.max(-5,Math.min(2,textZoom+delta));
         if(next==textZoom){
             Toast.makeText(this,
                 delta<0 ? "Zoom minimum" : "Zoom maximum",

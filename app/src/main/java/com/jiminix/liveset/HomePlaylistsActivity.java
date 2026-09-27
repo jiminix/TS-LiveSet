@@ -69,7 +69,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         root.addView(head);
 
         TextView version=new TextView(this);
-        version.setText("LiveSet v0.42");
+        version.setText("LiveSet v0.43");
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(11);
         version.setGravity(Gravity.RIGHT);
