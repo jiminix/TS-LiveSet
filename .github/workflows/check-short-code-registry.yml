@@ -1,4 +1,5 @@
 name: Check short-code registry
+# refresh current registry
 
 on:
   push:
