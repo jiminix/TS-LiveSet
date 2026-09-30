@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -61,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.23 expandable read-only Medley sub-playlists
     // Build V0.24 dedicated +/- Medley expansion on remote Viewer
     // Build V0.25 force all song titles uppercase
+    // Build V0.26 5-second startup banner, permanent Y6 auto-connect, no connection button
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -88,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView playlistTitle;
     private TextView appTitle;
     private TextView info;
+    private TextView startupBanner;
     private Button inProgressButton;
     private LinearLayout songsBox;
     private ScrollView scroll;
@@ -134,13 +137,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void buildUi(){
+        FrameLayout shell=new FrameLayout(this);
+
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
         root.setPadding(dp(10),dp(12),dp(10),dp(10));
 
         appTitle=new TextView(this);
-        appTitle.setText("Playlist");
+        appTitle.setText("TS PLAYLIST VIEWER");
         appTitle.setTextColor(Color.rgb(255,196,30));
         appTitle.setTextSize(22);
         appTitle.setGravity(Gravity.CENTER);
@@ -155,49 +160,9 @@ public class MainActivity extends AppCompatActivity {
         playlistTitle.setGravity(Gravity.CENTER);
         playlistTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         playlistTitle.setPadding(dp(6),dp(8),dp(6),dp(4));
-        LinearLayout infoRow=new LinearLayout(this);
-        infoRow.setOrientation(LinearLayout.HORIZONTAL);
-        infoRow.setGravity(Gravity.CENTER_VERTICAL);
-        infoRow.setPadding(dp(2),0,dp(2),0);
-        infoRow.setBackgroundColor(Color.rgb(105,12,18));
-
-        TextView slogan=new TextView(this);
-        slogan.setText("Un pour tous, tous pour la même playlist.");
-        slogan.setTextColor(Color.WHITE);
-        slogan.setTextSize(7.5f);
-        slogan.setSingleLine(true);
-        slogan.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
-        slogan.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        slogan.setPadding(dp(1),0,dp(1),0);
-        infoRow.addView(slogan,new LinearLayout.LayoutParams(0,dp(26),1.5f));
-
         info=new TextView(this);
         info.setText("0 titres");
-        info.setTextColor(Color.LTGRAY);
-        info.setTextSize(9);
-        info.setSingleLine(true);
-        info.setHorizontallyScrolling(false);
-        info.setGravity(Gravity.CENTER);
-        info.setPadding(dp(1),0,dp(1),0);
-        infoRow.addView(info,new LinearLayout.LayoutParams(0,dp(26),0.6f));
-
-        Button pageUp=new Button(this);
-        pageUp.setText("↑");
-        pageUp.setTextSize(14);
-        pageUp.setMinWidth(0);
-        pageUp.setMinimumWidth(0);
-        pageUp.setPadding(0,0,0,0);
-        infoRow.addView(pageUp,new LinearLayout.LayoutParams(dp(26),dp(26)));
-
-        Button pageDown=new Button(this);
-        pageDown.setText("↓");
-        pageDown.setTextSize(14);
-        pageDown.setMinWidth(0);
-        pageDown.setMinimumWidth(0);
-        pageDown.setPadding(0,0,0,0);
-        infoRow.addView(pageDown,new LinearLayout.LayoutParams(dp(26),dp(26)));
-
-        root.addView(infoRow,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(26)));
+        info.setVisibility(View.GONE);
 
         LinearLayout viewerActions=new LinearLayout(this);
         viewerActions.setOrientation(LinearLayout.HORIZONTAL);
@@ -211,11 +176,19 @@ public class MainActivity extends AppCompatActivity {
         inProgressButton.setBackgroundTintList(ColorStateList.valueOf(Color.rgb(198,40,40)));
         inProgressButton.setTextColor(Color.WHITE);
 
-        Button internet=new Button(this);
-        internet.setText("🌐 Connexion");
-        internet.setTextSize(10);
-        internet.setMinWidth(0);
-        internet.setMinimumWidth(0);
+        Button pageUp=new Button(this);
+        pageUp.setText("↑");
+        pageUp.setTextSize(14);
+        pageUp.setMinWidth(0);
+        pageUp.setMinimumWidth(0);
+        pageUp.setPadding(0,0,0,0);
+
+        Button pageDown=new Button(this);
+        pageDown.setText("↓");
+        pageDown.setTextSize(14);
+        pageDown.setMinWidth(0);
+        pageDown.setMinimumWidth(0);
+        pageDown.setPadding(0,0,0,0);
 
         Button update=new Button(this);
         update.setText("↻ Mise à jour");
@@ -224,13 +197,13 @@ public class MainActivity extends AppCompatActivity {
         update.setMinimumWidth(0);
 
         viewerActions.addView(inProgressButton,new LinearLayout.LayoutParams(0,dp(36),1));
-        viewerActions.addView(internet,new LinearLayout.LayoutParams(0,dp(36),1));
+        viewerActions.addView(pageUp,new LinearLayout.LayoutParams(dp(42),dp(36)));
+        viewerActions.addView(pageDown,new LinearLayout.LayoutParams(dp(42),dp(36)));
         viewerActions.addView(update,new LinearLayout.LayoutParams(0,dp(36),1));
         root.addView(viewerActions,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,dp(36)
         ));
 
-        internet.setOnClickListener(v->configureInternet());
         inProgressButton.setOnClickListener(v->toggleInProgress());
         update.setOnClickListener(v->checkForUpdate());
 
@@ -261,7 +234,32 @@ public class MainActivity extends AppCompatActivity {
         pageUp.setOnClickListener(v->pageScroll(-1));
         pageDown.setOnClickListener(v->pageScroll(1));
 
-        setContentView(root);
+        shell.addView(root,new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+
+        startupBanner=new TextView(this);
+        startupBanner.setText("Un pour tous, tous pour la même playlist\nTS 2026 - connexion…\nSynchronisation Internet : en cours");
+        startupBanner.setTextColor(Color.WHITE);
+        startupBanner.setTextSize(18);
+        startupBanner.setGravity(Gravity.CENTER);
+        startupBanner.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        startupBanner.setBackgroundColor(Color.argb(235,70,0,12));
+        startupBanner.setPadding(dp(22),dp(24),dp(22),dp(24));
+
+        FrameLayout.LayoutParams bannerLp=new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+        );
+        bannerLp.setMargins(dp(18),0,dp(18),0);
+        shell.addView(startupBanner,bannerLp);
+
+        setContentView(shell);
+        handler.postDelayed(()->{
+            if(startupBanner!=null)startupBanner.setVisibility(View.GONE);
+        },5000);
     }
 
     private String installedVersion(){
@@ -589,8 +587,14 @@ public class MainActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(name);
-        appTitle.setText((name==null || name.trim().isEmpty()) ? "Playlist" : name.trim());
+        appTitle.setText("TS PLAYLIST VIEWER");
         info.setText(songs.length()+" titre"+(songs.length()>1?"s":""));
+        if(startupBanner!=null && startupBanner.getVisibility()==View.VISIBLE){
+            String syncOk=source.startsWith("Internet · à jour") ? "OK" : (source.startsWith("Local") ? "OK" : "indisponible");
+            startupBanner.setText("Un pour tous, tous pour la même playlist\n"+
+                name+" - "+songs.length()+" Titre"+(songs.length()>1?"s":"")+"\n"+
+                "Synchronisation Internet : "+syncOk);
+        }
         songsBox.removeAllViews();
 
         for(int i=0;i<songs.length();i++){
@@ -606,45 +610,6 @@ public class MainActivity extends AppCompatActivity {
                 s.optJSONArray("medleyArtists")
             );
         }
-    }
-
-    private void configureInternet(){
-        EditText input=new EditText(this);
-        input.setHint("Exemple : A7");
-        input.setSingleLine(true);
-        input.setText(shortCode(getCode()));
-        input.selectAll();
-
-        new AlertDialog.Builder(this)
-            .setTitle("Connexion Internet")
-            .setMessage("Entre le code à 2 caractères affiché dans TS Playlist Manager, par exemple A7.")
-            .setView(input)
-            .setPositiveButton("Connecter",(d,w)->{
-                String code=cleanCode(input.getText().toString());
-                if(code.isEmpty()){
-                    showEmpty("Code Internet invalide","Entre le code à 2 caractères affiché par le Manager.");
-                    return;
-                }
-
-                getSharedPreferences(PREFS,MODE_PRIVATE).edit()
-                    .putString(K_CODE,code)
-                    .remove(K_CACHE)
-                    .apply();
-
-                lastSignature="";
-                refreshPlaylist();
-            })
-            .setNeutralButton("Effacer",(d,w)->{
-                getSharedPreferences(PREFS,MODE_PRIVATE).edit()
-                    .remove(K_CODE)
-                    .remove(K_CACHE)
-                    .apply();
-
-                lastSignature="";
-                showEmpty("Connexion Viewer","Aucun Manager Internet configuré.");
-            })
-            .setNegativeButton("Annuler",null)
-            .show();
     }
 
     private String cleanCode(String raw){
@@ -772,7 +737,11 @@ public class MainActivity extends AppCompatActivity {
         String code=getSharedPreferences(PREFS,MODE_PRIVATE).getString(K_CODE,"").trim();
         if(code.contains("/")){
             getSharedPreferences(PREFS,MODE_PRIVATE).edit().remove(K_CODE).remove(K_CACHE).apply();
-            return "";
+            code="";
+        }
+        if(code.isEmpty()){
+            code=BOOTSTRAP_CODE;
+            getSharedPreferences(PREFS,MODE_PRIVATE).edit().putString(K_CODE,code).apply();
         }
         return code;
     }
@@ -783,8 +752,11 @@ public class MainActivity extends AppCompatActivity {
 
         lastSignature=signature;
         playlistTitle.setText(title);
-        appTitle.setText("Meryl");
+        appTitle.setText("TS PLAYLIST VIEWER");
         info.setText(message);
+        if(startupBanner!=null && startupBanner.getVisibility()==View.VISIBLE){
+            startupBanner.setText("Un pour tous, tous pour la même playlist\nTS 2026 - 0 Titre\nSynchronisation Internet : indisponible");
+        }
         songsBox.removeAllViews();
     }
 
