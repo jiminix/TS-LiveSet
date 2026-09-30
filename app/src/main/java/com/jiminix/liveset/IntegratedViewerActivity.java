@@ -494,15 +494,34 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             medleyBox.setAlpha(disabled?0.5f:1f);
 
             for(int i=0;i<song.medleyItems.size();i++){
+                String itemTitle=song.medleyItems.get(i);
+                String itemArtist=i<song.medleyArtists.size()?song.medleyArtists.get(i):"";
+                String itemLyrics=i<song.medleyLyrics.size()?song.medleyLyrics.get(i):"";
+
                 TextView item=new TextView(this);
-                item.setText(String.format(Locale.ROOT,"%02d. %s",i+1,song.medleyItems.get(i)));
-                item.setTextColor(Color.WHITE);
+                String label=String.format(Locale.ROOT,"%02d. %s",i+1,itemTitle);
+                if(itemArtist!=null && !itemArtist.trim().isEmpty())label+=" — "+itemArtist.trim();
+                item.setText(label);
+                item.setTextColor(Color.rgb(255,193,7));
+                item.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
                 item.setTextSize(zsp(13));
-                item.setPadding(zdp(6),zdp(2),0,zdp(2));
+                item.setPadding(zdp(6),zdp(4),0,zdp(2));
                 medleyBox.addView(item,new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ));
+
+                if(itemLyrics!=null && !itemLyrics.trim().isEmpty()){
+                    TextView lyricsView=new TextView(this);
+                    lyricsView.setText(itemLyrics.trim());
+                    lyricsView.setTextColor(Color.WHITE);
+                    lyricsView.setTextSize(zsp(12));
+                    lyricsView.setPadding(zdp(18),0,zdp(4),zdp(6));
+                    medleyBox.addView(lyricsView,new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ));
+                }
             }
 
             songsBox.addView(medleyBox,new LinearLayout.LayoutParams(
