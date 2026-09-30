@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -23,9 +24,12 @@ public class HomePlaylistsActivity extends AppCompatActivity {
     // V0.24 draggable playlists
     // Build V0.24
     // Build V0.28
+    // Build V0.76 show reserved En cours below its principal playlist
     private RecyclerView recycler;
     private PlaylistHomeAdapter adapter;
     private List<SetListModel> lists;
+    private final List<SetListModel> displayLists=new ArrayList<>();
+    private SetListModel inProgress;
     private ItemTouchHelper touchHelper;
     private TextView empty;
 
@@ -104,9 +108,20 @@ public class HomePlaylistsActivity extends AppCompatActivity {
                 int a=from.getBindingAdapterPosition();
                 int b=to.getBindingAdapterPosition();
                 if(a==RecyclerView.NO_POSITION || b==RecyclerView.NO_POSITION)return false;
-                Collections.swap(lists,a,b);
-                adapter.notifyItemMoved(a,b);
-                AppStore.saveSetlists(HomePlaylistsActivity.this,lists);
+                if(a<0 || b<0 || a>=displayLists.size() || b>=displayLists.size())return false;
+
+                SetListModel fromList=displayLists.get(a);
+                SetListModel toList=displayLists.get(b);
+                if(isProgressRow(fromList) || isProgressRow(toList))return false;
+
+                int fromRegular=indexOfRegular(fromList.id);
+                int toRegular=indexOfRegular(toList.id);
+                if(fromRegular<0 || toRegular<0)return false;
+
+                Collections.swap(lists,fromRegular,toRegular);
+                saveRegularPlaylistOrder();
+                rebuildDisplayLists();
+                adapter.notifyDataSetChanged();
                 return true;
             }
 
@@ -123,7 +138,8 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
             @Override public void clearView(RecyclerView rv,RecyclerView.ViewHolder vh){
                 super.clearView(rv,vh);
-                AppStore.saveSetlists(HomePlaylistsActivity.this,lists);
+                saveRegularPlaylistOrder();
+                rebuildDisplayLists();
                 adapter.notifyDataSetChanged();
             }
         };
@@ -147,11 +163,67 @@ public class HomePlaylistsActivity extends AppCompatActivity {
     }
 
     private void loadLists(){
-        lists=AppStore.loadSetlists(this);
-        boolean isEmpty=lists.isEmpty();
+        List<SetListModel> all=AppStore.loadSetlists(this);
+        inProgress=AppStore.getOrCreateInProgressSetlist(this);
+
+        lists=new ArrayList<>();
+        for(SetListModel sl:all){
+            if(sl==null)continue;
+            if(AppStore.isInProgressSetlist(sl.id))continue;
+            lists.add(sl);
+        }
+
+        rebuildDisplayLists();
+
+        boolean isEmpty=displayLists.isEmpty();
         empty.setVisibility(isEmpty?View.VISIBLE:View.GONE);
         recycler.setVisibility(isEmpty?View.GONE:View.VISIBLE);
         adapter.notifyDataSetChanged();
+    }
+
+    private void rebuildDisplayLists(){
+        displayLists.clear();
+
+        String principalId=AppStore.getViewerSetlistId(this);
+        boolean progressInserted=false;
+
+        for(int i=0;i<lists.size();i++){
+            SetListModel sl=lists.get(i);
+            displayLists.add(sl);
+
+            if(inProgress!=null && !progressInserted &&
+                principalId!=null && !principalId.isEmpty() &&
+                principalId.equals(sl.id)){
+                displayLists.add(inProgress);
+                progressInserted=true;
+            }
+        }
+
+        if(inProgress!=null && !progressInserted){
+            if(displayLists.isEmpty()){
+                displayLists.add(inProgress);
+            }else{
+                displayLists.add(1,inProgress);
+            }
+        }
+    }
+
+    private boolean isProgressRow(SetListModel sl){
+        return sl!=null && AppStore.isInProgressSetlist(sl.id);
+    }
+
+    private void saveRegularPlaylistOrder(){
+        List<SetListModel> persisted=new ArrayList<>(lists);
+        if(inProgress!=null)persisted.add(inProgress);
+        AppStore.saveSetlists(this,persisted);
+    }
+
+    private int indexOfRegular(String id){
+        if(id==null)return -1;
+        for(int i=0;i<lists.size();i++){
+            if(id.equals(lists.get(i).id))return i;
+        }
+        return -1;
     }
 
     private class PlaylistHomeAdapter extends RecyclerView.Adapter<PlaylistHomeAdapter.Holder>{
@@ -205,6 +277,9 @@ public class HomePlaylistsActivity extends AppCompatActivity {
             Holder h=new Holder(row,name,open,del,handle);
 
             handle.setOnTouchListener((v,event)->{
+                int p=h.getBindingAdapterPosition();
+                if(p==RecyclerView.NO_POSITION || p<0 || p>=displayLists.size())return false;
+                if(isProgressRow(displayLists.get(p)))return false;
                 if(event.getActionMasked()==MotionEvent.ACTION_DOWN){
                     touchHelper.startDrag(h);
                     return true;
@@ -216,16 +291,32 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         }
 
         @Override public void onBindViewHolder(Holder h,int position){
-            SetListModel sl=lists.get(position);
-            h.name.setText((position+1)+".  "+sl.name+"\n"+sl.songIds.size()+" titre"+(sl.songIds.size()>1?"s":""));
-            h.itemView.setBackgroundColor(position%2==0?Color.rgb(30,30,30):Color.rgb(18,18,18));
+            SetListModel sl=displayLists.get(position);
+            boolean progress=isProgressRow(sl);
+
+            if(progress){
+                h.name.setText("↳  EN COURS\n"+sl.songIds.size()+" titre"+(sl.songIds.size()>1?"s":""));
+                h.name.setTextColor(Color.rgb(255,193,7));
+                h.itemView.setBackgroundColor(Color.rgb(55,20,20));
+                h.del.setVisibility(View.GONE);
+                h.handle.setVisibility(View.GONE);
+                h.open.setText("Ouvrir");
+            }else{
+                int regularIndex=indexOfRegular(sl.id);
+                h.name.setText((regularIndex+1)+".  "+sl.name+"\n"+sl.songIds.size()+" titre"+(sl.songIds.size()>1?"s":""));
+                h.name.setTextColor(Color.WHITE);
+                h.itemView.setBackgroundColor(regularIndex%2==0?Color.rgb(30,30,30):Color.rgb(18,18,18));
+                h.del.setVisibility(View.VISIBLE);
+                h.handle.setVisibility(View.VISIBLE);
+                h.open.setText("Ouvrir");
+            }
 
             h.name.setOnClickListener(v->openPlaylist(sl.id));
             h.open.setOnClickListener(v->openPlaylist(sl.id));
-            h.del.setOnClickListener(v->confirmDelete(sl));
+            h.del.setOnClickListener(progress?null:v->confirmDelete(sl));
         }
 
-        @Override public int getItemCount(){return lists==null?0:lists.size();}
+        @Override public int getItemCount(){return displayLists.size();}
     }
 
     private void openPlaylist(String id){
@@ -258,7 +349,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
             .setMessage("« "+sl.name+" » sera supprimée. Les morceaux et leurs paroles resteront dans la bibliothèque.")
             .setPositiveButton("Supprimer",(d,w)->{
                 lists.removeIf(x->x.id.equals(sl.id));
-                AppStore.saveSetlists(this,lists);
+                saveRegularPlaylistOrder();
                 loadLists();
             })
             .setNegativeButton("Annuler",null)
