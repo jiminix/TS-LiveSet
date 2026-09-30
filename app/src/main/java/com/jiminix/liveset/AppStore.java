@@ -15,6 +15,7 @@ public class AppStore {
     private static final String K_VIEWER_SETLIST = "viewer_setlist_id";
     private static final String K_IN_PROGRESS_BACKUP = "in_progress_song_ids_backup";
     private static final String K_IN_PROGRESS_DISABLED_BACKUP = "in_progress_disabled_song_ids_backup";
+    private static final String K_IN_PROGRESS_INTENTIONALLY_EMPTY = "in_progress_intentionally_empty";
     private static final String K_FULL_BACKUP = "full_backup_json";
     private static final String K_FULL_BACKUP_TIME = "full_backup_time";
     public static final String IN_PROGRESS_SETLIST_ID = "__in_progress__";
@@ -109,6 +110,9 @@ public class AppStore {
         if (!replaced) all.add(setlist);
 
         if (isInProgressSetlist(setlist.id)) {
+            if (!setlist.songIds.isEmpty()) {
+                prefs(c).edit().putBoolean(K_IN_PROGRESS_INTENTIONALLY_EMPTY, false).apply();
+            }
             saveInProgressBackup(c, setlist);
         }
 
@@ -153,8 +157,9 @@ public class AppStore {
             changed = true;
         }
 
-        // Restore from the dedicated backup if the canonical playlist is unexpectedly empty.
-        if (canonical.songIds.isEmpty()) {
+        // Restore from the dedicated backup only when the empty state was not intentional.
+        boolean intentionallyEmpty=prefs(c).getBoolean(K_IN_PROGRESS_INTENTIONALLY_EMPTY,false);
+        if (canonical.songIds.isEmpty() && !intentionallyEmpty) {
             List<String> backupIds = loadStringListBackup(c, K_IN_PROGRESS_BACKUP);
             if (!backupIds.isEmpty()) {
                 for (String id : backupIds) {
@@ -246,6 +251,46 @@ public class AppStore {
             .putString(K_IN_PROGRESS_BACKUP, ids.toString())
             .putString(K_IN_PROGRESS_DISABLED_BACKUP, disabled.toString())
             .apply();
+    }
+
+    public static boolean isInProgressIntentionallyEmpty(Context c) {
+        return prefs(c).getBoolean(K_IN_PROGRESS_INTENTIONALLY_EMPTY, false);
+    }
+
+    public static void clearInProgressSetlist(Context c) {
+        List<SetListModel> all=loadSetlists(c);
+        SetListModel progress=null;
+
+        for(SetListModel s:all){
+            if(isInProgressSetlist(s.id)){
+                progress=s;
+                break;
+            }
+        }
+
+        if(progress==null){
+            progress=new SetListModel();
+            progress.id=IN_PROGRESS_SETLIST_ID;
+            progress.name="En cours";
+            all.add(progress);
+        }
+
+        progress.songIds.clear();
+        progress.disabledSongIds.clear();
+
+        JSONArray a=new JSONArray();
+        for(SetListModel s:all){
+            try{a.put(s.toJson());}catch(Exception ignored){}
+        }
+
+        prefs(c).edit()
+            .putString(K_SETLISTS,a.toString())
+            .putString(K_IN_PROGRESS_BACKUP,"[]")
+            .putString(K_IN_PROGRESS_DISABLED_BACKUP,"[]")
+            .putBoolean(K_IN_PROGRESS_INTENTIONALLY_EMPTY,true)
+            .commit();
+
+        PlaylistCloudSync.maybePublish(c);
     }
 
     public static int getInProgressBackupCount(Context c) {
