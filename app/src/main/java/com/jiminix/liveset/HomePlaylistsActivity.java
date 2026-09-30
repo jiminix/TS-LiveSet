@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -19,12 +20,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class HomePlaylistsActivity extends AppCompatActivity {
     // V0.24 draggable playlists
     // Build V0.24
     // Build V0.28
     // Build V0.76 show reserved En cours below its principal playlist
+    // Build V0.77 global SAVE / RESTORE with backup timestamp
     private RecyclerView recycler;
     private PlaylistHomeAdapter adapter;
     private List<SetListModel> lists;
@@ -32,6 +37,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
     private SetListModel inProgress;
     private ItemTouchHelper touchHelper;
     private TextView empty;
+    private TextView backupInfo;
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
@@ -79,6 +85,27 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         version.setGravity(Gravity.RIGHT);
         version.setPadding(0,0,Ui.dp(this,12),Ui.dp(this,2));
         root.addView(version);
+
+        LinearLayout backupRow=Ui.row(this);
+        backupRow.setPadding(Ui.dp(this,6),Ui.dp(this,2),Ui.dp(this,6),Ui.dp(this,2));
+
+        Button saveAll=Ui.button(this,"SAVE TOUT");
+        saveAll.setTextSize(12);
+        Button restoreAll=Ui.button(this,"↻ RESTAURER");
+        restoreAll.setTextSize(12);
+        Ui.weight(saveAll,1);
+        Ui.weight(restoreAll,1);
+        backupRow.addView(saveAll);
+        backupRow.addView(restoreAll);
+        root.addView(backupRow);
+
+        backupInfo=new TextView(this);
+        backupInfo.setText("Dernière sauvegarde : vérification…");
+        backupInfo.setTextColor(Color.LTGRAY);
+        backupInfo.setTextSize(11);
+        backupInfo.setGravity(Gravity.CENTER);
+        backupInfo.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),Ui.dp(this,4));
+        root.addView(backupInfo);
 
         TextView hint=new TextView(this);
         hint.setText("Maintiens ≡ et glisse pour classer les playlists");
@@ -148,9 +175,105 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
         library.setOnClickListener(v->startActivity(new Intent(this,MainActivity.class).putExtra("open_library",true)));
         add.setOnClickListener(v->createPlaylist());
+        saveAll.setOnClickListener(v->saveEverything());
+        restoreAll.setOnClickListener(v->confirmRestoreEverything());
 
         Ui.applySafeArea(root);
         setContentView(root);
+        refreshBackupInfo();
+    }
+
+    private String formatBackupDate(long time){
+        if(time<=0L)return "Aucune sauvegarde";
+        return new SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault()).format(new Date(time));
+    }
+
+    private long parseTime(String value){
+        try{return Long.parseLong(value==null?"0":value.trim());}
+        catch(Exception ignored){return 0L;}
+    }
+
+    private void refreshBackupInfo(){
+        long local=AppStore.getFullBackupTimestamp(this);
+        if(backupInfo!=null){
+            backupInfo.setText(local>0L
+                ? "Dernière sauvegarde : "+formatBackupDate(local)+" · vérification Internet…"
+                : "Dernière sauvegarde : vérification Internet…");
+        }
+
+        PlaylistCloudSync.getGlobalBackupTimestamp(this,new PlaylistCloudSync.Listener(){
+            @Override public void onSuccess(String value){
+                long time=parseTime(value);
+                if(backupInfo!=null)backupInfo.setText("Dernière sauvegarde : "+formatBackupDate(time));
+            }
+
+            @Override public void onError(String message){
+                long fallback=AppStore.getFullBackupTimestamp(HomePlaylistsActivity.this);
+                if(backupInfo!=null){
+                    backupInfo.setText(fallback>0L
+                        ? "Dernière sauvegarde : "+formatBackupDate(fallback)+" · locale"
+                        : "Dernière sauvegarde : aucune");
+                }
+            }
+        });
+    }
+
+    private void saveEverything(){
+        Toast.makeText(this,"Sauvegarde complète en cours…",Toast.LENGTH_SHORT).show();
+
+        PlaylistCloudSync.saveGlobalBackup(this,new PlaylistCloudSync.Listener(){
+            @Override public void onSuccess(String value){
+                long time=parseTime(value);
+                if(backupInfo!=null)backupInfo.setText("Dernière sauvegarde : "+formatBackupDate(time));
+                Toast.makeText(HomePlaylistsActivity.this,
+                    "SAVE terminé · toutes les données sont sauvegardées",
+                    Toast.LENGTH_LONG).show();
+            }
+
+            @Override public void onError(String message){
+                long local=AppStore.getFullBackupTimestamp(HomePlaylistsActivity.this);
+                if(backupInfo!=null && local>0L){
+                    backupInfo.setText("Dernière sauvegarde : "+formatBackupDate(local)+" · locale");
+                }
+                Toast.makeText(HomePlaylistsActivity.this,
+                    "Sauvegarde locale créée, mais Internet : "+message,
+                    Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void confirmRestoreEverything(){
+        long time=AppStore.getFullBackupTimestamp(this);
+        String date=time>0L?formatBackupDate(time):"la dernière sauvegarde disponible";
+
+        new AlertDialog.Builder(this)
+            .setTitle("Restaurer la sauvegarde ?")
+            .setMessage("Toutes les données actuelles seront remplacées par "+date+
+                ".\n\nMorceaux, paroles, playlists, En cours et Medleys seront restaurés.")
+            .setPositiveButton("RESTAURER",(d,w)->restoreEverything())
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private void restoreEverything(){
+        Toast.makeText(this,"Restauration de la sauvegarde…",Toast.LENGTH_SHORT).show();
+
+        PlaylistCloudSync.restoreGlobalBackup(this,new PlaylistCloudSync.Listener(){
+            @Override public void onSuccess(String value){
+                long time=parseTime(value);
+                loadLists();
+                if(backupInfo!=null)backupInfo.setText("Dernière sauvegarde : "+formatBackupDate(time));
+                Toast.makeText(HomePlaylistsActivity.this,
+                    "Sauvegarde restaurée · "+formatBackupDate(time),
+                    Toast.LENGTH_LONG).show();
+            }
+
+            @Override public void onError(String message){
+                Toast.makeText(HomePlaylistsActivity.this,
+                    "Restauration impossible : "+message,
+                    Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private String installedVersion(){
