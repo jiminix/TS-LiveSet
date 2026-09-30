@@ -9,6 +9,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
+import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -19,6 +20,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
@@ -68,6 +70,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.81 multi-step undo
     // Build V0.83 borderless Google Docs icon
     // Build V0.84 inline YouTube audio controls
+    // Build V0.85 robust YouTube embed origin/referrer + real player viewport
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -415,20 +418,30 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         ws.setJavaScriptEnabled(true);
         ws.setDomStorageEnabled(true);
         ws.setMediaPlaybackRequiresUserGesture(false);
+        ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        ws.setUserAgentString("Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36");
+
+        CookieManager cookies=CookieManager.getInstance();
+        cookies.setAcceptCookie(true);
+        cookies.setAcceptThirdPartyCookies(audioWeb,true);
+
         audioWeb.setWebViewClient(new WebViewClient());
         audioWeb.setWebChromeClient(new WebChromeClient());
-        audioWeb.setBackgroundColor(Color.TRANSPARENT);
+        audioWeb.setBackgroundColor(Color.BLACK);
         audioWeb.setAlpha(0.01f);
+        audioWeb.setClickable(false);
+        audioWeb.setFocusable(false);
         audioWeb.setVerticalScrollBarEnabled(false);
         audioWeb.setHorizontalScrollBarEnabled(false);
         audioWeb.addJavascriptInterface(new PlayerBridge(),"AndroidPlayer");
 
-        String html="<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"+
-            "<style>html,body{margin:0;background:#000;width:240px;height:180px;overflow:hidden}</style></head>"+
+        String html="<!doctype html><html><head><meta name='referrer' content='strict-origin-when-cross-origin'>"+
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"+
+            "<style>html,body{margin:0;background:#000;width:200px;height:200px;overflow:hidden}#player{width:200px;height:200px}</style></head>"+
             "<body><div id='player'></div><script src='https://www.youtube.com/iframe_api'></script><script>"+
             "var player=null,pending=null;"+
-            "function onYouTubeIframeAPIReady(){player=new YT.Player('player',{width:'240',height:'180',"+
-            "playerVars:{playsinline:1,controls:0,rel:0},events:{"+
+            "function onYouTubeIframeAPIReady(){player=new YT.Player('player',{width:'200',height:'200',"+
+            "playerVars:{playsinline:1,controls:0,rel:0,enablejsapi:1,origin:'https://appassets.androidplatform.net',widget_referrer:'https://appassets.androidplatform.net/player/'},events:{"+
             "onReady:function(){AndroidPlayer.onReady();if(pending){player.loadVideoById(pending);pending=null;}}, "+
             "onStateChange:function(e){AndroidPlayer.onState(e.data);}, "+
             "onError:function(e){AndroidPlayer.onError(e.data);}}});}"+
@@ -438,10 +451,23 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             "function seekTo(sec){if(player&&player.seekTo)player.seekTo(sec,true);}"+
             "setInterval(function(){try{if(player&&player.getCurrentTime){AndroidPlayer.onProgress(player.getCurrentTime(),player.getDuration());}}catch(e){}},500);"+
             "</script></body></html>";
-        audioWeb.loadDataWithBaseURL("https://www.youtube.com",html,"text/html","UTF-8",null);
 
-        LinearLayout.LayoutParams hiddenLp=new LinearLayout.LayoutParams(Ui.dp(this,1),Ui.dp(this,1));
-        root.addView(audioWeb,hiddenLp);
+        String playerOrigin="https://appassets.androidplatform.net/player/";
+        audioWeb.loadDataWithBaseURL(playerOrigin,html,"text/html","UTF-8",playerOrigin);
+
+        // YouTube's embedded player needs a real viewport. Keep a 200x200 renderer
+        // alive beneath the visible controls instead of a 1x1 WebView.
+        FrameLayout playerHost=new FrameLayout(this);
+        playerHost.setClipChildren(false);
+        playerHost.setClipToPadding(false);
+        playerHost.setClickable(false);
+        FrameLayout.LayoutParams webLp=new FrameLayout.LayoutParams(
+            Ui.dp(this,200),Ui.dp(this,200)
+        );
+        playerHost.addView(audioWeb,webLp);
+        root.addView(playerHost,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,1)
+        ));
 
         miniPlayer=new LinearLayout(this);
         miniPlayer.setOrientation(LinearLayout.VERTICAL);
@@ -533,9 +559,15 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 playingSongId=null;
                 if(miniPlayer!=null)miniPlayer.setVisibility(View.GONE);
                 if(adapter!=null)adapter.notifyDataSetChanged();
-                Toast.makeText(PlaylistOverviewActivity.this,
-                    "Lecture YouTube impossible ("+code+")",
-                    Toast.LENGTH_LONG).show();
+                String message;
+                if(code==101 || code==150){
+                    message="Cette vidéo interdit la lecture intégrée YouTube.";
+                }else if(code==153){
+                    message="YouTube a refusé l’identification du lecteur intégré (153).";
+                }else{
+                    message="Lecture YouTube impossible ("+code+")";
+                }
+                Toast.makeText(PlaylistOverviewActivity.this,message,Toast.LENGTH_LONG).show();
             });
         }
     }
