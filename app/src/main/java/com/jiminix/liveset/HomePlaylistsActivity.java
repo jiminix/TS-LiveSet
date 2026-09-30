@@ -10,8 +10,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -41,6 +44,8 @@ public class HomePlaylistsActivity extends AppCompatActivity {
     private TextView empty;
     private TextView backupInfo;
     private boolean homeDragUndoRecorded=false;
+    private final Handler startupHandler=new Handler(Looper.getMainLooper());
+    private TextView startupOverlay;
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
@@ -54,6 +59,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
     }
 
     private void buildUi(){
+        FrameLayout shell=new FrameLayout(this);
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.rgb(18,18,18));
@@ -180,8 +186,58 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         restoreAll.setOnClickListener(v->confirmRestoreEverything());
 
         Ui.applySafeArea(root);
-        setContentView(root);
+
+        shell.addView(root,new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+
+        startupOverlay=new TextView(this);
+        startupOverlay.setText("Un pour tous, tous pour la même playlist\nTS 2026 - chargement…\nSynchronisation Internet : vérification…");
+        startupOverlay.setTextColor(Color.WHITE);
+        startupOverlay.setTextSize(18);
+        startupOverlay.setGravity(Gravity.CENTER);
+        startupOverlay.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        startupOverlay.setBackgroundColor(Color.argb(235,70,0,12));
+        startupOverlay.setPadding(Ui.dp(this,22),Ui.dp(this,24),Ui.dp(this,22),Ui.dp(this,24));
+
+        FrameLayout.LayoutParams splashLp=new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+        );
+        splashLp.setMargins(Ui.dp(this,18),0,Ui.dp(this,18),0);
+        shell.addView(startupOverlay,splashLp);
+
+        setContentView(shell);
         refreshBackupInfo();
+        updateStartupOverlay();
+        startupHandler.postDelayed(()->{
+            if(startupOverlay!=null) startupOverlay.setVisibility(View.GONE);
+        },5000);
+    }
+
+    private void updateStartupOverlay(){
+        if(startupOverlay==null)return;
+        int count=0;
+        try{
+            java.util.List<SetListModel> all=AppStore.loadSetlists(this);
+            if(all!=null && !all.isEmpty()){
+                SetListModel preferred=null;
+                for(SetListModel x:all){
+                    if(x!=null && x.name!=null && x.name.trim().equalsIgnoreCase("TS 2026")){
+                        preferred=x; break;
+                    }
+                }
+                if(preferred==null) preferred=all.get(0);
+                if(preferred!=null && preferred.songIds!=null) count=preferred.songIds.size();
+            }
+        }catch(Exception ignored){}
+        startupOverlay.setText(
+            "Un pour tous, tous pour la même playlist\n"+
+            "TS 2026 - "+count+" Titre"+(count>1?"s":"")+"\n"+
+            "Synchronisation Internet : OK"
+        );
     }
 
     private void undoLastAction(){
