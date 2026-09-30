@@ -349,6 +349,7 @@ public final class PlaylistCloudSync {
             o.put("stageNum2",s.stageNum2);
             o.put("stageGuitar",s.stageGuitar);
             o.put("stageKeyboard",s.stageKeyboard);
+            o.put("disabled",list.disabledSongIds.contains(songId));
             songs.put(o);
         }
         return songs;
