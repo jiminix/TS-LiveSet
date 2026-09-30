@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
+import android.text.InputFilter;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -57,7 +58,9 @@ public class EditSongActivity extends AppCompatActivity {
         LinearLayout outer=new LinearLayout(this); outer.setOrientation(LinearLayout.VERTICAL); outer.setBackgroundColor(Color.rgb(18,18,18));
         LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,newSong?"Nouveau morceau":"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
         ScrollView sv=new ScrollView(this); LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),Ui.dp(this,30)); sv.addView(root);
-        title=field(root,"Titre"); artist=field(root,"Artiste");
+        title=field(root,"Titre");
+        title.setFilters(new InputFilter[]{new InputFilter.AllCaps()});
+        artist=field(root,"Artiste");
         Button findSong=Ui.button(this,"⌕ Trouver titre / artiste");
         findSong.setOnClickListener(v->searchSongIdentity());
         root.addView(findSong);
@@ -118,7 +121,7 @@ public class EditSongActivity extends AppCompatActivity {
         String k=getIntent().getStringExtra("prefill_key");
         String b=getIntent().getStringExtra("prefill_bpm");
         String d=getIntent().getStringExtra("prefill_duration");
-        if(t!=null && !t.trim().isEmpty())title.setText(t.trim());
+        if(t!=null && !t.trim().isEmpty())title.setText(t.trim().toUpperCase(java.util.Locale.ROOT));
         if(a!=null && !a.trim().isEmpty())artist.setText(a.trim());
         if(k!=null && !k.trim().isEmpty())key.setText(k.trim());
         if(b!=null && !b.trim().isEmpty())bpm.setText(b.trim());
@@ -182,7 +185,7 @@ public class EditSongActivity extends AppCompatActivity {
 
     private void applySongLookupResult(SongCatalogLookup.Result r){
         if(r==null)return;
-        if(!r.title.isEmpty())title.setText(r.title);
+        if(!r.title.isEmpty())title.setText(r.title.toUpperCase(java.util.Locale.ROOT));
         if(!r.artist.isEmpty())artist.setText(r.artist);
         if(!r.key.isEmpty())key.setText(r.key);
         if(!r.bpm.isEmpty())bpm.setText(r.bpm);
