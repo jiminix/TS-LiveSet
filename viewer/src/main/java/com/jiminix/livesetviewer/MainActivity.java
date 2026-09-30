@@ -32,6 +32,9 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.UUID;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import okhttp3.OkHttpClient;
@@ -55,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.20 read-only En cours playlist toggle
     // Build V0.21 red En cours and colored Viewer bands
     // Build V0.22 show disabled songs at 50% opacity and GitHub self-updater
+    // Build V0.23 expandable read-only Medley sub-playlists
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -88,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
     private String lastSignature="";
     private volatile boolean cloudBusy=false;
     private boolean showInProgress=false;
+    private final Set<String> expandedMedleys=new HashSet<>();
     private String pendingUpdateUrl="";
     private String pendingUpdateVersion="";
 
@@ -589,7 +594,14 @@ public class MainActivity extends AppCompatActivity {
         for(int i=0;i<songs.length();i++){
             JSONObject s=songs.optJSONObject(i);
             if(s==null)continue;
-            addSongRow(i+1,s.optString("title",""),s.optString("bpm",""),s.optBoolean("disabled",false));
+            addSongRow(
+                i+1,
+                s.optString("id","medley-"+i),
+                s.optString("title",""),
+                s.optString("bpm",""),
+                s.optBoolean("disabled",false),
+                s.optJSONArray("medleyItems")
+            );
         }
     }
 
@@ -773,7 +785,20 @@ public class MainActivity extends AppCompatActivity {
         songsBox.removeAllViews();
     }
 
-    private void addSongRow(int number,String title,String bpm,boolean disabled){
+    private boolean isMedleyTitle(String title){
+        String t=title==null?"":title.trim().toLowerCase(Locale.ROOT);
+        return t.startsWith("medley") || t.startsWith("meddley");
+    }
+
+    private void toggleMedley(String songId){
+        if(songId==null || songId.isEmpty())return;
+        if(expandedMedleys.contains(songId))expandedMedleys.remove(songId);
+        else expandedMedleys.add(songId);
+        lastSignature="";
+        refreshPlaylist();
+    }
+
+    private void addSongRow(int number,String songId,String title,String bpm,boolean disabled,JSONArray medleyItems){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -781,6 +806,9 @@ public class MainActivity extends AppCompatActivity {
         row.setMinimumHeight(dp(36));
         row.setBackgroundColor(number%2==1?Color.rgb(28,28,28):Color.BLACK);
         row.setAlpha(disabled?0.5f:1f);
+
+        boolean medley=isMedleyTitle(title) && medleyItems!=null && medleyItems.length()>0;
+        boolean medleyExpanded=medley && expandedMedleys.contains(songId);
 
         TextView num=new TextView(this);
         num.setText(String.format("%02d",number));
@@ -791,7 +819,7 @@ public class MainActivity extends AppCompatActivity {
         row.addView(num,new LinearLayout.LayoutParams(dp(36),ViewGroup.LayoutParams.MATCH_PARENT));
 
         TextView name=new TextView(this);
-        name.setText(title);
+        name.setText((medley?(medleyExpanded?"▾ ":"▸ "):"")+(title==null?"":title));
         name.setTextColor(Color.WHITE);
         name.setTextSize(20);
         name.setGravity(Gravity.CENTER_VERTICAL);
@@ -810,10 +838,41 @@ public class MainActivity extends AppCompatActivity {
         bpmView.setPadding(dp(4),0,0,0);
         row.addView(bpmView,new LinearLayout.LayoutParams(dp(62),ViewGroup.LayoutParams.MATCH_PARENT));
 
+        if(medley){
+            row.setOnClickListener(v->toggleMedley(songId));
+        }
+
         songsBox.addView(row,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ));
+
+        if(medley && medleyExpanded){
+            LinearLayout medleyBox=new LinearLayout(this);
+            medleyBox.setOrientation(LinearLayout.VERTICAL);
+            medleyBox.setPadding(dp(42),dp(2),dp(8),dp(5));
+            medleyBox.setBackgroundColor(Color.rgb(18,18,18));
+            medleyBox.setAlpha(disabled?0.5f:1f);
+
+            for(int i=0;i<medleyItems.length();i++){
+                String itemTitle=medleyItems.optString(i,"").trim();
+                if(itemTitle.isEmpty())continue;
+                TextView item=new TextView(this);
+                item.setText(String.format(Locale.ROOT,"%02d. %s",i+1,itemTitle));
+                item.setTextColor(Color.WHITE);
+                item.setTextSize(13);
+                item.setPadding(dp(6),dp(2),0,dp(2));
+                medleyBox.addView(item,new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ));
+            }
+
+            songsBox.addView(medleyBox,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+        }
 
         View sep=new View(this);
         sep.setBackgroundColor(Color.rgb(45,45,45));
