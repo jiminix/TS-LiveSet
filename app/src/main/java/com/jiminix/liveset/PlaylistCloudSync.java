@@ -388,7 +388,7 @@ public final class PlaylistCloudSync {
                     JSONArray localSongs=localProgress==null?null:localProgress.optJSONArray("songs");
                     boolean localEmpty=localSongs==null || localSongs.length()==0;
 
-                    if(localEmpty){
+                    if(localEmpty && !AppStore.isInProgressIntentionallyEmpty(app)){
                         JSONObject remoteProgress=remote.optJSONObject("in_progress");
                         JSONArray remoteSongs=remoteProgress==null?null:remoteProgress.optJSONArray("songs");
                         if(remoteSongs!=null && remoteSongs.length()>0){
