@@ -1,10 +1,14 @@
 package com.jiminix.livesetviewer;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.graphics.Color;
 import android.content.res.ColorStateList;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Base64;
@@ -16,11 +20,16 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.TimeUnit;
 import java.nio.ByteBuffer;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.UUID;
 import java.util.Collections;
 import java.util.regex.Matcher;
@@ -45,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.19 direct Y6 pairing without registry lookup
     // Build V0.20 read-only En cours playlist toggle
     // Build V0.21 red En cours and colored Viewer bands
-    // Build V0.22 show disabled songs at 50% opacity
+    // Build V0.22 show disabled songs at 50% opacity and GitHub self-updater
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -59,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String K_RESOLVED_BLOB="resolved_blob_id";
     private static final String BOOTSTRAP_CODE="Y6";
     private static final String BOOTSTRAP_BLOB="d7e6c82a-82e0-4336-8e66-d49b9d013312";
+    private static final String UPDATE_API="https://api.github.com/repos/jiminix/TS-LiveSet/releases/tags/viewer-latest";
+    private static final String UPDATE_ASSET="TS-Playlist-Viewer.apk";
 
     private static final OkHttpClient CLIENT=new OkHttpClient.Builder()
         .connectTimeout(15,TimeUnit.SECONDS)
@@ -77,6 +88,8 @@ public class MainActivity extends AppCompatActivity {
     private String lastSignature="";
     private volatile boolean cloudBusy=false;
     private boolean showInProgress=false;
+    private String pendingUpdateUrl="";
+    private String pendingUpdateVersion="";
 
     private final Runnable refreshLoop=new Runnable(){
         @Override public void run(){
@@ -94,6 +107,14 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         handler.removeCallbacks(refreshLoop);
         refreshLoop.run();
+
+        if(!pendingUpdateUrl.isEmpty() && canInstallPackages()){
+            String url=pendingUpdateUrl;
+            String version=pendingUpdateVersion;
+            pendingUpdateUrl="";
+            pendingUpdateVersion="";
+            downloadAndInstallUpdate(version,url);
+        }
     }
 
     @Override protected void onPause(){
@@ -185,18 +206,26 @@ public class MainActivity extends AppCompatActivity {
 
         Button internet=new Button(this);
         internet.setText("🌐 Connexion");
-        internet.setTextSize(11);
+        internet.setTextSize(10);
         internet.setMinWidth(0);
         internet.setMinimumWidth(0);
 
+        Button update=new Button(this);
+        update.setText("↻ Mise à jour");
+        update.setTextSize(10);
+        update.setMinWidth(0);
+        update.setMinimumWidth(0);
+
         viewerActions.addView(inProgressButton,new LinearLayout.LayoutParams(0,dp(36),1));
         viewerActions.addView(internet,new LinearLayout.LayoutParams(0,dp(36),1));
+        viewerActions.addView(update,new LinearLayout.LayoutParams(0,dp(36),1));
         root.addView(viewerActions,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,dp(36)
         ));
 
         internet.setOnClickListener(v->configureInternet());
         inProgressButton.setOnClickListener(v->toggleInProgress());
+        update.setOnClickListener(v->checkForUpdate());
 
         scroll=new ScrollView(this);
         scroll.setFillViewport(true);
@@ -226,6 +255,171 @@ public class MainActivity extends AppCompatActivity {
         pageDown.setOnClickListener(v->pageScroll(1));
 
         setContentView(root);
+    }
+
+    private void checkForUpdate(){
+        Toast.makeText(this,"Vérification de la mise à jour…",Toast.LENGTH_SHORT).show();
+
+        new Thread(()->{
+            try{
+                Request req=new Request.Builder()
+                    .url(UPDATE_API)
+                    .header("Accept","application/vnd.github+json")
+                    .header("User-Agent","TS-Playlist-Viewer/"+BuildConfig.VERSION_NAME)
+                    .get()
+                    .build();
+
+                String remoteVersion="";
+                String assetUrl="";
+
+                try(Response response=CLIENT.newCall(req).execute()){
+                    if(!response.isSuccessful())throw new Exception("GitHub HTTP "+response.code());
+                    String raw=response.body()==null?"":response.body().string();
+                    JSONObject release=new JSONObject(raw);
+
+                    String releaseName=release.optString("name","");
+                    Matcher vm=Pattern.compile("(?i)\\bV([0-9]+(?:\\.[0-9]+)*)").matcher(releaseName);
+                    if(vm.find())remoteVersion=vm.group(1);
+
+                    JSONArray assets=release.optJSONArray("assets");
+                    if(assets!=null){
+                        for(int i=0;i<assets.length();i++){
+                            JSONObject asset=assets.optJSONObject(i);
+                            if(asset==null)continue;
+                            if(UPDATE_ASSET.equals(asset.optString("name",""))){
+                                assetUrl=asset.optString("browser_download_url","");
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if(remoteVersion.isEmpty())throw new Exception("Version distante introuvable");
+                if(assetUrl.isEmpty())throw new Exception("APK de mise à jour introuvable");
+
+                final String rv=remoteVersion;
+                final String url=assetUrl;
+                runOnUiThread(()->showUpdateResult(rv,url));
+            }catch(Exception e){
+                String msg=e.getMessage();
+                if(msg==null || msg.trim().isEmpty())msg="Erreur GitHub";
+                final String out=msg;
+                runOnUiThread(()->Toast.makeText(this,"Mise à jour impossible : "+out,Toast.LENGTH_LONG).show());
+            }
+        },"TS-Viewer-Update-Check").start();
+    }
+
+    private void showUpdateResult(String remoteVersion,String assetUrl){
+        String current=BuildConfig.VERSION_NAME;
+        if(compareVersions(remoteVersion,current)<=0){
+            new AlertDialog.Builder(this)
+                .setTitle("Viewer à jour")
+                .setMessage("Version installée : V"+current+"\nDernière version : V"+remoteVersion)
+                .setPositiveButton("OK",null)
+                .show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Mise à jour disponible")
+            .setMessage("Installée : V"+current+"\nDisponible : V"+remoteVersion+
+                "\n\nL’APK sera téléchargée puis Android affichera l’écran de confirmation de mise à jour.")
+            .setPositiveButton("Télécharger et installer",(d,w)->prepareUpdateInstall(remoteVersion,assetUrl))
+            .setNegativeButton("Plus tard",null)
+            .show();
+    }
+
+    private int compareVersions(String a,String b){
+        String[] aa=(a==null?"":a).split("\\.");
+        String[] bb=(b==null?"":b).split("\\.");
+        int n=Math.max(aa.length,bb.length);
+        for(int i=0;i<n;i++){
+            int av=0,bv=0;
+            try{if(i<aa.length)av=Integer.parseInt(aa[i]);}catch(Exception ignored){}
+            try{if(i<bb.length)bv=Integer.parseInt(bb[i]);}catch(Exception ignored){}
+            if(av!=bv)return av>bv?1:-1;
+        }
+        return 0;
+    }
+
+    private boolean canInstallPackages(){
+        return Build.VERSION.SDK_INT<Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls();
+    }
+
+    private void prepareUpdateInstall(String version,String url){
+        if(!canInstallPackages()){
+            pendingUpdateVersion=version;
+            pendingUpdateUrl=url;
+            Toast.makeText(this,"Autorise TS Playlist Viewer à installer la mise à jour.",Toast.LENGTH_LONG).show();
+            Intent settings=new Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:"+getPackageName())
+            );
+            startActivity(settings);
+            return;
+        }
+
+        downloadAndInstallUpdate(version,url);
+    }
+
+    private void downloadAndInstallUpdate(String version,String url){
+        Toast.makeText(this,"Téléchargement de Viewer V"+version+"…",Toast.LENGTH_LONG).show();
+
+        new Thread(()->{
+            try{
+                File dir=getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                if(dir==null)throw new Exception("Dossier de téléchargement indisponible");
+                if(!dir.exists() && !dir.mkdirs())throw new Exception("Impossible de créer le dossier de téléchargement");
+
+                File apk=new File(dir,"TS-Playlist-Viewer-V"+version+".apk");
+                if(apk.exists())apk.delete();
+
+                Request req=new Request.Builder()
+                    .url(url)
+                    .header("User-Agent","TS-Playlist-Viewer/"+BuildConfig.VERSION_NAME)
+                    .get()
+                    .build();
+
+                try(Response response=CLIENT.newCall(req).execute()){
+                    if(!response.isSuccessful())throw new Exception("Téléchargement HTTP "+response.code());
+                    if(response.body()==null)throw new Exception("APK vide");
+
+                    try(InputStream in=response.body().byteStream();
+                        FileOutputStream out=new FileOutputStream(apk)){
+                        byte[] buf=new byte[8192];
+                        int n;
+                        while((n=in.read(buf))>0)out.write(buf,0,n);
+                    }
+                }
+
+                if(!apk.exists() || apk.length()<100000)throw new Exception("APK téléchargée invalide");
+                runOnUiThread(()->launchInstaller(apk,version));
+            }catch(Exception e){
+                String msg=e.getMessage();
+                if(msg==null || msg.trim().isEmpty())msg="Erreur de téléchargement";
+                final String out=msg;
+                runOnUiThread(()->Toast.makeText(this,"Mise à jour impossible : "+out,Toast.LENGTH_LONG).show());
+            }
+        },"TS-Viewer-Update-Download").start();
+    }
+
+    private void launchInstaller(File apk,String version){
+        try{
+            Uri uri=FileProvider.getUriForFile(
+                this,
+                getPackageName()+".fileprovider",
+                apk
+            );
+
+            Intent install=new Intent(Intent.ACTION_VIEW);
+            install.setDataAndType(uri,"application/vnd.android.package-archive");
+            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(install);
+            Toast.makeText(this,"Confirme « Mettre à jour » pour installer V"+version+".",Toast.LENGTH_LONG).show();
+        }catch(Exception e){
+            Toast.makeText(this,"Impossible d’ouvrir l’installateur : "+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
     }
 
     private void toggleInProgress(){
