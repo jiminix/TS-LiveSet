@@ -2,6 +2,7 @@ package com.jiminix.liveset;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -32,10 +33,12 @@ public class EditSongActivity extends AppCompatActivity {
     // V0.63 fill key, BPM and duration from song lookup when available
     // V0.64 move Save below web lyrics search for new songs
     // V0.67 editable Medley sub-playlist
+    // V0.78 OUT button in song editor
     private Song song;
     private String targetSetlistId;
     private EditText title, artist, key, bpm, tuning, capo, duration, singer, guitar, notes, media, lyrics;
     private Button medleyButton;
+    private Button outButton;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -46,6 +49,12 @@ public class EditSongActivity extends AppCompatActivity {
         buildUi();
         fill();
         applyPrefill();
+        refreshOutButton();
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        refreshOutButton();
     }
 
     private EditText field(LinearLayout root,String hint){
@@ -67,6 +76,15 @@ public class EditSongActivity extends AppCompatActivity {
         LinearLayout r1=Ui.row(this); key=mini("Tonalité",r1); bpm=mini("BPM",r1); capo=mini("Capo",r1); root.addView(r1);
         tuning=field(root,"Accordage"); duration=field(root,"Durée"); singer=field(root,"Chanteur / chanteuse"); guitar=field(root,"Guitare / instrument");
         notes=field(root,"Notes live : intro, fin, départ…"); media=field(root,"Lien YouTube ou autre média");
+
+        outButton=Ui.button(this,"OUT");
+        outButton.setTextSize(16);
+        outButton.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        outButton.setOnClickListener(v->toggleOutStatus());
+        root.addView(outButton,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,48)
+        ));
+        refreshOutButton();
 
         medleyButton=Ui.button(this,"🎶 Sous-playlist Medley");
         medleyButton.setTextSize(14);
@@ -110,6 +128,48 @@ public class EditSongActivity extends AppCompatActivity {
         outer.addView(actions);
         cancel.setOnClickListener(v->finish());
         Ui.applySafeArea(outer); setContentView(outer);
+    }
+
+    private SetListModel getTargetSetlist(){
+        if(targetSetlistId==null || targetSetlistId.trim().isEmpty())return null;
+        if(AppStore.isInProgressSetlist(targetSetlistId)){
+            return AppStore.getOrCreateInProgressSetlist(this);
+        }
+        return AppStore.findSetlist(this,targetSetlistId);
+    }
+
+    private void refreshOutButton(){
+        if(outButton==null)return;
+
+        SetListModel list=getTargetSetlist();
+        boolean usable=list!=null && song!=null && list.songIds.contains(song.id);
+
+        outButton.setVisibility(usable?View.VISIBLE:View.GONE);
+        if(!usable)return;
+
+        boolean out=list.disabledSongIds.contains(song.id);
+        outButton.setText(out?"RÉACTIVER":"OUT");
+        outButton.setTextColor(Color.WHITE);
+        outButton.setBackgroundTintList(ColorStateList.valueOf(
+            out ? Color.rgb(95,95,95) : Color.rgb(198,40,40)
+        ));
+    }
+
+    private void toggleOutStatus(){
+        SetListModel list=getTargetSetlist();
+        if(list==null || song==null)return;
+
+        boolean out=list.disabledSongIds.contains(song.id);
+        if(out){
+            list.disabledSongIds.remove(song.id);
+            android.widget.Toast.makeText(this,"Morceau réactivé",android.widget.Toast.LENGTH_SHORT).show();
+        }else{
+            if(!list.disabledSongIds.contains(song.id))list.disabledSongIds.add(song.id);
+            android.widget.Toast.makeText(this,"Morceau OUT · conservé dans la playlist",android.widget.Toast.LENGTH_SHORT).show();
+        }
+
+        AppStore.upsertSetlist(this,list);
+        refreshOutButton();
     }
 
     private EditText mini(String hint,LinearLayout row){ EditText e=new EditText(this); e.setHint(hint); e.setTextColor(Color.WHITE); e.setHintTextColor(Color.GRAY); e.setSingleLine(true); Ui.weight(e,1); row.addView(e); return e; }
