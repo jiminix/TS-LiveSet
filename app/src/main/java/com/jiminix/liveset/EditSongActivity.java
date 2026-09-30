@@ -26,6 +26,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class EditSongActivity extends AppCompatActivity {
+    // V0.62 compact lyrics: remove empty lines on web import, paste and save
     private Song song;
     private String targetSetlistId;
     private EditText title, artist, key, bpm, tuning, capo, duration, singer, guitar, notes, media, lyrics;
@@ -123,7 +124,7 @@ public class EditSongActivity extends AppCompatActivity {
     private void fill(){ title.setText(song.title); artist.setText(song.artist); key.setText(song.key); bpm.setText(song.bpm); tuning.setText(song.tuning); capo.setText(song.capo); duration.setText(song.duration); singer.setText(song.singer); guitar.setText(song.guitar); notes.setText(song.notes); media.setText(song.mediaUrl); lyrics.setText(song.lyrics); }
 
     private void save(){
-        song.title=title.getText().toString().trim(); song.artist=artist.getText().toString().trim(); song.key=key.getText().toString().trim(); song.bpm=bpm.getText().toString().trim(); song.tuning=tuning.getText().toString().trim(); song.capo=capo.getText().toString().trim(); song.duration=duration.getText().toString().trim(); song.singer=singer.getText().toString().trim(); song.guitar=guitar.getText().toString().trim(); song.notes=notes.getText().toString().trim(); song.mediaUrl=media.getText().toString().trim(); song.lyrics=lyrics.getText().toString();
+        song.title=title.getText().toString().trim(); song.artist=artist.getText().toString().trim(); song.key=key.getText().toString().trim(); song.bpm=bpm.getText().toString().trim(); song.tuning=tuning.getText().toString().trim(); song.capo=capo.getText().toString().trim(); song.duration=duration.getText().toString().trim(); song.singer=singer.getText().toString().trim(); song.guitar=guitar.getText().toString().trim(); song.notes=notes.getText().toString().trim(); song.mediaUrl=media.getText().toString().trim(); song.lyrics=compactLyrics(lyrics.getText().toString()); lyrics.setText(song.lyrics);
         if(song.title.isEmpty()){ title.setError("Titre obligatoire"); return; }
         AppStore.upsertSong(this,song);
         if(targetSetlistId!=null && !targetSetlistId.isEmpty()){
@@ -171,7 +172,7 @@ public class EditSongActivity extends AppCompatActivity {
                         if(o==null)continue;
                         String plain=o.optString("plainLyrics","");
                         if(plain!=null && !plain.trim().isEmpty()){
-                            found=plain.trim();
+                            found=compactLyrics(plain);
                             source="LRCLIB";
                             break;
                         }
@@ -194,7 +195,7 @@ public class EditSongActivity extends AppCompatActivity {
                         JSONObject o=new JSONObject(readResponse(con));
                         String plain=o.optString("lyrics","");
                         if(plain!=null && !plain.trim().isEmpty()){
-                            found=plain.trim();
+                            found=compactLyrics(plain);
                             source="lyrics.ovh";
                         }
                     }
@@ -218,6 +219,19 @@ public class EditSongActivity extends AppCompatActivity {
                 }
             });
         }).start();
+    }
+
+    private String compactLyrics(String raw){
+        if(raw==null)return "";
+        String normalized=raw.replace("\r\n","\n").replace('\r','\n').replace('\u00A0',' ');
+        StringBuilder out=new StringBuilder();
+        for(String line:normalized.split("\n",-1)){
+            String cleaned=line.replaceAll("[\\t ]+$","");
+            if(cleaned.trim().isEmpty())continue;
+            if(out.length()>0)out.append('\n');
+            out.append(cleaned);
+        }
+        return out.toString().trim();
     }
 
     private String readResponse(HttpURLConnection con) throws Exception{
@@ -254,7 +268,7 @@ public class EditSongActivity extends AppCompatActivity {
                 t.setOnClickListener(v->{ EditText e=new EditText(EditSongActivity.this); e.setText(blocks.get(pos)); e.setMinLines(5); new AlertDialog.Builder(EditSongActivity.this).setTitle("Modifier le bloc").setView(e).setPositiveButton("OK",(d,w)->{blocks.set(pos,e.getText().toString()); run();}).setNegativeButton("Annuler",null).show(); });
             }
         }};
-        dialog.setOnShowListener(x->{ dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{ lyrics.setText(String.join("\n\n",blocks)); dialog.dismiss(); }); });
+        dialog.setOnShowListener(x->{ dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{ lyrics.setText(compactLyrics(String.join("\n",blocks))); dialog.dismiss(); }); });
         rebuild.run(); dialog.show();
     }
 }
