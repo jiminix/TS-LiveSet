@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.22 show disabled songs at 50% opacity and GitHub self-updater
     // Build V0.23 expandable read-only Medley sub-playlists
     // Build V0.24 dedicated +/- Medley expansion on remote Viewer
+    // Build V0.25 force all song titles uppercase
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -821,7 +822,7 @@ public class MainActivity extends AppCompatActivity {
         row.addView(num,new LinearLayout.LayoutParams(dp(36),ViewGroup.LayoutParams.MATCH_PARENT));
 
         TextView name=new TextView(this);
-        name.setText(title==null?"":title);
+        name.setText(title==null?"":title.toUpperCase(Locale.ROOT));
         name.setTextColor(Color.WHITE);
         name.setTextSize(20);
         name.setGravity(Gravity.CENTER_VERTICAL);
@@ -866,7 +867,7 @@ public class MainActivity extends AppCompatActivity {
             medleyBox.setAlpha(disabled?0.5f:1f);
 
             for(int i=0;i<medleyItems.length();i++){
-                String itemTitle=medleyItems.optString(i,"").trim();
+                String itemTitle=medleyItems.optString(i,"").trim().toUpperCase(Locale.ROOT);
                 if(itemTitle.isEmpty())continue;
                 String itemArtist=medleyArtists==null?"":medleyArtists.optString(i,"").trim();
                 TextView item=new TextView(this);
