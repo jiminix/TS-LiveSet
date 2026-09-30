@@ -47,6 +47,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.61 explicit Google Docs import button in En cours
     // Build V0.63 enrich online song search metadata
     // Build V0.65 red action buttons, black/white zoom and colored header/footer bands
+    // Build V0.66 per-playlist disabled songs at 50% opacity
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -727,6 +728,21 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .show();
     }
 
+    private void toggleSongDisabled(int pos){
+        if(pos<0 || pos>=setlist.songIds.size())return;
+        String id=setlist.songIds.get(pos);
+        boolean disabled=setlist.disabledSongIds.contains(id);
+        if(disabled){
+            setlist.disabledSongIds.remove(id);
+            Toast.makeText(this,"Morceau réactivé",Toast.LENGTH_SHORT).show();
+        }else{
+            setlist.disabledSongIds.add(id);
+            Toast.makeText(this,"Morceau désactivé · affiché à 50 %",Toast.LENGTH_SHORT).show();
+        }
+        AppStore.upsertSetlist(this,setlist);
+        adapter.notifyItemChanged(pos);
+    }
+
     private void confirmRemoveSong(int pos){
         if(pos<0 || pos>=setlist.songIds.size())return;
         String id=setlist.songIds.get(pos);
@@ -738,6 +754,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .setMessage(name+" sera retiré de cette playlist. Il restera dans la bibliothèque avec ses paroles.")
             .setPositiveButton("Retirer",(d,w)->{
                 setlist.songIds.remove(pos);
+                setlist.disabledSongIds.remove(id);
                 AppStore.upsertSetlist(this,setlist);
                 if(id.equals(currentSongId))currentSongId=null;
                 adapter.notifyItemRemoved(pos);
@@ -767,10 +784,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             final TextView stage2;
             final TextView guitarIcon;
             final TextView keyboardIcon;
+            final TextView disable;
             final TextView delete;
             final TextView handle;
 
-            Holder(LinearLayout row,TextView num,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView delete,TextView handle){
+            Holder(LinearLayout row,TextView num,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView disable,TextView delete,TextView handle){
                 super(row);
                 this.num=num;
                 this.song=song;
@@ -780,6 +798,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 this.stage2=stage2;
                 this.guitarIcon=guitarIcon;
                 this.keyboardIcon=keyboardIcon;
+                this.disable=disable;
                 this.delete=delete;
                 this.handle=handle;
             }
@@ -855,6 +874,14 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             stageBox.addView(guitarIcon);
             stageBox.addView(keyboardIcon);
 
+            TextView disable=new TextView(PlaylistOverviewActivity.this);
+            disable.setText("◐");
+            disable.setTextColor(Color.LTGRAY);
+            disable.setTextSize(17);
+            disable.setGravity(Gravity.CENTER);
+            disable.setContentDescription("Désactiver / réactiver le morceau");
+            disable.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,30),Ui.dp(PlaylistOverviewActivity.this,32)));
+
             TextView delete=new TextView(PlaylistOverviewActivity.this);
             delete.setText("🗑");
             delete.setTextColor(Color.LTGRAY);
@@ -873,10 +900,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             row.addView(song);
             row.addView(bpm);
             row.addView(stageBox);
+            row.addView(disable);
             row.addView(delete);
             row.addView(handle);
 
-            Holder h=new Holder(row,num,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,delete,handle);
+            Holder h=new Holder(row,num,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,disable,delete,handle);
             row.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p!=RecyclerView.NO_POSITION)openSong(p);
@@ -889,6 +917,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             bpm.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p!=RecyclerView.NO_POSITION)editBpm(p);
+            });
+
+            disable.setOnClickListener(v->{
+                int p=h.getBindingAdapterPosition();
+                if(p!=RecyclerView.NO_POSITION)toggleSongDisabled(p);
             });
 
             delete.setOnClickListener(v->{
@@ -920,6 +953,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.bpm.setPadding(zdp(2),0,0,0);
             h.song.setSingleLine(compact);
 
+            h.disable.setTextSize(zsp(17));
+            h.disable.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
             h.delete.setTextSize(zsp(16));
             h.delete.setLayoutParams(new LinearLayout.LayoutParams(zdp(34),zdp(compact?32:40)));
             h.handle.setTextSize(zsp(20));
@@ -989,6 +1024,12 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             }else{
                 h.stageBox.setVisibility(View.GONE);
             }
+
+            boolean disabled=setlist.disabledSongIds.contains(id);
+            h.itemView.setAlpha(disabled?0.5f:1f);
+            h.disable.setText(disabled?"●":"◐");
+            h.disable.setTextColor(disabled?Color.rgb(239,83,80):Color.LTGRAY);
+            h.disable.setContentDescription(disabled?"Réactiver le morceau":"Désactiver le morceau");
 
             boolean current=id.equals(currentSongId);
             int fg=current ? Color.rgb(255,193,7) : Color.WHITE;
