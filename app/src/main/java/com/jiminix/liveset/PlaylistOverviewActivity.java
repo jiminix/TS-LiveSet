@@ -43,6 +43,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.49 playlist top line: TS 2026, title count and page arrows
     // Build V0.53 single-line playlist header, no drag-help row
     // Build V0.60 editable En cours playlist access
+    // Build V0.61 explicit Google Docs import button in En cours
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -186,29 +187,30 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         LinearLayout actions=Ui.row(this);
         actions.setPadding(Ui.dp(this,2),Ui.dp(this,1),Ui.dp(this,2),Ui.dp(this,1));
+        boolean isInProgress=AppStore.isInProgressSetlist(setlist.id);
         Button addLibrary=Ui.button(this,"＋");
-        Button importTitles=Ui.button(this,"⇩");
+        Button importTitles=Ui.button(this,isInProgress?"Google Docs":"⇩");
         Button fixTitles=Ui.button(this,"⌕");
         Button viewer=Ui.button(this,"▣");
         Button inProgress=Ui.button(this,"En cours");
         Button zoomMinus=Ui.button(this,"−");
         Button zoomPlus=Ui.button(this,"+");
         addLibrary.setTextSize(16);
-        importTitles.setTextSize(15);
+        importTitles.setTextSize(isInProgress?9:15);
         fixTitles.setTextSize(17);
         viewer.setTextSize(15);
         inProgress.setTextSize(10);
         zoomMinus.setTextSize(16);
         zoomPlus.setTextSize(16);
         Ui.compactHeaderButton(addLibrary,this,34);
-        Ui.compactHeaderButton(importTitles,this,34);
+        Ui.compactHeaderButton(importTitles,this,isInProgress?78:34);
         Ui.compactHeaderButton(fixTitles,this,34);
         Ui.weight(viewer,1);
         Ui.compactHeaderButton(inProgress,this,66);
         Ui.compactHeaderButton(zoomMinus,this,32);
         Ui.compactHeaderButton(zoomPlus,this,32);
         addLibrary.setContentDescription("Ajouter depuis la bibliothèque");
-        importTitles.setContentDescription("Importer");
+        importTitles.setContentDescription(isInProgress?"Importer depuis Google Docs":"Importer");
         fixTitles.setContentDescription("Trouver les titres et artistes corrects");
         viewer.setContentDescription("Viewer");
         inProgress.setContentDescription("Playlist En cours");
@@ -216,7 +218,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         actions.addView(importTitles);
         actions.addView(fixTitles);
         actions.addView(viewer);
-        actions.addView(inProgress);
+        if(!isInProgress)actions.addView(inProgress);
         actions.addView(zoomMinus);
         actions.addView(zoomPlus);
         root.addView(actions);
