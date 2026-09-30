@@ -284,13 +284,16 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     }
 
     private void openViewer(){
-        AppStore.selectViewerSetlist(this,setlist.id);
+        boolean progress=AppStore.isInProgressSetlist(setlist.id);
+        if(!progress)AppStore.selectViewerSetlist(this,setlist.id);
 
+        String primaryId=AppStore.getViewerSetlistId(this);
         Intent viewer=new Intent(this,IntegratedViewerActivity.class);
-        viewer.putExtra("setlist_id",setlist.id);
+        viewer.putExtra("setlist_id",progress?primaryId:setlist.id);
+        viewer.putExtra("show_in_progress",progress);
         startActivity(viewer);
 
-        // Keep the Internet copy updated for the remote Viewer phones.
+        // Keep both Internet playlists updated for the remote Viewer phones.
         PlaylistCloudSync.publishSelected(this,new PlaylistCloudSync.Listener(){
             @Override public void onSuccess(String code){}
 
