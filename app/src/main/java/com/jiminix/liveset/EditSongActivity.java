@@ -34,9 +34,10 @@ public class EditSongActivity extends AppCompatActivity {
     // V0.64 move Save below web lyrics search for new songs
     // V0.67 editable Medley sub-playlist
     // V0.78 OUT button in song editor
+    // V0.82 simplified song/lyrics editor
     private Song song;
     private String targetSetlistId;
-    private EditText title, artist, key, bpm, tuning, capo, duration, singer, guitar, notes, media, lyrics;
+    private EditText title, artist, bpm, duration, notes, media, lyrics;
     private Button medleyButton;
     private Button outButton;
 
@@ -66,6 +67,15 @@ public class EditSongActivity extends AppCompatActivity {
         boolean newSong=getIntent().getBooleanExtra("new_song",false);
         LinearLayout outer=new LinearLayout(this); outer.setOrientation(LinearLayout.VERTICAL); outer.setBackgroundColor(Color.rgb(18,18,18));
         LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,newSong?"Nouveau morceau":"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
+
+        outButton=Ui.button(this,"OUT");
+        outButton.setTextSize(16);
+        outButton.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        outButton.setOnClickListener(v->toggleOutStatus());
+        outer.addView(outButton,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,48)
+        ));
+
         ScrollView sv=new ScrollView(this); LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),Ui.dp(this,30)); sv.addView(root);
         title=field(root,"Titre");
         title.setFilters(new InputFilter[]{new InputFilter.AllCaps()});
@@ -73,17 +83,13 @@ public class EditSongActivity extends AppCompatActivity {
         Button findSong=Ui.button(this,"⌕ Trouver titre / artiste");
         findSong.setOnClickListener(v->searchSongIdentity());
         root.addView(findSong);
-        LinearLayout r1=Ui.row(this); key=mini("Tonalité",r1); bpm=mini("BPM",r1); capo=mini("Capo",r1); root.addView(r1);
-        tuning=field(root,"Accordage"); duration=field(root,"Durée"); singer=field(root,"Chanteur / chanteuse"); guitar=field(root,"Guitare / instrument");
-        notes=field(root,"Notes live : intro, fin, départ…"); media=field(root,"Lien YouTube ou autre média");
+        LinearLayout r1=Ui.row(this);
+        bpm=mini("BPM",r1);
+        duration=mini("Durée",r1);
+        root.addView(r1);
+        notes=field(root,"Note");
+        media=field(root,"Lien YouTube ou autre média");
 
-        outButton=Ui.button(this,"OUT");
-        outButton.setTextSize(16);
-        outButton.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        outButton.setOnClickListener(v->toggleOutStatus());
-        root.addView(outButton,new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,48)
-        ));
         refreshOutButton();
 
         medleyButton=Ui.button(this,"🎶 Sous-playlist Medley");
@@ -147,7 +153,6 @@ public class EditSongActivity extends AppCompatActivity {
         outButton.setVisibility(usable?View.VISIBLE:View.GONE);
         if(!usable)return;
 
-        AppStore.recordUndoSnapshot(this,"OUT / réactivation");
         boolean out=list.disabledSongIds.contains(song.id);
         outButton.setText(out?"RÉACTIVER":"OUT");
         outButton.setTextColor(Color.WHITE);
@@ -160,6 +165,7 @@ public class EditSongActivity extends AppCompatActivity {
         SetListModel list=getTargetSetlist();
         if(list==null || song==null)return;
 
+        AppStore.recordUndoSnapshot(this,"OUT / réactivation");
         boolean out=list.disabledSongIds.contains(song.id);
         if(out){
             list.disabledSongIds.remove(song.id);
@@ -179,12 +185,10 @@ public class EditSongActivity extends AppCompatActivity {
         if(!getIntent().getBooleanExtra("new_song",false))return;
         String t=getIntent().getStringExtra("prefill_title");
         String a=getIntent().getStringExtra("prefill_artist");
-        String k=getIntent().getStringExtra("prefill_key");
         String b=getIntent().getStringExtra("prefill_bpm");
         String d=getIntent().getStringExtra("prefill_duration");
         if(t!=null && !t.trim().isEmpty())title.setText(t.trim().toUpperCase(java.util.Locale.ROOT));
         if(a!=null && !a.trim().isEmpty())artist.setText(a.trim());
-        if(k!=null && !k.trim().isEmpty())key.setText(k.trim());
         if(b!=null && !b.trim().isEmpty())bpm.setText(b.trim());
         if(d!=null && !d.trim().isEmpty())duration.setText(d.trim());
         updateMedleyButton();
@@ -225,15 +229,15 @@ public class EditSongActivity extends AppCompatActivity {
             .setItems(labels,(d,which)->{
                 SongCatalogLookup.Result r=results.get(which);
                 applySongLookupResult(r);
-                android.widget.Toast.makeText(this,"Récupération BPM / tonalité…",android.widget.Toast.LENGTH_SHORT).show();
+                android.widget.Toast.makeText(this,"Récupération BPM / durée…",android.widget.Toast.LENGTH_SHORT).show();
                 new Thread(()->{
                     SongCatalogLookup.Result enriched=SongCatalogLookup.enrich(r);
                     runOnUiThread(()->{
                         if(enriched!=null){
                             applySongLookupResult(enriched);
                             StringBuilder msg=new StringBuilder("Infos du morceau mises à jour");
-                            if(enriched.bpm.isEmpty() && enriched.key.isEmpty()){
-                                msg.append(" · BPM/tonalité non disponibles");
+                            if(enriched.bpm.isEmpty() && enriched.duration.isEmpty()){
+                                msg.append(" · BPM/durée non disponibles");
                             }
                             android.widget.Toast.makeText(this,msg.toString(),android.widget.Toast.LENGTH_SHORT).show();
                         }
@@ -248,7 +252,6 @@ public class EditSongActivity extends AppCompatActivity {
         if(r==null)return;
         if(!r.title.isEmpty())title.setText(r.title.toUpperCase(java.util.Locale.ROOT));
         if(!r.artist.isEmpty())artist.setText(r.artist);
-        if(!r.key.isEmpty())key.setText(r.key);
         if(!r.bpm.isEmpty())bpm.setText(r.bpm);
         if(!r.duration.isEmpty())duration.setText(r.duration);
     }
@@ -316,10 +319,10 @@ public class EditSongActivity extends AppCompatActivity {
             .show();
     }
 
-    private void fill(){ title.setText(song.title); artist.setText(song.artist); key.setText(song.key); bpm.setText(song.bpm); tuning.setText(song.tuning); capo.setText(song.capo); duration.setText(song.duration); singer.setText(song.singer); guitar.setText(song.guitar); notes.setText(song.notes); media.setText(song.mediaUrl); lyrics.setText(song.lyrics); updateMedleyButton(); }
+    private void fill(){ title.setText(song.title); artist.setText(song.artist); bpm.setText(song.bpm); duration.setText(song.duration); notes.setText(song.notes); media.setText(song.mediaUrl); lyrics.setText(song.lyrics); updateMedleyButton(); }
 
     private void save(){
-        song.title=title.getText().toString().trim(); song.artist=artist.getText().toString().trim(); song.key=key.getText().toString().trim(); song.bpm=bpm.getText().toString().trim(); song.tuning=tuning.getText().toString().trim(); song.capo=capo.getText().toString().trim(); song.duration=duration.getText().toString().trim(); song.singer=singer.getText().toString().trim(); song.guitar=guitar.getText().toString().trim(); song.notes=notes.getText().toString().trim(); song.mediaUrl=media.getText().toString().trim(); song.lyrics=compactLyrics(lyrics.getText().toString()); lyrics.setText(song.lyrics);
+        song.title=title.getText().toString().trim(); song.artist=artist.getText().toString().trim(); song.bpm=bpm.getText().toString().trim(); song.duration=duration.getText().toString().trim(); song.notes=notes.getText().toString().trim(); song.mediaUrl=media.getText().toString().trim(); song.lyrics=compactLyrics(lyrics.getText().toString()); lyrics.setText(song.lyrics);
         if(song.title.isEmpty()){ title.setError("Titre obligatoire"); return; }
         AppStore.recordUndoSnapshot(this,
             getIntent().getBooleanExtra("new_song",false) ? "Création morceau" : "Modification morceau");
