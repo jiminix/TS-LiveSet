@@ -43,6 +43,9 @@ public class PlaylistShareProvider extends ContentProvider {
                 o.put("stageNum2",s.stageNum2);
                 o.put("stageGuitar",s.stageGuitar);
                 o.put("stageKeyboard",s.stageKeyboard);
+                JSONArray medleyItems=new JSONArray();
+                for(String item:s.medleyItems)medleyItems.put(item);
+                o.put("medleyItems",medleyItems);
                 o.put("disabled",list.disabledSongIds.contains(songId));
                 songs.put(o);
             }catch(Exception ignored){}
