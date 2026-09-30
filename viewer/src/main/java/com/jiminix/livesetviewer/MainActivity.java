@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.17 Meryl title and count-only info line
     // Build V0.18 playlist name in top header and centered title count
     // Build V0.19 direct Y6 pairing without registry lookup
+    // Build V0.20 read-only En cours playlist toggle
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -67,10 +68,12 @@ public class MainActivity extends AppCompatActivity {
     private TextView playlistTitle;
     private TextView appTitle;
     private TextView info;
+    private Button inProgressButton;
     private LinearLayout songsBox;
     private ScrollView scroll;
     private String lastSignature="";
     private volatile boolean cloudBusy=false;
+    private boolean showInProgress=false;
 
     private final Runnable refreshLoop=new Runnable(){
         @Override public void run(){
@@ -163,11 +166,30 @@ public class MainActivity extends AppCompatActivity {
 
         root.addView(infoRow,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(26)));
 
+        LinearLayout viewerActions=new LinearLayout(this);
+        viewerActions.setOrientation(LinearLayout.HORIZONTAL);
+        viewerActions.setGravity(Gravity.CENTER_VERTICAL);
+
+        inProgressButton=new Button(this);
+        inProgressButton.setText("En cours");
+        inProgressButton.setTextSize(11);
+        inProgressButton.setMinWidth(0);
+        inProgressButton.setMinimumWidth(0);
+
         Button internet=new Button(this);
-        internet.setText("🌐 Connexion Internet");
-        internet.setTextSize(12);
+        internet.setText("🌐 Connexion");
+        internet.setTextSize(11);
+        internet.setMinWidth(0);
+        internet.setMinimumWidth(0);
+
+        viewerActions.addView(inProgressButton,new LinearLayout.LayoutParams(0,dp(36),1));
+        viewerActions.addView(internet,new LinearLayout.LayoutParams(0,dp(36),1));
+        root.addView(viewerActions,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,dp(36)
+        ));
+
         internet.setOnClickListener(v->configureInternet());
-        root.addView(internet,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(38)));
+        inProgressButton.setOnClickListener(v->toggleInProgress());
 
         scroll=new ScrollView(this);
         scroll.setFillViewport(true);
@@ -198,6 +220,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(root);
     }
 
+    private void toggleInProgress(){
+        showInProgress=!showInProgress;
+        inProgressButton.setText(showInProgress?"Principal":"En cours");
+        lastSignature="";
+        if(scroll!=null)scroll.scrollTo(0,0);
+        refreshPlaylist();
+    }
+
     private void pageScroll(int direction){
         if(scroll==null)return;
         int page=Math.max(1,scroll.getHeight());
@@ -224,7 +254,7 @@ public class MainActivity extends AppCompatActivity {
         try{
             Bundle b=getContentResolver().call(
                 Uri.parse("content://com.jiminix.liveset.playlists"),
-                "get_selected_playlist",
+                showInProgress?"get_in_progress_playlist":"get_selected_playlist",
                 null,
                 null
             );
@@ -307,14 +337,30 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void renderCloudPayload(JSONObject payload,boolean cached){
-        if(payload==null || !payload.optBoolean("available",false)){
-            showEmpty("Aucune playlist publiée",
-                "Dans le Manager, ouvre la playlist voulue puis appuie sur « Viewer ».");
+        if(payload==null){
+            showEmpty("Aucune playlist publiée","Aucune donnée reçue du Manager.");
             return;
         }
 
-        String name=payload.optString("playlist_name","Playlist");
-        JSONArray songs=payload.optJSONArray("songs");
+        JSONObject sourcePayload=payload;
+        if(showInProgress){
+            sourcePayload=payload.optJSONObject("in_progress");
+            if(sourcePayload==null){
+                showEmpty("En cours","Cette version du Manager n’a pas encore publié la playlist En cours.");
+                return;
+            }
+        }
+
+        if(!sourcePayload.optBoolean("available",false)){
+            showEmpty(showInProgress?"En cours":"Aucune playlist publiée",
+                showInProgress
+                    ? "La playlist En cours est vide ou indisponible."
+                    : "Dans le Manager, ouvre la playlist voulue puis appuie sur « Viewer ».");
+            return;
+        }
+
+        String name=sourcePayload.optString("playlist_name",showInProgress?"En cours":"Playlist");
+        JSONArray songs=sourcePayload.optJSONArray("songs");
         if(songs==null)songs=new JSONArray();
 
         renderPlaylist(name,songs,cached?"Internet · dernière copie enregistrée":"Internet · à jour");
