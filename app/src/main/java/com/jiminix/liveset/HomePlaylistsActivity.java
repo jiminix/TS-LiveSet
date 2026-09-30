@@ -193,7 +193,12 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         ));
 
         startupOverlay=new TextView(this);
-        startupOverlay.setText("Un pour tous, tous pour la même playlist\nTS 2026 - chargement…\nSynchronisation Internet : vérification…");
+        startupOverlay.setText("Un pour tous, tous pour la même playlist.\n"+
+            "Synchro au Manager : OK\n"+
+            "Playlist TS 2026 importée\n"+
+            "Numéro de version : V"+installedVersion()+"\n"+
+            "made with ChatGPT and I\n"+
+            "sept. 2026");
         startupOverlay.setTextColor(Color.WHITE);
         startupOverlay.setTextSize(18);
         startupOverlay.setGravity(Gravity.CENTER);
@@ -219,24 +224,13 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
     private void updateStartupOverlay(){
         if(startupOverlay==null)return;
-        int count=0;
-        try{
-            java.util.List<SetListModel> all=AppStore.loadSetlists(this);
-            if(all!=null && !all.isEmpty()){
-                SetListModel preferred=null;
-                for(SetListModel x:all){
-                    if(x!=null && x.name!=null && x.name.trim().equalsIgnoreCase("TS 2026")){
-                        preferred=x; break;
-                    }
-                }
-                if(preferred==null) preferred=all.get(0);
-                if(preferred!=null && preferred.songIds!=null) count=preferred.songIds.size();
-            }
-        }catch(Exception ignored){}
         startupOverlay.setText(
-            "Un pour tous, tous pour la même playlist\n"+
-            "TS 2026 - "+count+" Titre"+(count>1?"s":"")+"\n"+
-            "Synchronisation Internet : OK"
+            "Un pour tous, tous pour la même playlist.\n"+
+            "Synchro au Manager : OK\n"+
+            "Playlist TS 2026 importée\n"+
+            "Numéro de version : V"+installedVersion()+"\n"+
+            "made with ChatGPT and I\n"+
+            "sept. 2026"
         );
     }
 
