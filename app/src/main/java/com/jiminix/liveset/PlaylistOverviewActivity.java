@@ -102,6 +102,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private void maybeRestoreEmptyInProgress(){
         if(!AppStore.isInProgressSetlist(setlistId))return;
         if(setlist==null || !setlist.songIds.isEmpty())return;
+        if(AppStore.isInProgressIntentionallyEmpty(this))return;
         if(enCoursRestoreAttempted)return;
         enCoursRestoreAttempted=true;
 
