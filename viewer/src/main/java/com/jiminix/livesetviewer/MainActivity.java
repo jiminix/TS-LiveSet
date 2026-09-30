@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.19 direct Y6 pairing without registry lookup
     // Build V0.20 read-only En cours playlist toggle
     // Build V0.21 red En cours and colored Viewer bands
+    // Build V0.22 show disabled songs at 50% opacity
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -386,7 +387,7 @@ public class MainActivity extends AppCompatActivity {
         for(int i=0;i<songs.length();i++){
             JSONObject s=songs.optJSONObject(i);
             if(s==null)continue;
-            addSongRow(i+1,s.optString("title",""),s.optString("bpm",""));
+            addSongRow(i+1,s.optString("title",""),s.optString("bpm",""),s.optBoolean("disabled",false));
         }
     }
 
@@ -570,13 +571,14 @@ public class MainActivity extends AppCompatActivity {
         songsBox.removeAllViews();
     }
 
-    private void addSongRow(int number,String title,String bpm){
+    private void addSongRow(int number,String title,String bpm,boolean disabled){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(6),dp(1),dp(6),dp(1));
         row.setMinimumHeight(dp(36));
         row.setBackgroundColor(number%2==1?Color.rgb(28,28,28):Color.BLACK);
+        row.setAlpha(disabled?0.5f:1f);
 
         TextView num=new TextView(this);
         num.setText(String.format("%02d",number));
