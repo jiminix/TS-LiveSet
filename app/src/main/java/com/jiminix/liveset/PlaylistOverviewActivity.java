@@ -56,6 +56,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.72 backup + cloud recovery for En cours
     // Build V0.74 diagnostic + manual En cours rebuild
     // Build V0.79 simplified playlist controls
+    // Build V0.80 BPM after stage icons + validate En cours to principal playlist
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -836,6 +837,63 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .show();
     }
 
+    private void validateInProgressSong(int pos){
+        if(!AppStore.isInProgressSetlist(setlist.id))return;
+        if(pos<0 || pos>=setlist.songIds.size())return;
+
+        String songId=setlist.songIds.get(pos);
+        Song song=AppStore.findSong(this,songId);
+
+        String targetId=AppStore.getViewerSetlistId(this);
+        if(targetId==null || targetId.trim().isEmpty() || AppStore.isInProgressSetlist(targetId)){
+            Toast.makeText(this,
+                "Aucune playlist principale associée à EN COURS.",
+                Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        SetListModel target=AppStore.findSetlist(this,targetId);
+        if(target==null){
+            Toast.makeText(this,
+                "Playlist principale introuvable.",
+                Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        boolean alreadyPresent=target.songIds.contains(songId);
+        if(!alreadyPresent){
+            target.songIds.add(songId);
+        }
+        target.disabledSongIds.remove(songId);
+        AppStore.upsertSetlist(this,target);
+
+        setlist.songIds.remove(pos);
+        setlist.disabledSongIds.remove(songId);
+
+        if(setlist.songIds.isEmpty()){
+            AppStore.clearInProgressSetlist(this);
+            setlist=AppStore.getOrCreateInProgressSetlist(this);
+        }else{
+            AppStore.upsertSetlist(this,setlist);
+        }
+
+        if(songId.equals(currentSongId))currentSongId=null;
+        adapter.notifyItemRemoved(pos);
+        if(pos<setlist.songIds.size()){
+            adapter.notifyItemRangeChanged(pos,setlist.songIds.size()-pos);
+        }
+        updateCount();
+
+        String title=(song==null || song.title==null || song.title.trim().isEmpty())
+            ? "Morceau"
+            : song.title;
+        Toast.makeText(this,
+            alreadyPresent
+                ? title+" déjà dans « "+target.name+" » · retiré de EN COURS"
+                : title+" ajouté à « "+target.name+" »",
+            Toast.LENGTH_LONG).show();
+    }
+
     private void toggleSongDisabled(int pos){
         if(pos<0 || pos>=setlist.songIds.size())return;
         String id=setlist.songIds.get(pos);
@@ -911,12 +969,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             final TextView stage2;
             final TextView guitarIcon;
             final TextView keyboardIcon;
+            final TextView validate;
             final TextView disable;
             final TextView delete;
             final TextView handle;
             final LinearLayout medleyBox;
 
-            Holder(LinearLayout outer,TextView num,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView disable,TextView delete,TextView handle,LinearLayout medleyBox){
+            Holder(LinearLayout outer,TextView num,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView validate,TextView disable,TextView delete,TextView handle,LinearLayout medleyBox){
                 super(outer);
                 this.num=num;
                 this.song=song;
@@ -926,6 +985,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 this.stage2=stage2;
                 this.guitarIcon=guitarIcon;
                 this.keyboardIcon=keyboardIcon;
+                this.validate=validate;
                 this.disable=disable;
                 this.delete=delete;
                 this.handle=handle;
@@ -1010,6 +1070,18 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             stageBox.addView(guitarIcon);
             stageBox.addView(keyboardIcon);
 
+            TextView validate=new TextView(PlaylistOverviewActivity.this);
+            validate.setText("✓");
+            validate.setTextColor(Color.rgb(76,175,80));
+            validate.setTextSize(20);
+            validate.setTypeface(Typeface.DEFAULT_BOLD);
+            validate.setGravity(Gravity.CENTER);
+            validate.setContentDescription("Valider et ajouter à la playlist principale");
+            validate.setLayoutParams(new LinearLayout.LayoutParams(
+                Ui.dp(PlaylistOverviewActivity.this,30),
+                Ui.dp(PlaylistOverviewActivity.this,32)
+            ));
+
             TextView disable=new TextView(PlaylistOverviewActivity.this);
             disable.setText("◐");
             disable.setTextColor(Color.LTGRAY);
@@ -1034,8 +1106,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
             row.addView(num);
             row.addView(song);
-            row.addView(bpm);
             row.addView(stageBox);
+            row.addView(bpm);
+            row.addView(validate);
             row.addView(disable);
             row.addView(delete);
             row.addView(handle);
@@ -1055,7 +1128,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ));
 
-            Holder h=new Holder(outer,num,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,disable,delete,handle,medleyBox);
+            Holder h=new Holder(outer,num,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,validate,disable,delete,handle,medleyBox);
             row.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p==RecyclerView.NO_POSITION)return;
@@ -1074,6 +1147,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             bpm.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p!=RecyclerView.NO_POSITION)editBpm(p);
+            });
+
+            validate.setOnClickListener(v->{
+                int p=h.getBindingAdapterPosition();
+                if(p!=RecyclerView.NO_POSITION)validateInProgressSong(p);
             });
 
             disable.setOnClickListener(v->{
@@ -1109,6 +1187,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.bpm.setTextSize(zsp(compact?12:15));
             h.bpm.setPadding(zdp(2),0,0,0);
             h.song.setSingleLine(compact);
+
+            h.validate.setTextSize(zsp(20));
+            h.validate.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
+            h.validate.setVisibility(AppStore.isInProgressSetlist(setlist.id)?View.VISIBLE:View.GONE);
 
             h.disable.setTextSize(zsp(17));
             h.disable.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
