@@ -54,6 +54,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.70 dedicated Medley creator/editor
     // Build V0.71 self-repair reserved En cours playlist
     // Build V0.72 backup + cloud recovery for En cours
+    // Build V0.74 diagnostic + manual En cours rebuild
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -119,11 +120,75 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             }
 
             @Override public void onError(String message){
-                Toast.makeText(PlaylistOverviewActivity.this,
-                    "En cours est vide. "+message,
-                    Toast.LENGTH_LONG).show();
+                showEnCoursRecoveryFallback(message);
             }
         });
+    }
+
+    private void showEnCoursRecoveryFallback(String diagnostic){
+        List<Song> library=AppStore.loadSongs(this);
+
+        if(library.isEmpty()){
+            new AlertDialog.Builder(this)
+                .setTitle("Récupération En cours")
+                .setMessage("En cours est vide.\n\n"+diagnostic+
+                    "\n\nLa bibliothèque locale est également vide, donc aucun morceau ne peut être reconstruit depuis ce téléphone.")
+                .setPositiveButton("OK",null)
+                .show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Récupération En cours")
+            .setMessage("La récupération automatique n’a rien retrouvé.\n\n"+diagnostic+
+                "\n\nTu peux maintenant reconstruire En cours en choisissant les morceaux dans ta bibliothèque.")
+            .setPositiveButton("Choisir les morceaux",(d,w)->showLibraryRecoveryPicker())
+            .setNegativeButton("Plus tard",null)
+            .show();
+    }
+
+    private void showLibraryRecoveryPicker(){
+        List<Song> library=AppStore.loadSongs(this);
+        if(library.isEmpty())return;
+
+        String[] labels=new String[library.size()];
+        boolean[] checked=new boolean[library.size()];
+
+        for(int i=0;i<library.size();i++){
+            Song s=library.get(i);
+            String artist=s.artist==null?"":s.artist.trim();
+            labels[i]=(s.title==null?"":s.title)+(artist.isEmpty()?"":" — "+artist);
+            checked[i]=false;
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Reconstruire « En cours »")
+            .setMultiChoiceItems(labels,checked,(dialog,which,isChecked)->checked[which]=isChecked)
+            .setPositiveButton("Restaurer",(d,w)->{
+                SetListModel progress=AppStore.getOrCreateInProgressSetlist(this);
+                progress.songIds.clear();
+                progress.disabledSongIds.clear();
+
+                for(int i=0;i<library.size();i++){
+                    if(checked[i])progress.songIds.add(library.get(i).id);
+                }
+
+                if(progress.songIds.isEmpty()){
+                    Toast.makeText(this,"Aucun morceau sélectionné.",Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                AppStore.upsertSetlist(this,progress);
+                setlist=progress;
+                if(titleView!=null)titleView.setText("En cours · "+progress.songIds.size()+" titres");
+                if(adapter!=null)adapter.notifyDataSetChanged();
+
+                Toast.makeText(this,
+                    progress.songIds.size()+" morceau"+(progress.songIds.size()>1?"x":"")+" restauré"+(progress.songIds.size()>1?"s":"")+" dans En cours",
+                    Toast.LENGTH_LONG).show();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
     }
 
     private void buildUi(){
