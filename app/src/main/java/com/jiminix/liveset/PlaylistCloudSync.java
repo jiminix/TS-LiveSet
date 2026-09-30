@@ -168,34 +168,65 @@ public final class PlaylistCloudSync {
                 SetListModel list=AppStore.getOrCreateInProgressSetlist(app);
                 java.util.List<Song> library=AppStore.loadSongs(app);
                 java.util.List<String> recovered=new java.util.ArrayList<>();
+                java.util.Map<String,String> remoteToLocal=new java.util.HashMap<>();
+                int recreated=0;
 
                 for(int i=0;i<songs.length();i++){
                     JSONObject o=songs.optJSONObject(i);
                     if(o==null)continue;
 
-                    String id=o.optString("id","");
-                    Song local=id.isEmpty()?null:AppStore.findSong(app,id);
+                    String remoteId=o.optString("id","").trim();
+                    String title=o.optString("title","").trim();
+                    Song local=remoteId.isEmpty()?null:AppStore.findSong(app,remoteId);
 
-                    if(local==null){
-                        String title=o.optString("title","").trim();
-                        if(!title.isEmpty()){
-                            for(Song candidate:library){
-                                String ct=candidate.title==null?"":candidate.title.trim();
-                                if(title.equalsIgnoreCase(ct)){
-                                    local=candidate;
-                                    break;
-                                }
+                    if(local==null && !title.isEmpty()){
+                        for(Song candidate:library){
+                            String ct=candidate.title==null?"":candidate.title.trim();
+                            if(title.equalsIgnoreCase(ct)){
+                                local=candidate;
+                                break;
                             }
                         }
                     }
 
-                    if(local!=null && !recovered.contains(local.id)){
-                        recovered.add(local.id);
+                    if(local==null && !title.isEmpty()){
+                        local=new Song();
+                        if(!remoteId.isEmpty())local.id=remoteId;
+                        local.title=title;
+                        local.artist=o.optString("artist","");
+                        local.bpm=o.optString("bpm","");
+                        local.stageNum1=o.optString("stageNum1","");
+                        local.stageNum2=o.optString("stageNum2","");
+                        local.stageGuitar=o.optBoolean("stageGuitar",false);
+                        local.stageKeyboard=o.optBoolean("stageKeyboard",false);
+
+                        JSONArray medleyItems=o.optJSONArray("medleyItems");
+                        if(medleyItems!=null){
+                            for(int m=0;m<medleyItems.length();m++){
+                                String item=medleyItems.optString(m,"").trim();
+                                if(!item.isEmpty())local.medleyItems.add(item);
+                            }
+                        }
+
+                        JSONArray medleyArtists=o.optJSONArray("medleyArtists");
+                        for(int m=0;m<local.medleyItems.size();m++){
+                            local.medleyArtists.add(medleyArtists==null?"":medleyArtists.optString(m,""));
+                            local.medleyLyrics.add("");
+                        }
+
+                        AppStore.upsertSong(app,local);
+                        library.add(local);
+                        recreated++;
+                    }
+
+                    if(local!=null){
+                        if(!recovered.contains(local.id))recovered.add(local.id);
+                        if(!remoteId.isEmpty())remoteToLocal.put(remoteId,local.id);
                     }
                 }
 
                 if(recovered.isEmpty()){
-                    if(listener!=null)MAIN.post(()->listener.onError("Les morceaux sauvegardés ne sont plus présents dans la bibliothèque"));
+                    if(listener!=null)MAIN.post(()->listener.onError("La sauvegarde Y6 ne contient aucun morceau récupérable"));
                     return;
                 }
 
@@ -206,13 +237,15 @@ public final class PlaylistCloudSync {
                 for(int i=0;i<songs.length();i++){
                     JSONObject o=songs.optJSONObject(i);
                     if(o==null || !o.optBoolean("disabled",false))continue;
-                    String id=o.optString("id","");
-                    if(!id.isEmpty() && recovered.contains(id) && !list.disabledSongIds.contains(id)){
-                        list.disabledSongIds.add(id);
+                    String remoteId=o.optString("id","").trim();
+                    String localId=remoteToLocal.get(remoteId);
+                    if(localId!=null && recovered.contains(localId) && !list.disabledSongIds.contains(localId)){
+                        list.disabledSongIds.add(localId);
                     }
                 }
 
                 AppStore.upsertSetlist(app,list);
+                final int recreatedCount=recreated;
                 if(listener!=null)MAIN.post(()->listener.onSuccess(FIXED_SHARE_CODE));
             }catch(Exception e){
                 if(listener!=null){
@@ -416,6 +449,7 @@ public final class PlaylistCloudSync {
             JSONObject o=new JSONObject();
             o.put("id",s.id);
             o.put("title",s.title);
+            o.put("artist",s.artist);
             o.put("bpm",s.bpm);
             o.put("stageNum1",s.stageNum1);
             o.put("stageNum2",s.stageNum2);
