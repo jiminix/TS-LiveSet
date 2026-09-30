@@ -19,6 +19,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Locale;
 
 public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.38
@@ -45,6 +48,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     private String lastSignature="";
     private int textZoom=0;
     private boolean showInProgress=false;
+    private final Set<String> expandedMedleys=new HashSet<>();
 
     private final Runnable refreshLoop=new Runnable(){
         @Override public void run(){
@@ -273,7 +277,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             sig.append(s.id).append(':').append(s.title).append(':').append(s.bpm)
                 .append(':').append(s.stageNum1).append(':').append(s.stageNum2)
                 .append(':').append(s.stageGuitar).append(':').append(s.stageKeyboard)
-                .append(':').append(list.disabledSongIds.contains(id)).append('|');
+                .append(':').append(list.disabledSongIds.contains(id))
+                .append(':').append(s.medleyItems.toString()).append('|');
         }
 
         String signature=sig.toString();
@@ -340,6 +345,20 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         return d.length()==1?"0"+d:d;
     }
 
+    private boolean isMedleySong(Song song){
+        if(song==null || song.title==null)return false;
+        String t=song.title.trim().toLowerCase(Locale.ROOT);
+        return t.startsWith("medley") || t.startsWith("meddley");
+    }
+
+    private void toggleMedley(String songId){
+        if(songId==null || songId.isEmpty())return;
+        if(expandedMedleys.contains(songId))expandedMedleys.remove(songId);
+        else expandedMedleys.add(songId);
+        lastSignature="";
+        refreshPlaylist();
+    }
+
     private void addSongRow(int number,Song song,boolean disabled){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -348,6 +367,9 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         row.setMinimumHeight(zdp(36));
         row.setBackgroundColor(number%2==1?Color.rgb(28,28,28):Color.BLACK);
         row.setAlpha(disabled?0.5f:1f);
+
+        boolean medley=isMedleySong(song) && !song.medleyItems.isEmpty();
+        boolean medleyExpanded=medley && expandedMedleys.contains(song.id);
 
         TextView num=new TextView(this);
         num.setText(String.format("%02d",number));
@@ -360,7 +382,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         TextView name=new TextView(this);
         String title=song==null?"":song.title;
         String bpm=song==null?"":song.bpm;
-        name.setText(title==null?"":title);
+        name.setText((medley?(medleyExpanded?"▾ ":"▸ "):"")+(title==null?"":title));
         name.setTextColor(Color.WHITE);
         name.setTextSize(zsp(20));
         name.setGravity(Gravity.CENTER_VERTICAL);
@@ -455,10 +477,39 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
+        if(medley){
+            row.setOnClickListener(v->toggleMedley(song.id));
+        }
+
         songsBox.addView(row,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ));
+
+        if(medley && medleyExpanded){
+            LinearLayout medleyBox=new LinearLayout(this);
+            medleyBox.setOrientation(LinearLayout.VERTICAL);
+            medleyBox.setPadding(zdp(40),zdp(2),zdp(8),zdp(5));
+            medleyBox.setBackgroundColor(Color.rgb(18,18,18));
+            medleyBox.setAlpha(disabled?0.5f:1f);
+
+            for(int i=0;i<song.medleyItems.size();i++){
+                TextView item=new TextView(this);
+                item.setText(String.format(Locale.ROOT,"%02d. %s",i+1,song.medleyItems.get(i)));
+                item.setTextColor(Color.WHITE);
+                item.setTextSize(zsp(13));
+                item.setPadding(zdp(6),zdp(2),0,zdp(2));
+                medleyBox.addView(item,new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ));
+            }
+
+            songsBox.addView(medleyBox,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+        }
 
         View sep=new View(this);
         sep.setBackgroundColor(Color.rgb(45,45,45));
