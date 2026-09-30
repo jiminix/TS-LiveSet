@@ -67,7 +67,10 @@ public class AppStore {
         songs.removeIf(s -> s.id.equals(id));
         saveSongs(c, songs);
         List<SetListModel> setlists = loadSetlists(c);
-        for (SetListModel sl : setlists) sl.songIds.removeIf(x -> x.equals(id));
+        for (SetListModel sl : setlists) {
+            sl.songIds.removeIf(x -> x.equals(id));
+            sl.disabledSongIds.removeIf(x -> x.equals(id));
+        }
         saveSetlists(c, setlists);
     }
 
