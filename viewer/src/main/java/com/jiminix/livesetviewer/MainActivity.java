@@ -59,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.21 red En cours and colored Viewer bands
     // Build V0.22 show disabled songs at 50% opacity and GitHub self-updater
     // Build V0.23 expandable read-only Medley sub-playlists
+    // Build V0.24 dedicated +/- Medley expansion on remote Viewer
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -600,7 +601,8 @@ public class MainActivity extends AppCompatActivity {
                 s.optString("title",""),
                 s.optString("bpm",""),
                 s.optBoolean("disabled",false),
-                s.optJSONArray("medleyItems")
+                s.optJSONArray("medleyItems"),
+                s.optJSONArray("medleyArtists")
             );
         }
     }
@@ -798,7 +800,7 @@ public class MainActivity extends AppCompatActivity {
         refreshPlaylist();
     }
 
-    private void addSongRow(int number,String songId,String title,String bpm,boolean disabled,JSONArray medleyItems){
+    private void addSongRow(int number,String songId,String title,String bpm,boolean disabled,JSONArray medleyItems,JSONArray medleyArtists){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -819,7 +821,7 @@ public class MainActivity extends AppCompatActivity {
         row.addView(num,new LinearLayout.LayoutParams(dp(36),ViewGroup.LayoutParams.MATCH_PARENT));
 
         TextView name=new TextView(this);
-        name.setText((medley?(medleyExpanded?"▾ ":"▸ "):"")+(title==null?"":title));
+        name.setText(title==null?"":title);
         name.setTextColor(Color.WHITE);
         name.setTextSize(20);
         name.setGravity(Gravity.CENTER_VERTICAL);
@@ -827,6 +829,19 @@ public class MainActivity extends AppCompatActivity {
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         row.addView(name,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1));
+
+        Button medleyToggle=null;
+        if(medley){
+            medleyToggle=new Button(this);
+            medleyToggle.setText(medleyExpanded?"−":"+");
+            medleyToggle.setTextSize(17);
+            medleyToggle.setMinWidth(0);
+            medleyToggle.setMinimumWidth(0);
+            medleyToggle.setPadding(0,0,0,0);
+            Button finalMedleyToggle=medleyToggle;
+            finalMedleyToggle.setOnClickListener(v->toggleMedley(songId));
+            row.addView(finalMedleyToggle,new LinearLayout.LayoutParams(dp(34),dp(32)));
+        }
 
         TextView bpmView=new TextView(this);
         bpmView.setText(bpm==null || bpm.trim().isEmpty() ? "" : bpm.trim());
@@ -837,10 +852,6 @@ public class MainActivity extends AppCompatActivity {
         bpmView.setSingleLine(true);
         bpmView.setPadding(dp(4),0,0,0);
         row.addView(bpmView,new LinearLayout.LayoutParams(dp(62),ViewGroup.LayoutParams.MATCH_PARENT));
-
-        if(medley){
-            row.setOnClickListener(v->toggleMedley(songId));
-        }
 
         songsBox.addView(row,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -857,8 +868,11 @@ public class MainActivity extends AppCompatActivity {
             for(int i=0;i<medleyItems.length();i++){
                 String itemTitle=medleyItems.optString(i,"").trim();
                 if(itemTitle.isEmpty())continue;
+                String itemArtist=medleyArtists==null?"":medleyArtists.optString(i,"").trim();
                 TextView item=new TextView(this);
-                item.setText(String.format(Locale.ROOT,"%02d. %s",i+1,itemTitle));
+                String label=String.format(Locale.ROOT,"%02d. %s",i+1,itemTitle);
+                if(!itemArtist.isEmpty())label+=" — "+itemArtist;
+                item.setText(label);
                 item.setTextColor(Color.WHITE);
                 item.setTextSize(13);
                 item.setPadding(dp(6),dp(2),0,dp(2));
