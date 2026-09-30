@@ -2,6 +2,7 @@ package com.jiminix.livesetviewer;
 
 import android.app.AlertDialog;
 import android.graphics.Color;
+import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.18 playlist name in top header and centered title count
     // Build V0.19 direct Y6 pairing without registry lookup
     // Build V0.20 read-only En cours playlist toggle
+    // Build V0.21 red En cours and colored Viewer bands
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -114,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
         appTitle.setTextSize(22);
         appTitle.setGravity(Gravity.CENTER);
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        appTitle.setBackgroundColor(Color.rgb(105,12,18));
         root.addView(appTitle,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
 
         playlistTitle=new TextView(this);
@@ -127,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
         infoRow.setOrientation(LinearLayout.HORIZONTAL);
         infoRow.setGravity(Gravity.CENTER_VERTICAL);
         infoRow.setPadding(dp(2),0,dp(2),0);
+        infoRow.setBackgroundColor(Color.rgb(105,12,18));
 
         TextView slogan=new TextView(this);
         slogan.setText("Un pour tous, tous pour la même playlist.");
@@ -175,6 +179,8 @@ public class MainActivity extends AppCompatActivity {
         inProgressButton.setTextSize(11);
         inProgressButton.setMinWidth(0);
         inProgressButton.setMinimumWidth(0);
+        inProgressButton.setBackgroundTintList(ColorStateList.valueOf(Color.rgb(198,40,40)));
+        inProgressButton.setTextColor(Color.WHITE);
 
         Button internet=new Button(this);
         internet.setText("🌐 Connexion");
@@ -208,7 +214,8 @@ public class MainActivity extends AppCompatActivity {
 
         TextView footer=new TextView(this);
         footer.setText("Lecture seule · synchronisation Internet automatique");
-        footer.setTextColor(Color.DKGRAY);
+        footer.setTextColor(Color.WHITE);
+        footer.setBackgroundColor(Color.rgb(105,12,18));
         footer.setTextSize(10);
         footer.setGravity(Gravity.CENTER);
         footer.setPadding(0,dp(5),0,dp(2));
