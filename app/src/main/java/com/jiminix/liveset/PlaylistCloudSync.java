@@ -161,7 +161,12 @@ public final class PlaylistCloudSync {
                 JSONObject progress=payload.optJSONObject("in_progress");
                 JSONArray songs=progress==null?null:progress.optJSONArray("songs");
                 if(songs==null || songs.length()==0){
-                    if(listener!=null)MAIN.post(()->listener.onError("Aucune sauvegarde En cours trouvée sur Internet"));
+                    if(listener!=null){
+                        final String diagnostic="Y6 : 0 morceau · sauvegarde locale : "+
+                            AppStore.getInProgressBackupCount(app)+" · bibliothèque : "+
+                            AppStore.loadSongs(app).size();
+                        MAIN.post(()->listener.onError(diagnostic));
+                    }
                     return;
                 }
 
@@ -226,7 +231,12 @@ public final class PlaylistCloudSync {
                 }
 
                 if(recovered.isEmpty()){
-                    if(listener!=null)MAIN.post(()->listener.onError("La sauvegarde Y6 ne contient aucun morceau récupérable"));
+                    if(listener!=null){
+                        final String diagnostic="Y6 ne contient aucun morceau récupérable · sauvegarde locale : "+
+                            AppStore.getInProgressBackupCount(app)+" · bibliothèque : "+
+                            AppStore.loadSongs(app).size();
+                        MAIN.post(()->listener.onError(diagnostic));
+                    }
                     return;
                 }
 
