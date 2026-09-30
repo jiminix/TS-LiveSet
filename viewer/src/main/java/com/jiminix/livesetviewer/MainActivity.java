@@ -257,6 +257,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(root);
     }
 
+    private String installedVersion(){
+        try{
+            return getPackageManager().getPackageInfo(getPackageName(),0).versionName;
+        }catch(Exception ignored){
+            return "0";
+        }
+    }
+
     private void checkForUpdate(){
         Toast.makeText(this,"Vérification de la mise à jour…",Toast.LENGTH_SHORT).show();
 
@@ -265,7 +273,7 @@ public class MainActivity extends AppCompatActivity {
                 Request req=new Request.Builder()
                     .url(UPDATE_API)
                     .header("Accept","application/vnd.github+json")
-                    .header("User-Agent","TS-Playlist-Viewer/"+BuildConfig.VERSION_NAME)
+                    .header("User-Agent","TS-Playlist-Viewer/"+installedVersion())
                     .get()
                     .build();
 
@@ -310,7 +318,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showUpdateResult(String remoteVersion,String assetUrl){
-        String current=BuildConfig.VERSION_NAME;
+        String current=installedVersion();
         if(compareVersions(remoteVersion,current)<=0){
             new AlertDialog.Builder(this)
                 .setTitle("Viewer à jour")
@@ -376,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
 
                 Request req=new Request.Builder()
                     .url(url)
-                    .header("User-Agent","TS-Playlist-Viewer/"+BuildConfig.VERSION_NAME)
+                    .header("User-Agent","TS-Playlist-Viewer/"+installedVersion())
                     .get()
                     .build();
 
