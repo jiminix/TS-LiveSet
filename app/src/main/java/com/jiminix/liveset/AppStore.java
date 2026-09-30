@@ -11,6 +11,7 @@ public class AppStore {
     private static final String K_SONGS = "songs";
     private static final String K_SETLISTS = "setlists";
     private static final String K_VIEWER_SETLIST = "viewer_setlist_id";
+    public static final String IN_PROGRESS_SETLIST_ID = "__in_progress__";
 
     public static List<Song> loadSongs(Context c) {
         List<Song> out = new ArrayList<>();
@@ -83,6 +84,27 @@ public class AppStore {
         }
         if (!replaced) all.add(setlist);
         saveSetlists(c, all);
+    }
+
+    public static SetListModel getOrCreateInProgressSetlist(Context c) {
+        SetListModel existing = findSetlist(c, IN_PROGRESS_SETLIST_ID);
+        if (existing != null) {
+            if (!"En cours".equals(existing.name)) {
+                existing.name = "En cours";
+                upsertSetlist(c, existing);
+            }
+            return existing;
+        }
+
+        SetListModel list = new SetListModel();
+        list.id = IN_PROGRESS_SETLIST_ID;
+        list.name = "En cours";
+        upsertSetlist(c, list);
+        return list;
+    }
+
+    public static boolean isInProgressSetlist(String id) {
+        return IN_PROGRESS_SETLIST_ID.equals(id);
     }
 
     public static void selectViewerSetlist(Context c, String id) {
