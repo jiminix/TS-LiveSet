@@ -52,6 +52,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.66 per-playlist disabled songs at 50% opacity
     // Build V0.67 expandable Medley sub-playlists
     // Build V0.70 dedicated Medley creator/editor
+    // Build V0.71 self-repair reserved En cours playlist
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -69,7 +70,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         super.onCreate(b);
         setlistId=getIntent().getStringExtra("setlist_id");
         int currentIndex=getIntent().getIntExtra("current_index",-1);
-        setlist=AppStore.findSetlist(this,setlistId);
+        setlist=AppStore.isInProgressSetlist(setlistId)
+            ? AppStore.getOrCreateInProgressSetlist(this)
+            : AppStore.findSetlist(this,setlistId);
         if(setlist==null){ finish(); return; }
         repairMissingLyrics();
         if(currentIndex>=0 && currentIndex<setlist.songIds.size()) currentSongId=setlist.songIds.get(currentIndex);
@@ -80,7 +83,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
     @Override protected void onResume(){
         super.onResume();
-        SetListModel fresh=AppStore.findSetlist(this,setlistId);
+        SetListModel fresh=AppStore.isInProgressSetlist(setlistId)
+            ? AppStore.getOrCreateInProgressSetlist(this)
+            : AppStore.findSetlist(this,setlistId);
         if(fresh!=null){
             setlist=fresh;
             repairMissingLyrics();
