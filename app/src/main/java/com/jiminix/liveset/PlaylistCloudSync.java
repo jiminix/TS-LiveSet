@@ -268,20 +268,127 @@ public final class PlaylistCloudSync {
         },"TS-EnCours-Restore").start();
     }
 
+    public static void saveGlobalBackup(Context c, Listener listener){
+        Context app=c.getApplicationContext();
+        new Thread(()->{
+            try{
+                JSONObject backup=AppStore.createFullBackup(app);
+                long savedAt=AppStore.saveFullBackupLocal(app,backup);
+
+                JSONObject remote;
+                try{
+                    remote=getJson(API+"/"+FIXED_BLOB_ID);
+                }catch(Exception ignored){
+                    remote=selectedPlaylistJson(app);
+                }
+
+                remote.put("manager_backup",backup);
+                requestJson("PUT",API+"/"+FIXED_BLOB_ID,remote);
+
+                prefs(app).edit()
+                    .putString(K_BLOB_ID,FIXED_BLOB_ID)
+                    .putString(K_SHORT_CODE,FIXED_SHARE_CODE)
+                    .apply();
+
+                if(listener!=null){
+                    final String result=String.valueOf(savedAt);
+                    MAIN.post(()->listener.onSuccess(result));
+                }
+            }catch(Exception e){
+                String msg=e.getMessage();
+                if(msg==null || msg.trim().isEmpty())msg="Sauvegarde Internet impossible";
+                final String out=msg;
+                if(listener!=null)MAIN.post(()->listener.onError(out));
+            }
+        },"TS-Global-Backup").start();
+    }
+
+    public static void restoreGlobalBackup(Context c, Listener listener){
+        Context app=c.getApplicationContext();
+        new Thread(()->{
+            JSONObject backup=null;
+            String cloudError="";
+
+            try{
+                JSONObject remote=getJson(API+"/"+FIXED_BLOB_ID);
+                backup=remote.optJSONObject("manager_backup");
+            }catch(Exception e){
+                cloudError=e.getMessage()==null?"":e.getMessage();
+            }
+
+            if(backup==null){
+                backup=AppStore.getFullBackupLocal(app);
+            }
+
+            if(backup==null){
+                final String out=cloudError.isEmpty()
+                    ? "Aucune sauvegarde globale disponible"
+                    : "Sauvegarde Internet inaccessible : "+cloudError;
+                if(listener!=null)MAIN.post(()->listener.onError(out));
+                return;
+            }
+
+            try{
+                long savedAt=backup.optLong("savedAt",0L);
+                boolean ok=AppStore.restoreFullBackup(app,backup);
+                if(!ok)throw new Exception("Sauvegarde invalide");
+
+                if(listener!=null){
+                    final String result=String.valueOf(savedAt);
+                    MAIN.post(()->listener.onSuccess(result));
+                }
+            }catch(Exception e){
+                String msg=e.getMessage();
+                if(msg==null || msg.trim().isEmpty())msg="Restauration impossible";
+                final String out=msg;
+                if(listener!=null)MAIN.post(()->listener.onError(out));
+            }
+        },"TS-Global-Restore").start();
+    }
+
+    public static void getGlobalBackupTimestamp(Context c, Listener listener){
+        Context app=c.getApplicationContext();
+        new Thread(()->{
+            long local=AppStore.getFullBackupTimestamp(app);
+            long remoteTime=0L;
+
+            try{
+                JSONObject remote=getJson(API+"/"+FIXED_BLOB_ID);
+                JSONObject backup=remote.optJSONObject("manager_backup");
+                if(backup!=null)remoteTime=backup.optLong("savedAt",0L);
+            }catch(Exception ignored){}
+
+            long best=Math.max(local,remoteTime);
+            if(best>0L){
+                final String result=String.valueOf(best);
+                if(listener!=null)MAIN.post(()->listener.onSuccess(result));
+            }else if(listener!=null){
+                MAIN.post(()->listener.onError("Aucune sauvegarde"));
+            }
+        },"TS-Global-Backup-Date").start();
+    }
+
     public static void publishSelected(Context c, Listener listener){
         Context app=c.getApplicationContext();
         new Thread(()->{
             try{
                 JSONObject payload=selectedPlaylistJson(app);
 
-                // Never overwrite a non-empty remote En cours with an accidental empty local one.
+                // Preserve the independent global backup and never overwrite a non-empty
+                // remote En cours with an accidental empty local one.
                 try{
+                    JSONObject remote=getJson(API+"/"+FIXED_BLOB_ID);
+
+                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");
+                    if(remoteBackup!=null){
+                        payload.put("manager_backup",remoteBackup);
+                    }
+
                     JSONObject localProgress=payload.optJSONObject("in_progress");
                     JSONArray localSongs=localProgress==null?null:localProgress.optJSONArray("songs");
                     boolean localEmpty=localSongs==null || localSongs.length()==0;
 
                     if(localEmpty){
-                        JSONObject remote=getJson(API+"/"+FIXED_BLOB_ID);
                         JSONObject remoteProgress=remote.optJSONObject("in_progress");
                         JSONArray remoteSongs=remoteProgress==null?null:remoteProgress.optJSONArray("songs");
                         if(remoteSongs!=null && remoteSongs.length()>0){
