@@ -145,15 +145,14 @@ public class MainActivity extends AppCompatActivity {
         root.setPadding(dp(10),dp(12),dp(10),dp(10));
 
         appTitle=new TextView(this);
-        appTitle.setText("TS Playlist 2026\nUn pour tous, tous pour la même playlist.");
+        appTitle.setText("TS Playlist 2026");
         appTitle.setTextColor(Color.rgb(255,196,30));
-        appTitle.setTextSize(19);
+        appTitle.setTextSize(22);
         appTitle.setGravity(Gravity.CENTER);
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         appTitle.setBackgroundColor(Color.rgb(105,12,18));
-        appTitle.setLineSpacing(0f,0.88f);
         appTitle.setPadding(dp(2),0,dp(2),0);
-        root.addView(appTitle,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(42)));
+        root.addView(appTitle,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(38)));
 
         playlistTitle=new TextView(this);
         playlistTitle.setText("Connexion Viewer");
@@ -242,7 +241,12 @@ public class MainActivity extends AppCompatActivity {
         ));
 
         startupBanner=new TextView(this);
-        startupBanner.setText("Un pour tous, tous pour la même playlist\nTS 2026 - connexion…\nSynchronisation Internet : en cours");
+        startupBanner.setText("Un pour tous, tous pour la même playlist.\n"+
+            "Synchro au Manager : vérification…\n"+
+            "Playlist TS 2026 importée\n"+
+            "Numéro de version : V"+installedVersion()+"\n"+
+            "made with ChatGPT and I\n"+
+            "sept. 2026");
         startupBanner.setTextColor(Color.WHITE);
         startupBanner.setTextSize(18);
         startupBanner.setGravity(Gravity.CENTER);
@@ -589,13 +593,16 @@ public class MainActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(name);
-        appTitle.setText("TS Playlist 2026\nUn pour tous, tous pour la même playlist.");
+        appTitle.setText("TS Playlist 2026");
         info.setText(songs.length()+" titre"+(songs.length()>1?"s":""));
         if(startupBanner!=null && startupBanner.getVisibility()==View.VISIBLE){
             String syncOk=source.startsWith("Internet · à jour") ? "OK" : (source.startsWith("Local") ? "OK" : "indisponible");
-            startupBanner.setText("Un pour tous, tous pour la même playlist\n"+
-                name+" - "+songs.length()+" Titre"+(songs.length()>1?"s":"")+"\n"+
-                "Synchronisation Internet : "+syncOk);
+            startupBanner.setText("Un pour tous, tous pour la même playlist.\n"+
+                "Synchro au Manager : "+("OK".equals(syncOk)?"OK":"PAS OK")+"\n"+
+                "Playlist TS 2026 importée\n"+
+                "Numéro de version : V"+installedVersion()+"\n"+
+                "made with ChatGPT and I\n"+
+                "sept. 2026");
         }
         songsBox.removeAllViews();
 
@@ -754,10 +761,15 @@ public class MainActivity extends AppCompatActivity {
 
         lastSignature=signature;
         playlistTitle.setText(title);
-        appTitle.setText("TS Playlist 2026\nUn pour tous, tous pour la même playlist.");
+        appTitle.setText("TS Playlist 2026");
         info.setText(message);
         if(startupBanner!=null && startupBanner.getVisibility()==View.VISIBLE){
-            startupBanner.setText("Un pour tous, tous pour la même playlist\nTS 2026 - 0 Titre\nSynchronisation Internet : indisponible");
+            startupBanner.setText("Un pour tous, tous pour la même playlist.\n"+
+                "Synchro au Manager : PAS OK\n"+
+                "Playlist TS 2026 importée\n"+
+                "Numéro de version : V"+installedVersion()+"\n"+
+                "made with ChatGPT and I\n"+
+                "sept. 2026");
         }
         songsBox.removeAllViews();
     }
