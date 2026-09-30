@@ -272,7 +272,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             songs.add(s);
             sig.append(s.id).append(':').append(s.title).append(':').append(s.bpm)
                 .append(':').append(s.stageNum1).append(':').append(s.stageNum2)
-                .append(':').append(s.stageGuitar).append(':').append(s.stageKeyboard).append('|');
+                .append(':').append(s.stageGuitar).append(':').append(s.stageKeyboard)
+                .append(':').append(list.disabledSongIds.contains(id)).append('|');
         }
 
         String signature=sig.toString();
@@ -286,7 +287,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
         for(int i=0;i<songs.size();i++){
             Song s=songs.get(i);
-            addSongRow(i+1,s);
+            addSongRow(i+1,s,list.disabledSongIds.contains(s.id));
         }
     }
 
@@ -339,13 +340,14 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         return d.length()==1?"0"+d:d;
     }
 
-    private void addSongRow(int number,Song song){
+    private void addSongRow(int number,Song song,boolean disabled){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(zdp(6),zdp(1),zdp(6),zdp(1));
         row.setMinimumHeight(zdp(36));
         row.setBackgroundColor(number%2==1?Color.rgb(28,28,28):Color.BLACK);
+        row.setAlpha(disabled?0.5f:1f);
 
         TextView num=new TextView(this);
         num.setText(String.format("%02d",number));
