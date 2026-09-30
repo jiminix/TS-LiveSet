@@ -22,6 +22,7 @@ public final class PlaylistCloudSync {
     // Build Internet sync V0.52 two-character A0-Z9 pairing codes
     // Build Internet sync V0.54 refresh short-code mapping
     // Build Internet sync V0.59 fixed Y6 direct pairing
+    // Build Internet sync V0.60 publish main and En cours playlists together
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
     private static final String K_SHORT_CODE="short_code";
@@ -307,22 +308,36 @@ public final class PlaylistCloudSync {
         JSONObject out=new JSONObject();
         String id=AppStore.getViewerSetlistId(c);
         SetListModel list=(id==null||id.isEmpty())?null:AppStore.findSetlist(c,id);
+        SetListModel progress=AppStore.getOrCreateInProgressSetlist(c);
 
-        out.put("schema",1);
-        out.put("managerVersion","0.37");
+        out.put("schema",2);
+        out.put("managerVersion","0.60");
         out.put("updatedAt",System.currentTimeMillis());
 
         if(list==null){
             out.put("available",false);
             out.put("songs",new JSONArray());
-            return out;
+        }else{
+            out.put("available",true);
+            out.put("playlist_id",list.id);
+            out.put("playlist_name",list.name);
+            out.put("songs",songsJson(c,list));
         }
 
-        out.put("available",true);
-        out.put("playlist_id",list.id);
-        out.put("playlist_name",list.name);
+        JSONObject progressJson=new JSONObject();
+        progressJson.put("available",true);
+        progressJson.put("playlist_id",progress.id);
+        progressJson.put("playlist_name","En cours");
+        progressJson.put("songs",songsJson(c,progress));
+        out.put("in_progress",progressJson);
 
+        return out;
+    }
+
+    private static JSONArray songsJson(Context c,SetListModel list) throws Exception{
         JSONArray songs=new JSONArray();
+        if(list==null)return songs;
+
         for(String songId:list.songIds){
             Song s=AppStore.findSong(c,songId);
             if(s==null)continue;
@@ -336,9 +351,7 @@ public final class PlaylistCloudSync {
             o.put("stageKeyboard",s.stageKeyboard);
             songs.put(o);
         }
-
-        out.put("songs",songs);
-        return out;
+        return songs;
     }
 
     private static SharedPreferences prefs(Context c){
