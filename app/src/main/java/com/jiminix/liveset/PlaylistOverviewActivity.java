@@ -747,6 +747,25 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         adapter.notifyItemChanged(pos);
     }
 
+    private boolean isMedleySong(Song song){
+        if(song==null || song.title==null)return false;
+        String t=song.title.trim().toLowerCase(Locale.ROOT);
+        return t.startsWith("medley") || t.startsWith("meddley");
+    }
+
+    private void toggleMedleyExpanded(String songId,int pos){
+        if(songId==null || songId.isEmpty())return;
+        if(expandedMedleys.contains(songId))expandedMedleys.remove(songId);
+        else expandedMedleys.add(songId);
+        if(adapter!=null)adapter.notifyItemChanged(pos);
+    }
+
+    private void openMedleyEditor(String songId){
+        Intent i=new Intent(this,EditSongActivity.class);
+        i.putExtra("song_id",songId);
+        startActivity(i);
+    }
+
     private void confirmRemoveSong(int pos){
         if(pos<0 || pos>=setlist.songIds.size())return;
         String id=setlist.songIds.get(pos);
@@ -994,6 +1013,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.handle.setTextSize(zsp(20));
             h.handle.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
 
+            boolean medley=s!=null && isMedleySong(s) && !s.medleyItems.isEmpty();
+            boolean medleyExpanded=medley && expandedMedleys.contains(id);
+            String medleyPrefix=medley ? (medleyExpanded?"▾ ":"▸ ") : "";
+
             boolean hasStageInfo=s!=null && (
                 (s.stageNum1!=null && !s.stageNum1.trim().isEmpty()) ||
                 (s.stageNum2!=null && !s.stageNum2.trim().isEmpty()) ||
@@ -1005,14 +1028,14 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.bpm.setText("");
                 h.bpm.setVisibility(View.GONE);
             }else if(compact){
-                h.song.setText(s.title);
+                h.song.setText(medleyPrefix+s.title);
                 h.bpm.setText(s.bpm.isEmpty()?"＋":s.bpm);
                 h.bpm.setVisibility(View.VISIBLE);
             }else{
                 String meta="";
                 if(!s.artist.isEmpty())meta=s.artist;
                 if(!s.key.isEmpty())meta+=(meta.isEmpty()?"":" · ")+s.key;
-                h.song.setText(s.title+(meta.isEmpty()?"":"\n"+meta));
+                h.song.setText(medleyPrefix+s.title+(meta.isEmpty()?"":"\n"+meta));
                 h.bpm.setText(s.bpm.isEmpty()?"＋":s.bpm+" BPM");
                 h.bpm.setVisibility(View.VISIBLE);
             }
@@ -1057,6 +1080,37 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.keyboardIcon.setAlpha(1f);
             }else{
                 h.stageBox.setVisibility(View.GONE);
+            }
+
+            h.medleyBox.removeAllViews();
+            if(medley && medleyExpanded){
+                h.medleyBox.setVisibility(View.VISIBLE);
+
+                TextView editMedley=new TextView(PlaylistOverviewActivity.this);
+                editMedley.setText("✎ Modifier le medley");
+                editMedley.setTextColor(Color.rgb(255,193,7));
+                editMedley.setTextSize(zsp(12));
+                editMedley.setTypeface(Typeface.DEFAULT_BOLD);
+                editMedley.setPadding(0,zdp(2),0,zdp(4));
+                editMedley.setOnClickListener(v->openMedleyEditor(id));
+                h.medleyBox.addView(editMedley,new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ));
+
+                for(int mi=0;mi<s.medleyItems.size();mi++){
+                    TextView item=new TextView(PlaylistOverviewActivity.this);
+                    item.setText(String.format(Locale.ROOT,"%02d. %s",mi+1,s.medleyItems.get(mi)));
+                    item.setTextColor(Color.WHITE);
+                    item.setTextSize(zsp(12));
+                    item.setPadding(zdp(8),zdp(2),0,zdp(2));
+                    h.medleyBox.addView(item,new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ));
+                }
+            }else{
+                h.medleyBox.setVisibility(View.GONE);
             }
 
             boolean disabled=setlist.disabledSongIds.contains(id);
