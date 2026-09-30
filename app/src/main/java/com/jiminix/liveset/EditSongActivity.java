@@ -28,6 +28,7 @@ import org.json.JSONObject;
 public class EditSongActivity extends AppCompatActivity {
     // V0.62 compact lyrics: remove empty lines on web import, paste and save
     // V0.63 fill key, BPM and duration from song lookup when available
+    // V0.64 move Save below web lyrics search for new songs
     private Song song;
     private String targetSetlistId;
     private EditText title, artist, key, bpm, tuning, capo, duration, singer, guitar, notes, media, lyrics;
@@ -49,8 +50,9 @@ public class EditSongActivity extends AppCompatActivity {
     }
 
     private void buildUi(){
+        boolean newSong=getIntent().getBooleanExtra("new_song",false);
         LinearLayout outer=new LinearLayout(this); outer.setOrientation(LinearLayout.VERTICAL); outer.setBackgroundColor(Color.rgb(18,18,18));
-        LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,getIntent().getBooleanExtra("new_song",false)?"Nouveau morceau":"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
+        LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,newSong?"Nouveau morceau":"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
         ScrollView sv=new ScrollView(this); LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),Ui.dp(this,30)); sv.addView(root);
         title=field(root,"Titre"); artist=field(root,"Artiste");
         Button findSong=Ui.button(this,"⌕ Trouver titre / artiste");
@@ -63,12 +65,34 @@ public class EditSongActivity extends AppCompatActivity {
         Button findLyrics=Ui.button(this,"🌐 Chercher les paroles sur le web");
         findLyrics.setOnClickListener(v->searchLyricsWeb());
         root.addView(findLyrics);
+
+        if(newSong){
+            Button saveTop=Ui.button(this,"Enregistrer");
+            saveTop.setTextSize(17);
+            saveTop.setOnClickListener(v->save());
+            root.addView(saveTop,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,48)
+            ));
+        }
+
         lyrics=new EditText(this); lyrics.setHint("INTRO\n...\n\nCOUPLET 1\n...\n\nREFRAIN\n..."); lyrics.setGravity(android.view.Gravity.TOP); lyrics.setMinLines(14); lyrics.setTextColor(Color.WHITE); lyrics.setHintTextColor(Color.GRAY); lyrics.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         root.addView(lyrics,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,360)));
         Button arrange=Ui.button(this,"↕ Réarranger les blocs"); arrange.setOnClickListener(v->rearrangeBlocks()); root.addView(arrange);
         outer.addView(sv,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
-        LinearLayout actions=Ui.row(this); Button cancel=Ui.button(this,"Annuler"); Button save=Ui.button(this,"Enregistrer"); Ui.weight(cancel,1); Ui.weight(save,1); actions.addView(cancel); actions.addView(save); outer.addView(actions);
-        cancel.setOnClickListener(v->finish()); save.setOnClickListener(v->save()); Ui.applySafeArea(outer); setContentView(outer);
+
+        LinearLayout actions=Ui.row(this);
+        Button cancel=Ui.button(this,"Annuler");
+        Ui.weight(cancel,1);
+        actions.addView(cancel);
+        if(!newSong){
+            Button save=Ui.button(this,"Enregistrer");
+            Ui.weight(save,1);
+            actions.addView(save);
+            save.setOnClickListener(v->save());
+        }
+        outer.addView(actions);
+        cancel.setOnClickListener(v->finish());
+        Ui.applySafeArea(outer); setContentView(outer);
     }
 
     private EditText mini(String hint,LinearLayout row){ EditText e=new EditText(this); e.setHint(hint); e.setTextColor(Color.WHITE); e.setHintTextColor(Color.GRAY); e.setSingleLine(true); Ui.weight(e,1); row.addView(e); return e; }
