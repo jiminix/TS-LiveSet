@@ -21,10 +21,13 @@ public final class PlaylistCloudSync {
     // Build Internet sync V0.51 compact 22-character share code
     // Build Internet sync V0.52 two-character A0-Z9 pairing codes
     // Build Internet sync V0.54 refresh short-code mapping
+    // Build Internet sync V0.59 fixed Y6 direct pairing
     private static final String PREFS="viewer_cloud_sync";
     private static final String K_BLOB_ID="blob_id";
     private static final String K_SHORT_CODE="short_code";
     private static final String API="https://superjsonblob.com/api/jsonBlob";
+    private static final String FIXED_SHARE_CODE="Y6";
+    private static final String FIXED_BLOB_ID="d7e6c82a-82e0-4336-8e66-d49b9d013312";
     private static final String SHORT_REGISTRY_ID="95af90a8-317b-4588-b7ab-5153db677527";
     private static final String SHORT_REGISTRY_API=API+"/"+SHORT_REGISTRY_ID;
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
@@ -58,9 +61,7 @@ public final class PlaylistCloudSync {
     }
 
     public static String getShareCode(Context c){
-        String shortCode=prefs(c).getString(K_SHORT_CODE,"");
-        shortCode=shortCode==null?"":shortCode.trim().toUpperCase();
-        return shortCode.matches("[A-Z][0-9]")?shortCode:"";
+        return FIXED_SHARE_CODE;
     }
 
     private static String codeAt(int index){
@@ -156,17 +157,15 @@ public final class PlaylistCloudSync {
         new Thread(()->{
             try{
                 JSONObject payload=selectedPlaylistJson(app);
-                String code=getCode(app);
 
-                if(code.isEmpty()){
-                    code=createRemote(payload);
-                    prefs(app).edit().putString(K_BLOB_ID,code).apply();
-                }else{
-                    requestJson("PUT",API+"/"+code,payload);
-                }
+                // Stable direct pairing: Y6 always points to the same Internet blob.
+                requestJson("PUT",API+"/"+FIXED_BLOB_ID,payload);
+                prefs(app).edit()
+                    .putString(K_BLOB_ID,FIXED_BLOB_ID)
+                    .putString(K_SHORT_CODE,FIXED_SHARE_CODE)
+                    .apply();
 
-                final String resultCode=ensureShortCode(app,code);
-                if(listener!=null)MAIN.post(()->listener.onSuccess(resultCode));
+                if(listener!=null)MAIN.post(()->listener.onSuccess(FIXED_SHARE_CODE));
             }catch(Exception e){
                 if(listener!=null){
                     String msg=e.getMessage();
