@@ -254,6 +254,7 @@ public class MainActivity extends AppCompatActivity {
             .setTitle("Supprimer la playlist ?")
             .setMessage("« "+sl.name+" » sera supprimée. Les morceaux et les paroles resteront dans la bibliothèque.")
             .setPositiveButton("Supprimer",(d,w)->{
+                AppStore.recordUndoSnapshot(this,"Suppression playlist");
                 List<SetListModel> all=AppStore.loadSetlists(this);
                 all.removeIf(x->x.id.equals(sl.id));
                 AppStore.saveSetlists(this,all);
@@ -374,6 +375,7 @@ public class MainActivity extends AppCompatActivity {
             .setPositiveButton("Créer",(d,w)->{
                 String n=input.getText().toString().trim();
                 if(n.isEmpty()) n="Nouvelle setlist";
+                AppStore.recordUndoSnapshot(this,"Création playlist");
                 SetListModel sl=new SetListModel(); sl.name=n; AppStore.upsertSetlist(this,sl); showSetlists();
             }).setNegativeButton("Annuler",null).show();
     }
@@ -383,7 +385,7 @@ public class MainActivity extends AppCompatActivity {
         new AlertDialog.Builder(this).setTitle(sl.name).setItems(items,(d,which)->{
             if(which==0){
                 EditText e=new EditText(this); e.setText(sl.name); e.selectAll();
-                new AlertDialog.Builder(this).setTitle("Renommer").setView(e).setPositiveButton("OK",(x,y)->{ sl.name=e.getText().toString().trim(); AppStore.upsertSetlist(this,sl); showSetlists(); }).setNegativeButton("Annuler",null).show();
+                new AlertDialog.Builder(this).setTitle("Renommer").setView(e).setPositiveButton("OK",(x,y)->{ AppStore.recordUndoSnapshot(this,"Renommage playlist"); sl.name=e.getText().toString().trim(); AppStore.upsertSetlist(this,sl); showSetlists(); }).setNegativeButton("Annuler",null).show();
             } else {
                 confirmDeleteSetlist(sl);
             }
@@ -394,7 +396,7 @@ public class MainActivity extends AppCompatActivity {
         String[] items={"Modifier","Supprimer"};
         new AlertDialog.Builder(this).setTitle(s.title).setItems(items,(d,which)->{
             if(which==0) editSong(s.id);
-            else new AlertDialog.Builder(this).setTitle("Supprimer ce morceau ?").setMessage(s.title).setPositiveButton("Supprimer",(x,y)->{ AppStore.deleteSong(this,s.id); showLibrary(); }).setNegativeButton("Annuler",null).show();
+            else new AlertDialog.Builder(this).setTitle("Supprimer ce morceau ?").setMessage(s.title).setPositiveButton("Supprimer",(x,y)->{ AppStore.recordUndoSnapshot(this,"Suppression morceau"); AppStore.deleteSong(this,s.id); showLibrary(); }).setNegativeButton("Annuler",null).show();
         }).show();
     }
 
