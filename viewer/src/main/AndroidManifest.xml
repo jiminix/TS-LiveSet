@@ -5,6 +5,7 @@
 
     <application
         android:allowBackup="false"
+        android:icon="@drawable/ic_launcher_viewer"
         android:label="TS Playlist Viewer"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
