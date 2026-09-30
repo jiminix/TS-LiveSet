@@ -38,10 +38,12 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     private TextView playlistTitle;
     private TextView appTitle;
     private TextView info;
+    private Button inProgressButton;
     private LinearLayout songsBox;
     private ScrollView scroll;
     private String lastSignature="";
     private int textZoom=0;
+    private boolean showInProgress=false;
 
     private final Runnable refreshLoop=new Runnable(){
         @Override public void run(){
@@ -121,11 +123,16 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         cloud.setTextSize(9);
         Ui.compactHeaderButton(cloud,this,56);
 
+        inProgressButton=Ui.button(this,"En cours");
+        inProgressButton.setTextSize(9);
+        Ui.compactHeaderButton(inProgressButton,this,58);
+
         top.addView(back);
         top.addView(appTitle);
         top.addView(zoomMinus);
         top.addView(zoomPlus);
         top.addView(cloud);
+        top.addView(inProgressButton);
         root.addView(top);
 
         playlistTitle=new TextView(this);
@@ -197,9 +204,18 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         pageUp.setOnClickListener(v->pageScroll(-1));
         pageDown.setOnClickListener(v->pageScroll(1));
         cloud.setOnClickListener(v->showInternetCode());
+        inProgressButton.setOnClickListener(v->toggleInProgress());
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private void toggleInProgress(){
+        showInProgress=!showInProgress;
+        inProgressButton.setText(showInProgress?"Principal":"En cours");
+        lastSignature="";
+        if(scroll!=null)scroll.scrollTo(0,0);
+        refreshPlaylist();
     }
 
     private void pageScroll(int direction){
@@ -226,7 +242,9 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     }
 
     private void refreshPlaylist(){
-        SetListModel list=AppStore.findSetlist(this,setlistId);
+        SetListModel list=showInProgress
+            ? AppStore.getOrCreateInProgressSetlist(this)
+            : AppStore.findSetlist(this,setlistId);
         if(list==null){
             showEmpty("Playlist introuvable","Retourne dans le Manager et sélectionne une playlist.");
             return;
