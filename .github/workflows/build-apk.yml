@@ -14,6 +14,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 concurrency:
   group: liveset-android-build
   cancel-in-progress: false
@@ -64,3 +67,17 @@ jobs:
         with:
           name: TS-Playlist-Viewer-V0.10-debug
           path: viewer/build/outputs/apk/debug/viewer-debug.apk
+
+      - name: Publish stable Viewer updater APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VIEWER_VERSION="$(grep '^Viewer V' VERSION | sed 's/^Viewer V//')"
+          cp viewer/build/outputs/apk/debug/viewer-debug.apk TS-Playlist-Viewer.apk
+
+          if gh release view viewer-latest >/dev/null 2>&1; then
+            gh release upload viewer-latest TS-Playlist-Viewer.apk --clobber
+            gh release edit viewer-latest               --title "TS Playlist Viewer V${VIEWER_VERSION}"               --notes "APK de mise à jour automatique du Viewer V${VIEWER_VERSION}."
+          else
+            gh release create viewer-latest TS-Playlist-Viewer.apk               --title "TS Playlist Viewer V${VIEWER_VERSION}"               --notes "APK de mise à jour automatique du Viewer V${VIEWER_VERSION}."
+          fi
