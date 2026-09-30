@@ -11,6 +11,8 @@ public class AppStore {
     private static final String K_SONGS = "songs";
     private static final String K_SETLISTS = "setlists";
     private static final String K_VIEWER_SETLIST = "viewer_setlist_id";
+    private static final String K_IN_PROGRESS_BACKUP = "in_progress_song_ids_backup";
+    private static final String K_IN_PROGRESS_DISABLED_BACKUP = "in_progress_disabled_song_ids_backup";
     public static final String IN_PROGRESS_SETLIST_ID = "__in_progress__";
 
     public static List<Song> loadSongs(Context c) {
@@ -86,6 +88,11 @@ public class AppStore {
             if (all.get(i).id.equals(setlist.id)) { all.set(i, setlist); replaced = true; break; }
         }
         if (!replaced) all.add(setlist);
+
+        if (isInProgressSetlist(setlist.id)) {
+            saveInProgressBackup(c, setlist);
+        }
+
         saveSetlists(c, all);
     }
 
@@ -125,6 +132,29 @@ public class AppStore {
         if (!"En cours".equals(canonical.name)) {
             canonical.name = "En cours";
             changed = true;
+        }
+
+        // Restore from the dedicated backup if the canonical playlist is unexpectedly empty.
+        if (canonical.songIds.isEmpty()) {
+            List<String> backupIds = loadStringListBackup(c, K_IN_PROGRESS_BACKUP);
+            if (!backupIds.isEmpty()) {
+                for (String id : backupIds) {
+                    if (id != null && !id.isEmpty() && findSong(c,id) != null && !canonical.songIds.contains(id)) {
+                        canonical.songIds.add(id);
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        if (canonical.disabledSongIds.isEmpty()) {
+            List<String> backupDisabled = loadStringListBackup(c, K_IN_PROGRESS_DISABLED_BACKUP);
+            for (String id : backupDisabled) {
+                if (canonical.songIds.contains(id) && !canonical.disabledSongIds.contains(id)) {
+                    canonical.disabledSongIds.add(id);
+                    changed = true;
+                }
+            }
         }
 
         // Merge any duplicate playlist also named "En cours" into the reserved one.
@@ -176,7 +206,32 @@ public class AppStore {
         }
 
         if (changed) saveSetlists(c, all);
+        saveInProgressBackup(c, canonical);
         return canonical;
+    }
+
+    private static void saveInProgressBackup(Context c, SetListModel list) {
+        if (list == null) return;
+        JSONArray ids = new JSONArray();
+        for (String id : list.songIds) ids.put(id);
+        JSONArray disabled = new JSONArray();
+        for (String id : list.disabledSongIds) disabled.put(id);
+        prefs(c).edit()
+            .putString(K_IN_PROGRESS_BACKUP, ids.toString())
+            .putString(K_IN_PROGRESS_DISABLED_BACKUP, disabled.toString())
+            .apply();
+    }
+
+    private static List<String> loadStringListBackup(Context c, String key) {
+        List<String> out = new ArrayList<>();
+        try {
+            JSONArray a = new JSONArray(prefs(c).getString(key, "[]"));
+            for (int i = 0; i < a.length(); i++) {
+                String id = a.optString(i, "");
+                if (!id.isEmpty() && !out.contains(id)) out.add(id);
+            }
+        } catch (Exception ignored) {}
+        return out;
     }
 
     public static boolean isInProgressSetlist(String id) {
