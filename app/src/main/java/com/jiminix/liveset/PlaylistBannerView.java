@@ -14,12 +14,12 @@ public class PlaylistBannerView extends View {
 
     public PlaylistBannerView(Context c){
         super(c);
-        setBackgroundColor(Color.BLACK);
+        setBackgroundColor(Color.rgb(105,12,18));
     }
 
     @Override protected void onMeasure(int widthMeasureSpec,int heightMeasureSpec){
         int w=MeasureSpec.getSize(widthMeasureSpec);
-        int h=Math.max(Ui.dp(getContext(),92),Math.round(w*0.22f));
+        int h=Ui.dp(getContext(),42);
         setMeasuredDimension(w,h);
     }
 
@@ -37,44 +37,20 @@ public class PlaylistBannerView extends View {
         float h=getHeight();
         float pad=Math.max(8f,w*0.02f);
 
-        p.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD_ITALIC));
-        String main="Ts PLAYLIST manager";
-        float mainSize=fitText(main,w-pad*2,h*0.38f);
-
-        float baseY=h*0.53f;
-
-        // Blue offset/shadow for the 3D look.
         p.setStyle(Paint.Style.FILL);
-        p.setColor(Color.rgb(20,20,180));
-        p.setTextSize(mainSize);
-        canvas.drawText(main,pad+3,baseY+5,p);
-
-        // Dark blue outline.
-        p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(Math.max(2f,mainSize*0.055f));
-        p.setColor(Color.rgb(20,35,170));
-        canvas.drawText(main,pad,baseY,p);
-
-        // Yellow/orange face.
-        p.setStyle(Paint.Style.FILL);
-        p.setColor(Color.rgb(255,196,30));
-        canvas.drawText(main,pad,baseY,p);
-
-        // Small white signature on the right.
         p.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD));
-        p.setColor(Color.WHITE);
-        String signature="made with ChatGPT and I";
-        float sigSize=fitText(signature,w*0.34f,h*0.115f);
-        p.setTextSize(sigSize);
-        float sigX=pad+Math.max(2f,w*0.02f);
-        canvas.drawText(signature,sigX,h*0.69f,p);
+        p.setTextAlign(Paint.Align.CENTER);
 
-        // Subtitle.
-        p.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD_ITALIC));
+        String main="TS Playlist 2026";
+        p.setColor(Color.rgb(255,196,30));
+        p.setTextSize(h*0.43f);
+        canvas.drawText(main,w/2f,h*0.43f,p);
+
+        String sub="Un pour tous, tous pour la même playlist.";
         p.setColor(Color.WHITE);
-        String sub="La playlist préférée des grands-pères";
-        float subSize=fitText(sub,w-pad*2,h*0.23f);
-        p.setTextSize(subSize);
-        canvas.drawText(sub,pad,h*0.88f,p);
+        p.setTextSize(h*0.24f);
+        canvas.drawText(sub,w/2f,h*0.78f,p);
+
+        p.setTextAlign(Paint.Align.LEFT);
     }
 }
