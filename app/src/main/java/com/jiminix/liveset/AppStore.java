@@ -90,20 +90,93 @@ public class AppStore {
     }
 
     public static SetListModel getOrCreateInProgressSetlist(Context c) {
-        SetListModel existing = findSetlist(c, IN_PROGRESS_SETLIST_ID);
-        if (existing != null) {
-            if (!"En cours".equals(existing.name)) {
-                existing.name = "En cours";
-                upsertSetlist(c, existing);
+        List<SetListModel> all = loadSetlists(c);
+        SetListModel canonical = null;
+        boolean changed = false;
+
+        for (SetListModel s : all) {
+            if (IN_PROGRESS_SETLIST_ID.equals(s.id)) {
+                canonical = s;
+                break;
             }
-            return existing;
         }
 
-        SetListModel list = new SetListModel();
-        list.id = IN_PROGRESS_SETLIST_ID;
-        list.name = "En cours";
-        upsertSetlist(c, list);
-        return list;
+        if (canonical == null) {
+            // Recover older/duplicate "En cours" playlists created before the reserved ID existed.
+            for (SetListModel s : all) {
+                if (s.name != null && "en cours".equalsIgnoreCase(s.name.trim())) {
+                    canonical = s;
+                    canonical.id = IN_PROGRESS_SETLIST_ID;
+                    canonical.name = "En cours";
+                    changed = true;
+                    break;
+                }
+            }
+        }
+
+        if (canonical == null) {
+            canonical = new SetListModel();
+            canonical.id = IN_PROGRESS_SETLIST_ID;
+            canonical.name = "En cours";
+            all.add(canonical);
+            changed = true;
+        }
+
+        if (!"En cours".equals(canonical.name)) {
+            canonical.name = "En cours";
+            changed = true;
+        }
+
+        // Merge any duplicate playlist also named "En cours" into the reserved one.
+        List<SetListModel> duplicates = new ArrayList<>();
+        for (SetListModel s : all) {
+            if (s == canonical) continue;
+            if (s.name == null || !"en cours".equalsIgnoreCase(s.name.trim())) continue;
+
+            for (String songId : s.songIds) {
+                if (songId != null && !songId.isEmpty() && !canonical.songIds.contains(songId)) {
+                    canonical.songIds.add(songId);
+                    changed = true;
+                }
+            }
+            for (String songId : s.disabledSongIds) {
+                if (songId != null && !songId.isEmpty() && !canonical.disabledSongIds.contains(songId)) {
+                    canonical.disabledSongIds.add(songId);
+                    changed = true;
+                }
+            }
+            duplicates.add(s);
+        }
+
+        if (!duplicates.isEmpty()) {
+            all.removeAll(duplicates);
+            changed = true;
+        }
+
+        // If we migrated an old named playlist, ensure no old object with its previous ID survives.
+        boolean hasCanonical = false;
+        for (int i = 0; i < all.size(); i++) {
+            SetListModel s = all.get(i);
+            if (IN_PROGRESS_SETLIST_ID.equals(s.id)) {
+                if (!hasCanonical) {
+                    all.set(i, canonical);
+                    hasCanonical = true;
+                } else if (s != canonical) {
+                    for (String songId : s.songIds) {
+                        if (!canonical.songIds.contains(songId)) canonical.songIds.add(songId);
+                    }
+                    all.remove(i--);
+                    changed = true;
+                }
+            }
+        }
+        if (!hasCanonical) {
+            all.add(canonical);
+            changed = true;
+        }
+
+        if (changed) saveSetlists(c, all);
+        return canonical;
     }
 
     public static boolean isInProgressSetlist(String id) {
