@@ -1,12 +1,18 @@
 package com.jiminix.liveset;
 
 import android.app.AlertDialog;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -16,6 +22,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -60,6 +67,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.80 BPM after stage icons + validate En cours to principal playlist
     // Build V0.81 multi-step undo
     // Build V0.83 borderless Google Docs icon
+    // Build V0.84 inline YouTube audio controls
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -74,6 +82,15 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private final Set<String> expandedMedleys=new HashSet<>();
     private boolean enCoursRestoreAttempted=false;
     private boolean playlistDragUndoRecorded=false;
+    private WebView audioWeb;
+    private LinearLayout miniPlayer;
+    private TextView miniPlayerTitle;
+    private TextView miniPlayerTime;
+    private SeekBar miniSeek;
+    private String playingSongId=null;
+    private String loadedVideoId=null;
+    private boolean audioPlaying=false;
+    private boolean seekTouch=false;
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
@@ -104,6 +121,21 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             if(adapter!=null) adapter.notifyDataSetChanged();
             maybeRestoreEmptyInProgress();
         }
+    }
+
+    @Override protected void onPause(){
+        pauseInlineAudio();
+        super.onPause();
+    }
+
+    @Override protected void onDestroy(){
+        if(audioWeb!=null){
+            audioWeb.stopLoading();
+            audioWeb.removeJavascriptInterface("AndroidPlayer");
+            audioWeb.destroy();
+            audioWeb=null;
+        }
+        super.onDestroy();
     }
 
     private void maybeRestoreEmptyInProgress(){
@@ -273,6 +305,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         recycler.setAdapter(adapter);
         root.addView(recycler,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
 
+        buildInlineAudioPlayer();
+
         ItemTouchHelper.Callback callback=new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP|ItemTouchHelper.DOWN,0){
             @Override public boolean onMove(RecyclerView rv,RecyclerView.ViewHolder from,RecyclerView.ViewHolder to){
                 int a=from.getBindingAdapterPosition();
@@ -372,6 +406,206 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    @SuppressLint({"SetJavaScriptEnabled","JavascriptInterface"})
+    private void buildInlineAudioPlayer(){
+        audioWeb=new WebView(this);
+        WebSettings ws=audioWeb.getSettings();
+        ws.setJavaScriptEnabled(true);
+        ws.setDomStorageEnabled(true);
+        ws.setMediaPlaybackRequiresUserGesture(false);
+        audioWeb.setWebViewClient(new WebViewClient());
+        audioWeb.setWebChromeClient(new WebChromeClient());
+        audioWeb.setBackgroundColor(Color.TRANSPARENT);
+        audioWeb.setAlpha(0.01f);
+        audioWeb.setVerticalScrollBarEnabled(false);
+        audioWeb.setHorizontalScrollBarEnabled(false);
+        audioWeb.addJavascriptInterface(new PlayerBridge(),"AndroidPlayer");
+
+        String html="<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"+
+            "<style>html,body{margin:0;background:#000;width:240px;height:180px;overflow:hidden}</style></head>"+
+            "<body><div id='player'></div><script src='https://www.youtube.com/iframe_api'></script><script>"+
+            "var player=null,pending=null;"+
+            "function onYouTubeIframeAPIReady(){player=new YT.Player('player',{width:'240',height:'180',"+
+            "playerVars:{playsinline:1,controls:0,rel:0},events:{"+
+            "onReady:function(){AndroidPlayer.onReady();if(pending){player.loadVideoById(pending);pending=null;}}, "+
+            "onStateChange:function(e){AndroidPlayer.onState(e.data);}, "+
+            "onError:function(e){AndroidPlayer.onError(e.data);}}});}"+
+            "function loadVideo(id){if(player&&player.loadVideoById){player.loadVideoById(id);}else{pending=id;}}"+
+            "function playVideo(){if(player&&player.playVideo)player.playVideo();}"+
+            "function pauseVideo(){if(player&&player.pauseVideo)player.pauseVideo();}"+
+            "function seekTo(sec){if(player&&player.seekTo)player.seekTo(sec,true);}"+
+            "setInterval(function(){try{if(player&&player.getCurrentTime){AndroidPlayer.onProgress(player.getCurrentTime(),player.getDuration());}}catch(e){}},500);"+
+            "</script></body></html>";
+        audioWeb.loadDataWithBaseURL("https://www.youtube.com",html,"text/html","UTF-8",null);
+
+        LinearLayout.LayoutParams hiddenLp=new LinearLayout.LayoutParams(Ui.dp(this,1),Ui.dp(this,1));
+        root.addView(audioWeb,hiddenLp);
+
+        miniPlayer=new LinearLayout(this);
+        miniPlayer.setOrientation(LinearLayout.VERTICAL);
+        miniPlayer.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4));
+        miniPlayer.setBackgroundColor(Color.rgb(28,28,28));
+        miniPlayer.setVisibility(View.GONE);
+
+        LinearLayout infoRow=Ui.row(this);
+        miniPlayerTitle=new TextView(this);
+        miniPlayerTitle.setTextColor(Color.WHITE);
+        miniPlayerTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        miniPlayerTitle.setTextSize(12);
+        miniPlayerTitle.setSingleLine(true);
+        miniPlayerTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        Ui.weight(miniPlayerTitle,1);
+
+        miniPlayerTime=new TextView(this);
+        miniPlayerTime.setTextColor(Color.LTGRAY);
+        miniPlayerTime.setTextSize(11);
+        miniPlayerTime.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+
+        infoRow.addView(miniPlayerTitle);
+        infoRow.addView(miniPlayerTime);
+        miniPlayer.addView(infoRow);
+
+        miniSeek=new SeekBar(this);
+        miniSeek.setMax(1);
+        miniSeek.setProgress(0);
+        miniSeek.setPadding(0,0,0,0);
+        miniSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            @Override public void onProgressChanged(SeekBar seekBar,int progress,boolean fromUser){
+                if(fromUser && miniPlayerTime!=null){
+                    miniPlayerTime.setText(formatPlayerTime(progress)+" / "+formatPlayerTime(seekBar.getMax()));
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar){ seekTouch=true; }
+            @Override public void onStopTrackingTouch(SeekBar seekBar){
+                seekTouch=false;
+                if(audioWeb!=null){
+                    audioWeb.evaluateJavascript("seekTo("+seekBar.getProgress()+")",null);
+                }
+            }
+        });
+        miniPlayer.addView(miniSeek,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,28)
+        ));
+
+        root.addView(miniPlayer,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,54)
+        ));
+    }
+
+    private class PlayerBridge {
+        @JavascriptInterface public void onReady(){}
+
+        @JavascriptInterface public void onState(int state){
+            runOnUiThread(()->{
+                if(state==1){
+                    audioPlaying=true;
+                    if(playingSongId!=null && miniPlayer!=null)miniPlayer.setVisibility(View.VISIBLE);
+                    if(adapter!=null)adapter.notifyDataSetChanged();
+                }else if(state==2){
+                    audioPlaying=false;
+                    if(miniPlayer!=null)miniPlayer.setVisibility(View.GONE);
+                    if(adapter!=null)adapter.notifyDataSetChanged();
+                }else if(state==0){
+                    audioPlaying=false;
+                    playingSongId=null;
+                    if(miniPlayer!=null)miniPlayer.setVisibility(View.GONE);
+                    if(adapter!=null)adapter.notifyDataSetChanged();
+                }
+            });
+        }
+
+        @JavascriptInterface public void onProgress(double current,double duration){
+            runOnUiThread(()->{
+                if(seekTouch || miniSeek==null || miniPlayerTime==null)return;
+                int d=Math.max(1,(int)Math.round(duration));
+                int p=Math.max(0,Math.min(d,(int)Math.round(current)));
+                miniSeek.setMax(d);
+                miniSeek.setProgress(p);
+                miniPlayerTime.setText(formatPlayerTime(p)+" / "+formatPlayerTime(d));
+            });
+        }
+
+        @JavascriptInterface public void onError(int code){
+            runOnUiThread(()->{
+                audioPlaying=false;
+                playingSongId=null;
+                if(miniPlayer!=null)miniPlayer.setVisibility(View.GONE);
+                if(adapter!=null)adapter.notifyDataSetChanged();
+                Toast.makeText(PlaylistOverviewActivity.this,
+                    "Lecture YouTube impossible ("+code+")",
+                    Toast.LENGTH_LONG).show();
+            });
+        }
+    }
+
+    private String formatPlayerTime(int totalSeconds){
+        int s=Math.max(0,totalSeconds);
+        int m=s/60;
+        int sec=s%60;
+        return String.format(Locale.ROOT,"%d:%02d",m,sec);
+    }
+
+    private String youtubeVideoId(String url){
+        if(url==null)return null;
+        String u=url.trim();
+        java.util.regex.Pattern[] patterns=new java.util.regex.Pattern[]{
+            java.util.regex.Pattern.compile("[?&]v=([A-Za-z0-9_-]{11})"),
+            java.util.regex.Pattern.compile("youtu\\.be/([A-Za-z0-9_-]{11})"),
+            java.util.regex.Pattern.compile("youtube\\.com/(?:shorts|embed)/([A-Za-z0-9_-]{11})")
+        };
+        for(java.util.regex.Pattern p:patterns){
+            java.util.regex.Matcher m=p.matcher(u);
+            if(m.find())return m.group(1);
+        }
+        return null;
+    }
+
+    private void toggleInlineAudio(Song song){
+        if(song==null)return;
+        String videoId=youtubeVideoId(song.mediaUrl);
+        if(videoId==null){
+            Toast.makeText(this,"Aucune URL YouTube renseignée pour ce morceau.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if(song.id.equals(playingSongId)){
+            if(audioPlaying){
+                audioPlaying=false;
+                if(audioWeb!=null)audioWeb.evaluateJavascript("pauseVideo()",null);
+                if(miniPlayer!=null)miniPlayer.setVisibility(View.GONE);
+            }else{
+                audioPlaying=true;
+                if(miniPlayerTitle!=null)miniPlayerTitle.setText(song.title);
+                if(miniPlayer!=null)miniPlayer.setVisibility(View.VISIBLE);
+                if(audioWeb!=null){
+                    if(videoId.equals(loadedVideoId))audioWeb.evaluateJavascript("playVideo()",null);
+                    else {
+                        loadedVideoId=videoId;
+                        audioWeb.evaluateJavascript("loadVideo('"+videoId+"')",null);
+                    }
+                }
+            }
+        }else{
+            playingSongId=song.id;
+            loadedVideoId=videoId;
+            audioPlaying=true;
+            if(miniPlayerTitle!=null)miniPlayerTitle.setText(song.title);
+            if(miniPlayerTime!=null)miniPlayerTime.setText("0:00 / 0:00");
+            if(miniSeek!=null){miniSeek.setMax(1);miniSeek.setProgress(0);}
+            if(miniPlayer!=null)miniPlayer.setVisibility(View.VISIBLE);
+            if(audioWeb!=null)audioWeb.evaluateJavascript("loadVideo('"+videoId+"')",null);
+        }
+
+        if(adapter!=null)adapter.notifyDataSetChanged();
+    }
+
+    private void pauseInlineAudio(){
+        if(audioPlaying && audioWeb!=null)audioWeb.evaluateJavascript("pauseVideo()",null);
+        audioPlaying=false;
+        if(miniPlayer!=null)miniPlayer.setVisibility(View.GONE);
+        if(adapter!=null)adapter.notifyDataSetChanged();
     }
 
     private void undoLastAction(){
@@ -1016,6 +1250,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.Holder>{
         class Holder extends RecyclerView.ViewHolder{
             final TextView num;
+            final TextView play;
             final TextView song;
             final TextView bpm;
             final LinearLayout stageBox;
@@ -1029,9 +1264,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             final TextView handle;
             final LinearLayout medleyBox;
 
-            Holder(LinearLayout outer,TextView num,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView validate,TextView disable,TextView delete,TextView handle,LinearLayout medleyBox){
+            Holder(LinearLayout outer,TextView num,TextView play,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView validate,TextView disable,TextView delete,TextView handle,LinearLayout medleyBox){
                 super(outer);
                 this.num=num;
+                this.play=play;
                 this.song=song;
                 this.bpm=bpm;
                 this.stageBox=stageBox;
@@ -1063,6 +1299,18 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             num.setTypeface(Typeface.DEFAULT_BOLD);
             num.setGravity(Gravity.CENTER);
             num.setMinWidth(Ui.dp(PlaylistOverviewActivity.this,28));
+
+            TextView play=new TextView(PlaylistOverviewActivity.this);
+            play.setText("▶");
+            play.setTextColor(Color.WHITE);
+            play.setTextSize(15);
+            play.setGravity(Gravity.CENTER);
+            play.setClickable(true);
+            play.setFocusable(true);
+            play.setLayoutParams(new LinearLayout.LayoutParams(
+                Ui.dp(PlaylistOverviewActivity.this,30),
+                Ui.dp(PlaylistOverviewActivity.this,32)
+            ));
 
             TextView song=new TextView(PlaylistOverviewActivity.this);
             song.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1159,6 +1407,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             handle.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(PlaylistOverviewActivity.this,30),Ui.dp(PlaylistOverviewActivity.this,32)));
 
             row.addView(num);
+            row.addView(play);
             row.addView(song);
             row.addView(stageBox);
             row.addView(bpm);
@@ -1182,7 +1431,14 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ));
 
-            Holder h=new Holder(outer,num,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,validate,disable,delete,handle,medleyBox);
+            Holder h=new Holder(outer,num,play,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,validate,disable,delete,handle,medleyBox);
+            play.setOnClickListener(v->{
+                int p=h.getBindingAdapterPosition();
+                if(p==RecyclerView.NO_POSITION)return;
+                Song item=AppStore.findSong(PlaylistOverviewActivity.this,setlist.songIds.get(p));
+                toggleInlineAudio(item);
+            });
+
             row.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p==RecyclerView.NO_POSITION)return;
@@ -1236,6 +1492,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.num.setMinWidth(zdp(28));
             h.num.setText(String.format("%02d",position+1));
             h.num.setTextSize(zsp(compact?12:16));
+            h.play.setTextSize(zsp(15));
+            h.play.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
             h.song.setTextSize(zsp(compact?13:17));
             h.song.setPadding(zdp(2),0,zdp(2),0);
             h.bpm.setTextSize(zsp(compact?12:15));
@@ -1262,6 +1520,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 (s.stageNum2!=null && !s.stageNum2.trim().isEmpty()) ||
                 s.stageGuitar || s.stageKeyboard
             );
+
+            boolean hasYoutube=s!=null && youtubeVideoId(s.mediaUrl)!=null;
+            boolean thisPlaying=s!=null && s.id.equals(playingSongId) && audioPlaying;
+            h.play.setText(thisPlaying?"⏸":"▶");
+            h.play.setTextColor(hasYoutube?Color.WHITE:Color.DKGRAY);
+            h.play.setAlpha(hasYoutube?1f:0.35f);
+            h.play.setContentDescription(thisPlaying?"Pause":"Lire l'audio YouTube");
 
             if(s==null){
                 h.song.setText("Morceau introuvable");
