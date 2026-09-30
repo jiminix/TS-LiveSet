@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -29,9 +30,11 @@ public class EditSongActivity extends AppCompatActivity {
     // V0.62 compact lyrics: remove empty lines on web import, paste and save
     // V0.63 fill key, BPM and duration from song lookup when available
     // V0.64 move Save below web lyrics search for new songs
+    // V0.67 editable Medley sub-playlist
     private Song song;
     private String targetSetlistId;
     private EditText title, artist, key, bpm, tuning, capo, duration, singer, guitar, notes, media, lyrics;
+    private Button medleyButton;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -61,6 +64,17 @@ public class EditSongActivity extends AppCompatActivity {
         LinearLayout r1=Ui.row(this); key=mini("Tonalité",r1); bpm=mini("BPM",r1); capo=mini("Capo",r1); root.addView(r1);
         tuning=field(root,"Accordage"); duration=field(root,"Durée"); singer=field(root,"Chanteur / chanteuse"); guitar=field(root,"Guitare / instrument");
         notes=field(root,"Notes live : intro, fin, départ…"); media=field(root,"Lien YouTube ou autre média");
+
+        medleyButton=Ui.button(this,"🎶 Sous-playlist Medley");
+        medleyButton.setTextSize(14);
+        medleyButton.setOnClickListener(v->editMedleyItems());
+        root.addView(medleyButton);
+        title.addTextChangedListener(new android.text.TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence s,int start,int before,int count){ updateMedleyButton(); }
+            @Override public void afterTextChanged(android.text.Editable s){}
+        });
+
         TextView lh=Ui.title(this,"Paroles / structure"); lh.setTextSize(18); root.addView(lh);
         Button findLyrics=Ui.button(this,"🌐 Chercher les paroles sur le web");
         findLyrics.setOnClickListener(v->searchLyricsWeb());
@@ -109,6 +123,7 @@ public class EditSongActivity extends AppCompatActivity {
         if(k!=null && !k.trim().isEmpty())key.setText(k.trim());
         if(b!=null && !b.trim().isEmpty())bpm.setText(b.trim());
         if(d!=null && !d.trim().isEmpty())duration.setText(d.trim());
+        updateMedleyButton();
     }
 
     private void searchSongIdentity(){
@@ -174,7 +189,57 @@ public class EditSongActivity extends AppCompatActivity {
         if(!r.duration.isEmpty())duration.setText(r.duration);
     }
 
-    private void fill(){ title.setText(song.title); artist.setText(song.artist); key.setText(song.key); bpm.setText(song.bpm); tuning.setText(song.tuning); capo.setText(song.capo); duration.setText(song.duration); singer.setText(song.singer); guitar.setText(song.guitar); notes.setText(song.notes); media.setText(song.mediaUrl); lyrics.setText(song.lyrics); }
+    private boolean isMedleyTitle(String value){
+        String t=value==null?"":value.trim().toLowerCase(java.util.Locale.ROOT);
+        return t.startsWith("medley") || t.startsWith("meddley");
+    }
+
+    private void updateMedleyButton(){
+        if(medleyButton==null || title==null)return;
+        boolean medley=isMedleyTitle(title.getText().toString()) || !song.medleyItems.isEmpty();
+        medleyButton.setVisibility(medley?View.VISIBLE:View.GONE);
+        medleyButton.setText(song.medleyItems.isEmpty()
+            ? "🎶 Ajouter la sous-playlist Medley"
+            : "🎶 Sous-playlist Medley · "+song.medleyItems.size()+" titre"+(song.medleyItems.size()>1?"s":""));
+    }
+
+    private void editMedleyItems(){
+        if(!isMedleyTitle(title.getText().toString()) && song.medleyItems.isEmpty()){
+            android.widget.Toast.makeText(this,
+                "Le titre doit commencer par « Medley » ou « Meddley ».",
+                android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        EditText input=new EditText(this);
+        input.setHint("Un morceau par ligne\nExemple :\nProud Mary\nI Will Survive\nSeptember");
+        input.setGravity(android.view.Gravity.TOP);
+        input.setMinLines(9);
+        input.setText(String.join("\n",song.medleyItems));
+        input.setSelection(input.getText().length());
+
+        new AlertDialog.Builder(this)
+            .setTitle("Sous-playlist du Medley")
+            .setMessage("Entre dans l’ordre les morceaux qui s’enchaînent. Un titre par ligne.")
+            .setView(input)
+            .setPositiveButton("Enregistrer",(d,w)->{
+                song.medleyItems.clear();
+                String raw=input.getText().toString().replace("\r\n","\n").replace('\r','\n');
+                for(String line:raw.split("\n")){
+                    String item=line.trim();
+                    if(!item.isEmpty())song.medleyItems.add(item);
+                }
+                updateMedleyButton();
+            })
+            .setNeutralButton("Vider",(d,w)->{
+                song.medleyItems.clear();
+                updateMedleyButton();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private void fill(){ title.setText(song.title); artist.setText(song.artist); key.setText(song.key); bpm.setText(song.bpm); tuning.setText(song.tuning); capo.setText(song.capo); duration.setText(song.duration); singer.setText(song.singer); guitar.setText(song.guitar); notes.setText(song.notes); media.setText(song.mediaUrl); lyrics.setText(song.lyrics); updateMedleyButton(); }
 
     private void save(){
         song.title=title.getText().toString().trim(); song.artist=artist.getText().toString().trim(); song.key=key.getText().toString().trim(); song.bpm=bpm.getText().toString().trim(); song.tuning=tuning.getText().toString().trim(); song.capo=capo.getText().toString().trim(); song.duration=duration.getText().toString().trim(); song.singer=singer.getText().toString().trim(); song.guitar=guitar.getText().toString().trim(); song.notes=notes.getText().toString().trim(); song.mediaUrl=media.getText().toString().trim(); song.lyrics=compactLyrics(lyrics.getText().toString()); lyrics.setText(song.lyrics);
