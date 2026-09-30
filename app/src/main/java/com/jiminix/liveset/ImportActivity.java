@@ -882,6 +882,7 @@ public class ImportActivity extends AppCompatActivity {
         }
 
         importButton.setEnabled(false);
+        AppStore.recordUndoSnapshot(this,"Import Google Docs");
 
         List<Song> existing=AppStore.loadSongs(this);
         Set<String> keys=new HashSet<>();
