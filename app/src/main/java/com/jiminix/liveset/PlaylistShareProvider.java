@@ -15,13 +15,16 @@ public class PlaylistShareProvider extends ContentProvider {
 
     @Override public Bundle call(String method,String arg,Bundle extras){
         Bundle out=new Bundle();
-        if(!"get_selected_playlist".equals(method)){
+        SetListModel list;
+        if("get_in_progress_playlist".equals(method)){
+            list=AppStore.getOrCreateInProgressSetlist(getContext());
+        }else if("get_selected_playlist".equals(method)){
+            String id=AppStore.getViewerSetlistId(getContext());
+            list=id==null || id.isEmpty()?null:AppStore.findSetlist(getContext(),id);
+        }else{
             out.putBoolean("available",false);
             return out;
         }
-
-        String id=AppStore.getViewerSetlistId(getContext());
-        SetListModel list=id==null || id.isEmpty()?null:AppStore.findSetlist(getContext(),id);
         if(list==null){
             out.putBoolean("available",false);
             return out;
