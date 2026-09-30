@@ -67,7 +67,7 @@ public class EditSongActivity extends AppCompatActivity {
 
         medleyButton=Ui.button(this,"🎶 Sous-playlist Medley");
         medleyButton.setTextSize(14);
-        medleyButton.setOnClickListener(v->editMedleyItems());
+        medleyButton.setOnClickListener(v->openDedicatedMedleyEditor());
         root.addView(medleyButton);
         title.addTextChangedListener(new android.text.TextWatcher(){
             @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
@@ -201,6 +201,19 @@ public class EditSongActivity extends AppCompatActivity {
         medleyButton.setText(song.medleyItems.isEmpty()
             ? "🎶 Ajouter la sous-playlist Medley"
             : "🎶 Sous-playlist Medley · "+song.medleyItems.size()+" titre"+(song.medleyItems.size()>1?"s":""));
+    }
+
+    private void openDedicatedMedleyEditor(){
+        Song saved=AppStore.findSong(this,song.id);
+        if(saved==null){
+            android.widget.Toast.makeText(this,
+                "Enregistre d’abord le morceau, puis ouvre son éditeur Medley.",
+                android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        Intent i=new Intent(this,MedleyEditorActivity.class);
+        i.putExtra("song_id",song.id);
+        startActivity(i);
     }
 
     private void editMedleyItems(){
