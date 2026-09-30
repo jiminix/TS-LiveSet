@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.ViewGroup;
@@ -111,6 +112,7 @@ public class MedleyEditorActivity extends AppCompatActivity {
         medleyTitle.setTextColor(Color.WHITE);
         medleyTitle.setHintTextColor(Color.GRAY);
         medleyTitle.setSingleLine(true);
+        medleyTitle.setFilters(new InputFilter[]{new InputFilter.AllCaps()});
         medleyTitle.setText(song.title==null || song.title.trim().isEmpty()?"Medley":song.title);
         body.addView(medleyTitle,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -258,6 +260,7 @@ public class MedleyEditorActivity extends AppCompatActivity {
             EditText title=new EditText(this);
             title.setHint("Titre");
             title.setSingleLine(true);
+            title.setFilters(new InputFilter[]{new InputFilter.AllCaps()});
             title.setTextColor(Color.WHITE);
             title.setHintTextColor(Color.GRAY);
             title.setText(entry.title);
@@ -373,7 +376,7 @@ public class MedleyEditorActivity extends AppCompatActivity {
             .setTitle("Ajouter au Medley")
             .setItems(labels,(d,which)->{
                 SongCatalogLookup.Result r=results.get(which);
-                Entry entry=new Entry(r.title,r.artist,"");
+                Entry entry=new Entry(r.title==null?"":r.title.toUpperCase(Locale.ROOT),r.artist,"");
                 entries.add(entry);
                 rebuildEntries();
                 fetchLyricsForEntry(entry,false);
@@ -480,7 +483,7 @@ public class MedleyEditorActivity extends AppCompatActivity {
     }
 
     private void saveMedley(){
-        String name=medleyTitle.getText().toString().trim();
+        String name=medleyTitle.getText().toString().trim().toUpperCase(Locale.ROOT);
         if(name.toLowerCase(Locale.ROOT).startsWith("meddley")){
             name="Medley"+name.substring(7);
             medleyTitle.setText(name);
@@ -493,7 +496,7 @@ public class MedleyEditorActivity extends AppCompatActivity {
 
         ArrayList<Entry> clean=new ArrayList<>();
         for(Entry e:entries){
-            String t=e.title==null?"":e.title.trim();
+            String t=e.title==null?"":e.title.trim().toUpperCase(Locale.ROOT);
             if(t.isEmpty())continue;
             e.title=t;
             e.artist=e.artist==null?"":e.artist.trim();
