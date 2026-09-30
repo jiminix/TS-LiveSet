@@ -13,6 +13,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -58,6 +59,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.79 simplified playlist controls
     // Build V0.80 BPM after stage icons + validate En cours to principal playlist
     // Build V0.81 multi-step undo
+    // Build V0.83 borderless Google Docs icon
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -314,15 +316,18 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         actions.setPadding(Ui.dp(this,2),Ui.dp(this,1),Ui.dp(this,2),Ui.dp(this,1));
         actions.setBackgroundColor(Color.rgb(105,12,18));
         boolean isInProgress=AppStore.isInProgressSetlist(setlist.id);
-        Button importTitles=Ui.button(this,"");
+        ImageButton importTitles=new ImageButton(this);
         Button fixTitles=Ui.button(this,"⌕");
         Button viewer=Ui.button(this,"▣");
         Button inProgress=Ui.button(this,"En cours");
         Button zoomMinus=Ui.button(this,"−");
         Button zoomPlus=Ui.button(this,"+");
-        importTitles.setTextSize(15);
-        importTitles.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_google_docs),null,null,null);
-        importTitles.setGravity(Gravity.CENTER);
+        importTitles.setImageResource(R.drawable.ic_google_docs);
+        importTitles.setBackgroundColor(Color.TRANSPARENT);
+        importTitles.setPadding(Ui.dp(this,6),Ui.dp(this,4),Ui.dp(this,6),Ui.dp(this,4));
+        importTitles.setScaleType(ImageButton.ScaleType.CENTER_INSIDE);
+        importTitles.setMinimumWidth(0);
+        importTitles.setMinimumHeight(0);
         fixTitles.setTextSize(17);
         viewer.setTextSize(15);
         inProgress.setTextSize(10);
@@ -331,10 +336,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         // Live UI colors.
         styleButton(inProgress,Color.rgb(198,40,40),Color.WHITE);
-        if(isInProgress)styleButton(importTitles,Color.rgb(198,40,40),Color.WHITE);
         styleButton(zoomMinus,Color.BLACK,Color.WHITE);
         styleButton(zoomPlus,Color.WHITE,Color.BLACK);
-        Ui.compactHeaderButton(importTitles,this,38);
+        importTitles.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this,36),Ui.dp(this,36)));
         Ui.compactHeaderButton(fixTitles,this,34);
         Ui.weight(viewer,1);
         Ui.compactHeaderButton(inProgress,this,66);
