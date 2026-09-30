@@ -44,6 +44,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.53 single-line playlist header, no drag-help row
     // Build V0.60 editable En cours playlist access
     // Build V0.61 explicit Google Docs import button in En cours
+    // Build V0.63 enrich online song search metadata
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -447,12 +448,23 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .setTitle("Choisir le morceau")
             .setItems(labels,(d,which)->{
                 SongCatalogLookup.Result r=results.get(which);
-                Intent i=new Intent(this,EditSongActivity.class);
-                i.putExtra("target_setlist_id",setlist.id);
-                i.putExtra("new_song",true);
-                i.putExtra("prefill_title",r.title);
-                i.putExtra("prefill_artist",r.artist);
-                startActivity(i);
+                Toast.makeText(this,"Récupération des infos du morceau…",Toast.LENGTH_SHORT).show();
+                new Thread(()->{
+                    SongCatalogLookup.Result enriched=SongCatalogLookup.enrich(r);
+                    if(enriched==null)enriched=r;
+                    final SongCatalogLookup.Result selected=enriched;
+                    runOnUiThread(()->{
+                        Intent i=new Intent(this,EditSongActivity.class);
+                        i.putExtra("target_setlist_id",setlist.id);
+                        i.putExtra("new_song",true);
+                        i.putExtra("prefill_title",selected.title);
+                        i.putExtra("prefill_artist",selected.artist);
+                        i.putExtra("prefill_key",selected.key);
+                        i.putExtra("prefill_bpm",selected.bpm);
+                        i.putExtra("prefill_duration",selected.duration);
+                        startActivity(i);
+                    });
+                },"TS-Song-Insert-Metadata").start();
             })
             .setNegativeButton("Annuler",null)
             .show();
@@ -532,6 +544,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                     if(s==null)continue;
                     s.title=x.result.title;
                     s.artist=x.result.artist;
+                    if((s.duration==null || s.duration.trim().isEmpty()) && !x.result.duration.isEmpty())s.duration=x.result.duration;
+                    if((s.bpm==null || s.bpm.trim().isEmpty()) && !x.result.bpm.isEmpty())s.bpm=x.result.bpm;
+                    if((s.key==null || s.key.trim().isEmpty()) && !x.result.key.isEmpty())s.key=x.result.key;
                     AppStore.upsertSong(this,s);
                     changed++;
                 }
