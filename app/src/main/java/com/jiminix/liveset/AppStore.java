@@ -18,6 +18,8 @@ public class AppStore {
     private static final String K_IN_PROGRESS_INTENTIONALLY_EMPTY = "in_progress_intentionally_empty";
     private static final String K_FULL_BACKUP = "full_backup_json";
     private static final String K_FULL_BACKUP_TIME = "full_backup_time";
+    private static final String K_UNDO_HISTORY = "undo_history";
+    private static final int MAX_UNDO = 20;
     public static final String IN_PROGRESS_SETLIST_ID = "__in_progress__";
 
     public static List<Song> loadSongs(Context c) {
@@ -311,6 +313,92 @@ public class AppStore {
 
     public static boolean isInProgressSetlist(String id) {
         return IN_PROGRESS_SETLIST_ID.equals(id);
+    }
+
+    public static void recordUndoSnapshot(Context c, String label) {
+        try {
+            JSONObject state = new JSONObject();
+            state.put("label", label == null ? "Action" : label);
+            state.put("savedAt", System.currentTimeMillis());
+            state.put("songs", new JSONArray(prefs(c).getString(K_SONGS, "[]")));
+            state.put("setlists", new JSONArray(prefs(c).getString(K_SETLISTS, "[]")));
+            state.put("viewerSetlistId", prefs(c).getString(K_VIEWER_SETLIST, ""));
+            state.put("inProgressBackup", prefs(c).getString(K_IN_PROGRESS_BACKUP, "[]"));
+            state.put("inProgressDisabledBackup", prefs(c).getString(K_IN_PROGRESS_DISABLED_BACKUP, "[]"));
+            state.put("inProgressIntentionallyEmpty",
+                prefs(c).getBoolean(K_IN_PROGRESS_INTENTIONALLY_EMPTY, false));
+
+            SharedPreferences view = c.getSharedPreferences("playlist_view", Context.MODE_PRIVATE);
+            state.put("compact", view.getBoolean("compact", true));
+            state.put("textZoom", view.getInt("text_zoom", 0));
+
+            JSONArray history;
+            try {
+                history = new JSONArray(prefs(c).getString(K_UNDO_HISTORY, "[]"));
+            } catch (Exception ignored) {
+                history = new JSONArray();
+            }
+
+            JSONArray next = new JSONArray();
+            next.put(state);
+            int keep = Math.min(history.length(), MAX_UNDO - 1);
+            for (int i = 0; i < keep; i++) {
+                JSONObject old = history.optJSONObject(i);
+                if (old != null) next.put(old);
+            }
+
+            prefs(c).edit().putString(K_UNDO_HISTORY, next.toString()).commit();
+        } catch (Exception ignored) {}
+    }
+
+    public static boolean canUndo(Context c) {
+        try {
+            return new JSONArray(prefs(c).getString(K_UNDO_HISTORY, "[]")).length() > 0;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public static String undoLast(Context c) {
+        try {
+            JSONArray history = new JSONArray(prefs(c).getString(K_UNDO_HISTORY, "[]"));
+            if (history.length() == 0) return "";
+
+            JSONObject state = history.optJSONObject(0);
+            if (state == null) return "";
+
+            JSONArray songs = state.optJSONArray("songs");
+            JSONArray setlists = state.optJSONArray("setlists");
+            if (songs == null || setlists == null) return "";
+
+            SharedPreferences.Editor e = prefs(c).edit()
+                .putString(K_SONGS, songs.toString())
+                .putString(K_SETLISTS, setlists.toString())
+                .putString(K_VIEWER_SETLIST, state.optString("viewerSetlistId", ""))
+                .putString(K_IN_PROGRESS_BACKUP, state.optString("inProgressBackup", "[]"))
+                .putString(K_IN_PROGRESS_DISABLED_BACKUP, state.optString("inProgressDisabledBackup", "[]"))
+                .putBoolean(K_IN_PROGRESS_INTENTIONALLY_EMPTY,
+                    state.optBoolean("inProgressIntentionallyEmpty", false));
+
+            if (!e.commit()) return "";
+
+            c.getSharedPreferences("playlist_view", Context.MODE_PRIVATE).edit()
+                .putBoolean("compact", state.optBoolean("compact", true))
+                .putInt("text_zoom", state.optInt("textZoom", 0))
+                .commit();
+
+            JSONArray remaining = new JSONArray();
+            for (int i = 1; i < history.length(); i++) {
+                JSONObject old = history.optJSONObject(i);
+                if (old != null) remaining.put(old);
+            }
+            prefs(c).edit().putString(K_UNDO_HISTORY, remaining.toString()).commit();
+
+            PlaylistCloudSync.maybePublish(c);
+            return state.optString("label", "Action");
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 
     public static JSONObject createFullBackup(Context c) throws Exception {
