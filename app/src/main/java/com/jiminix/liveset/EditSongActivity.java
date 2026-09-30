@@ -27,6 +27,7 @@ import org.json.JSONObject;
 
 public class EditSongActivity extends AppCompatActivity {
     // V0.62 compact lyrics: remove empty lines on web import, paste and save
+    // V0.63 fill key, BPM and duration from song lookup when available
     private Song song;
     private String targetSetlistId;
     private EditText title, artist, key, bpm, tuning, capo, duration, singer, guitar, notes, media, lyrics;
@@ -76,8 +77,14 @@ public class EditSongActivity extends AppCompatActivity {
         if(!getIntent().getBooleanExtra("new_song",false))return;
         String t=getIntent().getStringExtra("prefill_title");
         String a=getIntent().getStringExtra("prefill_artist");
+        String k=getIntent().getStringExtra("prefill_key");
+        String b=getIntent().getStringExtra("prefill_bpm");
+        String d=getIntent().getStringExtra("prefill_duration");
         if(t!=null && !t.trim().isEmpty())title.setText(t.trim());
         if(a!=null && !a.trim().isEmpty())artist.setText(a.trim());
+        if(k!=null && !k.trim().isEmpty())key.setText(k.trim());
+        if(b!=null && !b.trim().isEmpty())bpm.setText(b.trim());
+        if(d!=null && !d.trim().isEmpty())duration.setText(d.trim());
     }
 
     private void searchSongIdentity(){
@@ -114,11 +121,33 @@ public class EditSongActivity extends AppCompatActivity {
             .setTitle("Choisir le bon morceau")
             .setItems(labels,(d,which)->{
                 SongCatalogLookup.Result r=results.get(which);
-                title.setText(r.title);
-                artist.setText(r.artist);
+                applySongLookupResult(r);
+                android.widget.Toast.makeText(this,"Récupération BPM / tonalité…",android.widget.Toast.LENGTH_SHORT).show();
+                new Thread(()->{
+                    SongCatalogLookup.Result enriched=SongCatalogLookup.enrich(r);
+                    runOnUiThread(()->{
+                        if(enriched!=null){
+                            applySongLookupResult(enriched);
+                            StringBuilder msg=new StringBuilder("Infos du morceau mises à jour");
+                            if(enriched.bpm.isEmpty() && enriched.key.isEmpty()){
+                                msg.append(" · BPM/tonalité non disponibles");
+                            }
+                            android.widget.Toast.makeText(this,msg.toString(),android.widget.Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                },"TS-Song-Metadata").start();
             })
             .setNegativeButton("Annuler",null)
             .show();
+    }
+
+    private void applySongLookupResult(SongCatalogLookup.Result r){
+        if(r==null)return;
+        if(!r.title.isEmpty())title.setText(r.title);
+        if(!r.artist.isEmpty())artist.setText(r.artist);
+        if(!r.key.isEmpty())key.setText(r.key);
+        if(!r.bpm.isEmpty())bpm.setText(r.bpm);
+        if(!r.duration.isEmpty())duration.setText(r.duration);
     }
 
     private void fill(){ title.setText(song.title); artist.setText(song.artist); key.setText(song.key); bpm.setText(song.bpm); tuning.setText(song.tuning); capo.setText(song.capo); duration.setText(song.duration); singer.setText(song.singer); guitar.setText(song.guitar); notes.setText(song.notes); media.setText(song.mediaUrl); lyrics.setText(song.lyrics); }
