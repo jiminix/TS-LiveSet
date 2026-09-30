@@ -153,6 +153,78 @@ public final class PlaylistCloudSync {
         }
     }
 
+    public static void restoreInProgressFromCloud(Context c, Listener listener){
+        Context app=c.getApplicationContext();
+        new Thread(()->{
+            try{
+                JSONObject payload=getJson(API+"/"+FIXED_BLOB_ID);
+                JSONObject progress=payload.optJSONObject("in_progress");
+                JSONArray songs=progress==null?null:progress.optJSONArray("songs");
+                if(songs==null || songs.length()==0){
+                    if(listener!=null)MAIN.post(()->listener.onError("Aucune sauvegarde En cours trouvée sur Internet"));
+                    return;
+                }
+
+                SetListModel list=AppStore.getOrCreateInProgressSetlist(app);
+                java.util.List<Song> library=AppStore.loadSongs(app);
+                java.util.List<String> recovered=new java.util.ArrayList<>();
+
+                for(int i=0;i<songs.length();i++){
+                    JSONObject o=songs.optJSONObject(i);
+                    if(o==null)continue;
+
+                    String id=o.optString("id","");
+                    Song local=id.isEmpty()?null:AppStore.findSong(app,id);
+
+                    if(local==null){
+                        String title=o.optString("title","").trim();
+                        if(!title.isEmpty()){
+                            for(Song candidate:library){
+                                String ct=candidate.title==null?"":candidate.title.trim();
+                                if(title.equalsIgnoreCase(ct)){
+                                    local=candidate;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if(local!=null && !recovered.contains(local.id)){
+                        recovered.add(local.id);
+                    }
+                }
+
+                if(recovered.isEmpty()){
+                    if(listener!=null)MAIN.post(()->listener.onError("Les morceaux sauvegardés ne sont plus présents dans la bibliothèque"));
+                    return;
+                }
+
+                list.songIds.clear();
+                list.songIds.addAll(recovered);
+                list.disabledSongIds.clear();
+
+                for(int i=0;i<songs.length();i++){
+                    JSONObject o=songs.optJSONObject(i);
+                    if(o==null || !o.optBoolean("disabled",false))continue;
+                    String id=o.optString("id","");
+                    if(!id.isEmpty() && recovered.contains(id) && !list.disabledSongIds.contains(id)){
+                        list.disabledSongIds.add(id);
+                    }
+                }
+
+                AppStore.upsertSetlist(app,list);
+                if(listener!=null)MAIN.post(()->listener.onSuccess(FIXED_SHARE_CODE));
+            }catch(Exception e){
+                if(listener!=null){
+                    String msg=e.getMessage();
+                    if(msg==null || msg.trim().isEmpty())msg="Récupération Internet impossible";
+                    final String out=msg;
+                    MAIN.post(()->listener.onError(out));
+                }
+            }
+        },"TS-EnCours-Restore").start();
+    }
+
     public static void publishSelected(Context c, Listener listener){
         Context app=c.getApplicationContext();
         new Thread(()->{
