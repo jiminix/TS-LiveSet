@@ -2,7 +2,10 @@ package com.jiminix.liveset;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Song {
     public String id = UUID.randomUUID().toString();
@@ -22,6 +25,7 @@ public class Song {
     public String stageNum2 = "";
     public boolean stageGuitar = false;
     public boolean stageKeyboard = false;
+    public final List<String> medleyItems = new ArrayList<>();
 
     public JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
@@ -42,6 +46,9 @@ public class Song {
         o.put("stageNum2", stageNum2);
         o.put("stageGuitar", stageGuitar);
         o.put("stageKeyboard", stageKeyboard);
+        JSONArray medley = new JSONArray();
+        for (String item : medleyItems) medley.put(item);
+        o.put("medleyItems", medley);
         return o;
     }
 
@@ -64,6 +71,11 @@ public class Song {
         s.stageNum2 = o.optString("stageNum2", "");
         s.stageGuitar = o.optBoolean("stageGuitar", false);
         s.stageKeyboard = o.optBoolean("stageKeyboard", false);
+        JSONArray medley = o.optJSONArray("medleyItems");
+        if (medley != null) for (int i = 0; i < medley.length(); i++) {
+            String item = medley.optString(i, "").trim();
+            if (!item.isEmpty()) s.medleyItems.add(item);
+        }
         return s;
     }
 }
