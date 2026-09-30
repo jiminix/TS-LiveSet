@@ -791,9 +791,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             final TextView disable;
             final TextView delete;
             final TextView handle;
+            final LinearLayout medleyBox;
 
-            Holder(LinearLayout row,TextView num,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView disable,TextView delete,TextView handle){
-                super(row);
+            Holder(LinearLayout outer,TextView num,TextView song,TextView bpm,LinearLayout stageBox,TextView stage1,TextView stage2,TextView guitarIcon,TextView keyboardIcon,TextView disable,TextView delete,TextView handle,LinearLayout medleyBox){
+                super(outer);
                 this.num=num;
                 this.song=song;
                 this.bpm=bpm;
@@ -805,10 +806,18 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 this.disable=disable;
                 this.delete=delete;
                 this.handle=handle;
+                this.medleyBox=medleyBox;
             }
         }
 
         @Override public Holder onCreateViewHolder(ViewGroup parent,int viewType){
+            LinearLayout outer=new LinearLayout(PlaylistOverviewActivity.this);
+            outer.setOrientation(LinearLayout.VERTICAL);
+            outer.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+
             LinearLayout row=Ui.row(PlaylistOverviewActivity.this);
             row.setPadding(Ui.dp(PlaylistOverviewActivity.this,1),0,0,0);
             row.setMinimumHeight(Ui.dp(PlaylistOverviewActivity.this,32));
@@ -908,10 +917,31 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             row.addView(delete);
             row.addView(handle);
 
-            Holder h=new Holder(row,num,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,disable,delete,handle);
+            LinearLayout medleyBox=new LinearLayout(PlaylistOverviewActivity.this);
+            medleyBox.setOrientation(LinearLayout.VERTICAL);
+            medleyBox.setPadding(Ui.dp(PlaylistOverviewActivity.this,38),Ui.dp(PlaylistOverviewActivity.this,3),Ui.dp(PlaylistOverviewActivity.this,8),Ui.dp(PlaylistOverviewActivity.this,5));
+            medleyBox.setBackgroundColor(Color.rgb(18,18,18));
+            medleyBox.setVisibility(View.GONE);
+
+            outer.addView(row,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+            outer.addView(medleyBox,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+
+            Holder h=new Holder(outer,num,song,bpm,stageBox,stage1,stage2,guitarIcon,keyboardIcon,disable,delete,handle,medleyBox);
             row.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
-                if(p!=RecyclerView.NO_POSITION)openSong(p);
+                if(p==RecyclerView.NO_POSITION)return;
+                Song item=AppStore.findSong(PlaylistOverviewActivity.this,setlist.songIds.get(p));
+                if(item!=null && isMedleySong(item) && !item.medleyItems.isEmpty()){
+                    toggleMedleyExpanded(item.id,p);
+                }else{
+                    openSong(p);
+                }
             });
             stageBox.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
