@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.net.Uri;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -15,6 +16,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class LiveSongActivity extends AppCompatActivity {
+    // V0.63 open the exact saved YouTube URL from the Play button.
     private Song song; private String setlistId; private int index; private TextView lyrics; private float fontSize=24f;
 
     @Override protected void onCreate(Bundle b){ super.onCreate(b); getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); fontSize=getSharedPreferences("live_ui",MODE_PRIVATE).getFloat("font",24f); load(); buildUi(); }
@@ -43,6 +45,31 @@ public class LiveSongActivity extends AppCompatActivity {
     }
 
     private void font(float d){fontSize=Math.max(12f,Math.min(52f,fontSize+d));lyrics.setTextSize(fontSize);getSharedPreferences("live_ui",MODE_PRIVATE).edit().putFloat("font",fontSize).apply();}
-    private void player(){if(song.mediaUrl.trim().isEmpty()){Toast.makeText(this,"Ajoute un lien média dans la fiche du morceau.",Toast.LENGTH_SHORT).show();return;}Intent i=new Intent(this,PlayerActivity.class);i.putExtra("title",song.title);i.putExtra("url",song.mediaUrl);startActivity(i);}
+    private void player(){
+        if(song.mediaUrl==null || song.mediaUrl.trim().isEmpty()){
+            Toast.makeText(this,"Ajoute un lien média dans la fiche du morceau.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String url=song.mediaUrl.trim();
+        if(!url.startsWith("http://") && !url.startsWith("https://"))url="https://"+url;
+
+        if(isYoutubeUrl(url)){
+            try{
+                startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));
+                return;
+            }catch(Exception ignored){}
+        }
+
+        Intent i=new Intent(this,PlayerActivity.class);
+        i.putExtra("title",song.title);
+        i.putExtra("url",url);
+        startActivity(i);
+    }
+
+    private boolean isYoutubeUrl(String url){
+        String u=url==null?"":url.toLowerCase(java.util.Locale.ROOT);
+        return u.contains("youtube.com/") || u.contains("youtu.be/") || u.contains("music.youtube.com/");
+    }
     private void navigate(int delta){SetListModel sl=AppStore.findSetlist(this,setlistId);if(sl==null)return;int n=index+delta;if(n<0||n>=sl.songIds.size())return;Intent i=new Intent(this,LiveSongActivity.class);i.putExtra("song_id",sl.songIds.get(n));i.putExtra("setlist_id",sl.id);i.putExtra("index",n);startActivity(i);finish();}
 }
