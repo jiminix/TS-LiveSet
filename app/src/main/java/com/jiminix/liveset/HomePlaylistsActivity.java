@@ -69,7 +69,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         root.addView(head);
 
         TextView version=new TextView(this);
-        version.setText("LiveSet v0.47");
+        version.setText("LiveSet v"+installedVersion());
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(11);
         version.setGravity(Gravity.RIGHT);
@@ -135,6 +135,15 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private String installedVersion(){
+        try{
+            String v=getPackageManager().getPackageInfo(getPackageName(),0).versionName;
+            return v==null || v.trim().isEmpty() ? "?" : v.trim();
+        }catch(Exception ignored){
+            return "?";
+        }
     }
 
     private void loadLists(){
