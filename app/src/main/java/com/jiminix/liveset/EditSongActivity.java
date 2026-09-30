@@ -147,6 +147,7 @@ public class EditSongActivity extends AppCompatActivity {
         outButton.setVisibility(usable?View.VISIBLE:View.GONE);
         if(!usable)return;
 
+        AppStore.recordUndoSnapshot(this,"OUT / réactivation");
         boolean out=list.disabledSongIds.contains(song.id);
         outButton.setText(out?"RÉACTIVER":"OUT");
         outButton.setTextColor(Color.WHITE);
@@ -320,6 +321,8 @@ public class EditSongActivity extends AppCompatActivity {
     private void save(){
         song.title=title.getText().toString().trim(); song.artist=artist.getText().toString().trim(); song.key=key.getText().toString().trim(); song.bpm=bpm.getText().toString().trim(); song.tuning=tuning.getText().toString().trim(); song.capo=capo.getText().toString().trim(); song.duration=duration.getText().toString().trim(); song.singer=singer.getText().toString().trim(); song.guitar=guitar.getText().toString().trim(); song.notes=notes.getText().toString().trim(); song.mediaUrl=media.getText().toString().trim(); song.lyrics=compactLyrics(lyrics.getText().toString()); lyrics.setText(song.lyrics);
         if(song.title.isEmpty()){ title.setError("Titre obligatoire"); return; }
+        AppStore.recordUndoSnapshot(this,
+            getIntent().getBooleanExtra("new_song",false) ? "Création morceau" : "Modification morceau");
         AppStore.upsertSong(this,song);
         if(targetSetlistId!=null && !targetSetlistId.isEmpty()){
             SetListModel sl=AppStore.findSetlist(this,targetSetlistId);
