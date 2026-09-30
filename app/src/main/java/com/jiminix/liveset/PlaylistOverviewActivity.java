@@ -42,6 +42,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.47 BPM edit, online title suggestions and full-row zoom
     // Build V0.49 playlist top line: TS 2026, title count and page arrows
     // Build V0.53 single-line playlist header, no drag-help row
+    // Build V0.60 editable En cours playlist access
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -189,28 +190,33 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         Button importTitles=Ui.button(this,"⇩");
         Button fixTitles=Ui.button(this,"⌕");
         Button viewer=Ui.button(this,"▣");
+        Button inProgress=Ui.button(this,"En cours");
         Button zoomMinus=Ui.button(this,"−");
         Button zoomPlus=Ui.button(this,"+");
         addLibrary.setTextSize(16);
         importTitles.setTextSize(15);
         fixTitles.setTextSize(17);
         viewer.setTextSize(15);
+        inProgress.setTextSize(10);
         zoomMinus.setTextSize(16);
         zoomPlus.setTextSize(16);
         Ui.compactHeaderButton(addLibrary,this,34);
         Ui.compactHeaderButton(importTitles,this,34);
         Ui.compactHeaderButton(fixTitles,this,34);
         Ui.weight(viewer,1);
+        Ui.compactHeaderButton(inProgress,this,66);
         Ui.compactHeaderButton(zoomMinus,this,32);
         Ui.compactHeaderButton(zoomPlus,this,32);
         addLibrary.setContentDescription("Ajouter depuis la bibliothèque");
         importTitles.setContentDescription("Importer");
         fixTitles.setContentDescription("Trouver les titres et artistes corrects");
         viewer.setContentDescription("Viewer");
+        inProgress.setContentDescription("Playlist En cours");
         actions.addView(addLibrary);
         actions.addView(importTitles);
         actions.addView(fixTitles);
         actions.addView(viewer);
+        actions.addView(inProgress);
         actions.addView(zoomMinus);
         actions.addView(zoomPlus);
         root.addView(actions);
@@ -223,6 +229,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         importTitles.setOnClickListener(v->openImporter());
         fixTitles.setOnClickListener(v->findCorrectTitles());
         viewer.setOnClickListener(v->openViewer());
+        inProgress.setOnClickListener(v->openInProgressPlaylist());
         zoomMinus.setOnClickListener(v->changeZoom(-1));
         zoomPlus.setOnClickListener(v->changeZoom(1));
         modeButton.setOnClickListener(v->toggleMode());
@@ -317,6 +324,17 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         startActivity(Intent.createChooser(send,"Partager le code Viewer"));
     }
 
+    private void openInProgressPlaylist(){
+        SetListModel progress=AppStore.getOrCreateInProgressSetlist(this);
+        if(progress.id.equals(setlist.id)){
+            recycler.scrollToPosition(0);
+            return;
+        }
+        Intent i=new Intent(this,PlaylistOverviewActivity.class);
+        i.putExtra("setlist_id",progress.id);
+        startActivity(i);
+    }
+
     private void openImporter(){
         Intent i=new Intent(this,ImportActivity.class);
         i.putExtra("target_setlist_id",setlist.id);
@@ -324,6 +342,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     }
 
     private void renameList(){
+        if(AppStore.isInProgressSetlist(setlist.id)){
+            Toast.makeText(this,"La playlist « En cours » garde ce nom.",Toast.LENGTH_SHORT).show();
+            return;
+        }
         final android.widget.EditText input=new android.widget.EditText(this);
         input.setSingleLine(true);
         input.setText(setlist.name);
