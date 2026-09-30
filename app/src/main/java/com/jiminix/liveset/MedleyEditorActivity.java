@@ -531,6 +531,8 @@ public class MedleyEditorActivity extends AppCompatActivity {
         }
         song.lyrics=combined.toString().trim();
 
+        AppStore.recordUndoSnapshot(this,
+            getIntent().getBooleanExtra("new_medley",false) ? "Création Medley" : "Modification Medley");
         AppStore.upsertSong(this,song);
 
         if(targetSetlistId!=null && !targetSetlistId.isEmpty()){
