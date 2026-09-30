@@ -26,6 +26,8 @@ public class Song {
     public boolean stageGuitar = false;
     public boolean stageKeyboard = false;
     public final List<String> medleyItems = new ArrayList<>();
+    public final List<String> medleyArtists = new ArrayList<>();
+    public final List<String> medleyLyrics = new ArrayList<>();
 
     public JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
@@ -49,6 +51,14 @@ public class Song {
         JSONArray medley = new JSONArray();
         for (String item : medleyItems) medley.put(item);
         o.put("medleyItems", medley);
+
+        JSONArray medleyArtistsJson = new JSONArray();
+        for (String item : medleyArtists) medleyArtistsJson.put(item);
+        o.put("medleyArtists", medleyArtistsJson);
+
+        JSONArray medleyLyricsJson = new JSONArray();
+        for (String item : medleyLyrics) medleyLyricsJson.put(item);
+        o.put("medleyLyrics", medleyLyricsJson);
         return o;
     }
 
@@ -75,6 +85,13 @@ public class Song {
         if (medley != null) for (int i = 0; i < medley.length(); i++) {
             String item = medley.optString(i, "").trim();
             if (!item.isEmpty()) s.medleyItems.add(item);
+        }
+
+        JSONArray medleyArtistsJson = o.optJSONArray("medleyArtists");
+        JSONArray medleyLyricsJson = o.optJSONArray("medleyLyrics");
+        for (int i = 0; i < s.medleyItems.size(); i++) {
+            s.medleyArtists.add(medleyArtistsJson == null ? "" : medleyArtistsJson.optString(i, ""));
+            s.medleyLyrics.add(medleyLyricsJson == null ? "" : medleyLyricsJson.optString(i, ""));
         }
         return s;
     }
