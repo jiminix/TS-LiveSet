@@ -145,13 +145,15 @@ public class MainActivity extends AppCompatActivity {
         root.setPadding(dp(10),dp(12),dp(10),dp(10));
 
         appTitle=new TextView(this);
-        appTitle.setText("TS PLAYLIST VIEWER");
+        appTitle.setText("TS Playlist 2026\nUn pour tous, tous pour la même playlist.");
         appTitle.setTextColor(Color.rgb(255,196,30));
-        appTitle.setTextSize(22);
+        appTitle.setTextSize(19);
         appTitle.setGravity(Gravity.CENTER);
         appTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         appTitle.setBackgroundColor(Color.rgb(105,12,18));
-        root.addView(appTitle,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(44)));
+        appTitle.setLineSpacing(0f,0.88f);
+        appTitle.setPadding(dp(2),0,dp(2),0);
+        root.addView(appTitle,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,dp(42)));
 
         playlistTitle=new TextView(this);
         playlistTitle.setText("Connexion Viewer");
@@ -587,7 +589,7 @@ public class MainActivity extends AppCompatActivity {
         lastSignature=signature;
 
         playlistTitle.setText(name);
-        appTitle.setText("TS PLAYLIST VIEWER");
+        appTitle.setText("TS Playlist 2026\nUn pour tous, tous pour la même playlist.");
         info.setText(songs.length()+" titre"+(songs.length()>1?"s":""));
         if(startupBanner!=null && startupBanner.getVisibility()==View.VISIBLE){
             String syncOk=source.startsWith("Internet · à jour") ? "OK" : (source.startsWith("Local") ? "OK" : "indisponible");
@@ -752,7 +754,7 @@ public class MainActivity extends AppCompatActivity {
 
         lastSignature=signature;
         playlistTitle.setText(title);
-        appTitle.setText("TS PLAYLIST VIEWER");
+        appTitle.setText("TS Playlist 2026\nUn pour tous, tous pour la même playlist.");
         info.setText(message);
         if(startupBanner!=null && startupBanner.getVisibility()==View.VISIBLE){
             startupBanner.setText("Un pour tous, tous pour la même playlist\nTS 2026 - 0 Titre\nSynchronisation Internet : indisponible");
