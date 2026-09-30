@@ -35,6 +35,7 @@ public class EditSongActivity extends AppCompatActivity {
     // V0.67 editable Medley sub-playlist
     // V0.78 OUT button in song editor
     // V0.82 simplified song/lyrics editor
+    // V0.83 compact OUT + Save row
     private Song song;
     private String targetSetlistId;
     private EditText title, artist, bpm, duration, notes, media, lyrics;
@@ -68,12 +69,25 @@ public class EditSongActivity extends AppCompatActivity {
         LinearLayout outer=new LinearLayout(this); outer.setOrientation(LinearLayout.VERTICAL); outer.setBackgroundColor(Color.rgb(18,18,18));
         LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,newSong?"Nouveau morceau":"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
 
+        LinearLayout topActions=Ui.row(this);
+        topActions.setPadding(Ui.dp(this,6),Ui.dp(this,1),Ui.dp(this,6),Ui.dp(this,1));
+
         outButton=Ui.button(this,"OUT");
-        outButton.setTextSize(16);
+        outButton.setTextSize(15);
         outButton.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         outButton.setOnClickListener(v->toggleOutStatus());
-        outer.addView(outButton,new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,48)
+
+        Button saveTop=Ui.button(this,"ENREGISTRER");
+        saveTop.setTextSize(15);
+        saveTop.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        saveTop.setOnClickListener(v->save());
+
+        LinearLayout.LayoutParams topLp=new LinearLayout.LayoutParams(0,Ui.dp(this,40),1);
+        topLp.setMargins(Ui.dp(this,2),0,Ui.dp(this,2),0);
+        topActions.addView(outButton,new LinearLayout.LayoutParams(topLp));
+        topActions.addView(saveTop,new LinearLayout.LayoutParams(topLp));
+        outer.addView(topActions,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,42)
         ));
 
         ScrollView sv=new ScrollView(this); LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(Ui.dp(this,14),0,Ui.dp(this,14),Ui.dp(this,30)); sv.addView(root);
@@ -107,15 +121,6 @@ public class EditSongActivity extends AppCompatActivity {
         findLyrics.setOnClickListener(v->searchLyricsWeb());
         root.addView(findLyrics);
 
-        if(newSong){
-            Button saveTop=Ui.button(this,"Enregistrer");
-            saveTop.setTextSize(17);
-            saveTop.setOnClickListener(v->save());
-            root.addView(saveTop,new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,48)
-            ));
-        }
-
         lyrics=new EditText(this); lyrics.setHint("INTRO\n...\n\nCOUPLET 1\n...\n\nREFRAIN\n..."); lyrics.setGravity(android.view.Gravity.TOP); lyrics.setMinLines(14); lyrics.setTextColor(Color.WHITE); lyrics.setHintTextColor(Color.GRAY); lyrics.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         root.addView(lyrics,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,360)));
         Button arrange=Ui.button(this,"↕ Réarranger les blocs"); arrange.setOnClickListener(v->rearrangeBlocks()); root.addView(arrange);
@@ -125,12 +130,6 @@ public class EditSongActivity extends AppCompatActivity {
         Button cancel=Ui.button(this,"Annuler");
         Ui.weight(cancel,1);
         actions.addView(cancel);
-        if(!newSong){
-            Button save=Ui.button(this,"Enregistrer");
-            Ui.weight(save,1);
-            actions.addView(save);
-            save.setOnClickListener(v->save());
-        }
         outer.addView(actions);
         cancel.setOnClickListener(v->finish());
         Ui.applySafeArea(outer); setContentView(outer);
