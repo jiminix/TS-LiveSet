@@ -352,6 +352,9 @@ public final class PlaylistCloudSync {
             JSONArray medleyItems=new JSONArray();
             for(String item:s.medleyItems)medleyItems.put(item);
             o.put("medleyItems",medleyItems);
+            JSONArray medleyArtists=new JSONArray();
+            for(String item:s.medleyArtists)medleyArtists.put(item);
+            o.put("medleyArtists",medleyArtists);
             o.put("disabled",list.disabledSongIds.contains(songId));
             songs.put(o);
         }
