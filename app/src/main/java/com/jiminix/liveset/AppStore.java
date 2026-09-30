@@ -212,6 +212,13 @@ public class AppStore {
 
     private static void saveInProgressBackup(Context c, SetListModel list) {
         if (list == null) return;
+
+        // Never destroy a non-empty rescue copy with an accidental empty playlist.
+        if (list.songIds.isEmpty()) {
+            List<String> existing = loadStringListBackup(c, K_IN_PROGRESS_BACKUP);
+            if (!existing.isEmpty()) return;
+        }
+
         JSONArray ids = new JSONArray();
         for (String id : list.songIds) ids.put(id);
         JSONArray disabled = new JSONArray();
@@ -220,6 +227,10 @@ public class AppStore {
             .putString(K_IN_PROGRESS_BACKUP, ids.toString())
             .putString(K_IN_PROGRESS_DISABLED_BACKUP, disabled.toString())
             .apply();
+    }
+
+    public static int getInProgressBackupCount(Context c) {
+        return loadStringListBackup(c, K_IN_PROGRESS_BACKUP).size();
     }
 
     private static List<String> loadStringListBackup(Context c, String key) {
