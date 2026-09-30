@@ -264,6 +264,22 @@ public final class PlaylistCloudSync {
             try{
                 JSONObject payload=selectedPlaylistJson(app);
 
+                // Never overwrite a non-empty remote En cours with an accidental empty local one.
+                try{
+                    JSONObject localProgress=payload.optJSONObject("in_progress");
+                    JSONArray localSongs=localProgress==null?null:localProgress.optJSONArray("songs");
+                    boolean localEmpty=localSongs==null || localSongs.length()==0;
+
+                    if(localEmpty){
+                        JSONObject remote=getJson(API+"/"+FIXED_BLOB_ID);
+                        JSONObject remoteProgress=remote.optJSONObject("in_progress");
+                        JSONArray remoteSongs=remoteProgress==null?null:remoteProgress.optJSONArray("songs");
+                        if(remoteSongs!=null && remoteSongs.length()>0){
+                            payload.put("in_progress",remoteProgress);
+                        }
+                    }
+                }catch(Exception ignored){}
+
                 // Stable direct pairing: Y6 always points to the same Internet blob.
                 requestJson("PUT",API+"/"+FIXED_BLOB_ID,payload);
                 prefs(app).edit()
