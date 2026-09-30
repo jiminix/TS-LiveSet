@@ -55,6 +55,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.71 self-repair reserved En cours playlist
     // Build V0.72 backup + cloud recovery for En cours
     // Build V0.74 diagnostic + manual En cours rebuild
+    // Build V0.79 simplified playlist controls
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -79,7 +80,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         if(setlist==null){ finish(); return; }
         repairMissingLyrics();
         if(currentIndex>=0 && currentIndex<setlist.songIds.size()) currentSongId=setlist.songIds.get(currentIndex);
-        compact=getSharedPreferences("playlist_view",MODE_PRIVATE).getBoolean("compact",true);
+        compact=true;
+        getSharedPreferences("playlist_view",MODE_PRIVATE).edit().putBoolean("compact",true).apply();
         textZoom=Math.max(-5,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
         buildUi();
         maybeRestoreEmptyInProgress();
@@ -230,10 +232,6 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         add.setTextSize(18);
         Ui.compactHeaderButton(add,this,30);
 
-        modeButton=Ui.button(this, compact ? "Détail" : "Compact");
-        modeButton.setTextSize(11);
-        Ui.compactHeaderButton(modeButton,this,50);
-
         Button pageUp=Ui.button(this,"↑");
         pageUp.setTextSize(16);
         Ui.compactHeaderButton(pageUp,this,30);
@@ -248,7 +246,6 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         head.addView(pageDown);
         head.addView(rename);
         head.addView(add);
-        head.addView(modeButton);
         root.addView(head,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             Ui.dp(this,44)
@@ -302,15 +299,15 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         actions.setPadding(Ui.dp(this,2),Ui.dp(this,1),Ui.dp(this,2),Ui.dp(this,1));
         actions.setBackgroundColor(Color.rgb(105,12,18));
         boolean isInProgress=AppStore.isInProgressSetlist(setlist.id);
-        Button addLibrary=Ui.button(this,"＋");
-        Button importTitles=Ui.button(this,isInProgress?"Google Docs":"⇩");
+        Button importTitles=Ui.button(this,"");
         Button fixTitles=Ui.button(this,"⌕");
         Button viewer=Ui.button(this,"▣");
         Button inProgress=Ui.button(this,"En cours");
         Button zoomMinus=Ui.button(this,"−");
         Button zoomPlus=Ui.button(this,"+");
-        addLibrary.setTextSize(16);
-        importTitles.setTextSize(isInProgress?9:15);
+        importTitles.setTextSize(15);
+        importTitles.setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.ic_google_docs),null,null,null);
+        importTitles.setGravity(Gravity.CENTER);
         fixTitles.setTextSize(17);
         viewer.setTextSize(15);
         inProgress.setTextSize(10);
@@ -322,19 +319,16 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         if(isInProgress)styleButton(importTitles,Color.rgb(198,40,40),Color.WHITE);
         styleButton(zoomMinus,Color.BLACK,Color.WHITE);
         styleButton(zoomPlus,Color.WHITE,Color.BLACK);
-        Ui.compactHeaderButton(addLibrary,this,34);
-        Ui.compactHeaderButton(importTitles,this,isInProgress?78:34);
+        Ui.compactHeaderButton(importTitles,this,38);
         Ui.compactHeaderButton(fixTitles,this,34);
         Ui.weight(viewer,1);
         Ui.compactHeaderButton(inProgress,this,66);
         Ui.compactHeaderButton(zoomMinus,this,32);
         Ui.compactHeaderButton(zoomPlus,this,32);
-        addLibrary.setContentDescription("Ajouter depuis la bibliothèque");
-        importTitles.setContentDescription(isInProgress?"Importer depuis Google Docs":"Importer");
+        importTitles.setContentDescription("Importer depuis Google Docs");
         fixTitles.setContentDescription("Trouver les titres et artistes corrects");
         viewer.setContentDescription("Viewer");
         inProgress.setContentDescription("Playlist En cours");
-        actions.addView(addLibrary);
         actions.addView(importTitles);
         actions.addView(fixTitles);
         actions.addView(viewer);
@@ -347,14 +341,12 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         titleView.setOnClickListener(v->renameList());
         rename.setOnClickListener(v->renameList());
         add.setOnClickListener(v->showAddSongMenu());
-        addLibrary.setOnClickListener(v->addSong());
         importTitles.setOnClickListener(v->openImporter());
         fixTitles.setOnClickListener(v->findCorrectTitles());
         viewer.setOnClickListener(v->openViewer());
         inProgress.setOnClickListener(v->openInProgressPlaylist());
         zoomMinus.setOnClickListener(v->changeZoom(-1));
         zoomPlus.setOnClickListener(v->changeZoom(1));
-        modeButton.setOnClickListener(v->toggleMode());
         pageUp.setOnClickListener(v->pageScroll(-1));
         pageDown.setOnClickListener(v->pageScroll(1));
 
