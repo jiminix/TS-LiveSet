@@ -49,6 +49,7 @@ public class ImportActivity extends AppCompatActivity {
     // V0.23 numbered DOCX parser
     // V0.23 rebuild
     // V0.23 rebuild 2
+    // V0.62 compact lyrics on every import
     private static final int PICK_FILE = 42;
     private EditText source;
     private TextView preview;
@@ -895,11 +896,13 @@ public class ImportActivity extends AppCompatActivity {
         int added=0,replaced=0,reused=0;
 
         for(Song in:parsed){
+            in.lyrics=compactLyrics(in.lyrics);
             String k=dupKey(in);
             if(keys.contains(k)){
                 Song old=byKey.get(k);
                 if(replaceDuplicates.isChecked() || tsSongbookDetected){
                     preserveExistingData(in,old);
+                    in.lyrics=compactLyrics(in.lyrics);
                     in.id=old.id;
                     AppStore.upsertSong(this,in);
                     importedIds.add(in.id);
@@ -966,6 +969,19 @@ public class ImportActivity extends AppCompatActivity {
         }else{
             finish();
         }
+    }
+
+    private String compactLyrics(String raw){
+        if(raw==null)return "";
+        String normalized=raw.replace("\r\n","\n").replace('\r','\n').replace('\u00A0',' ');
+        StringBuilder out=new StringBuilder();
+        for(String line:normalized.split("\n",-1)){
+            String cleaned=line.replaceAll("[\\t ]+$","");
+            if(cleaned.trim().isEmpty())continue;
+            if(out.length()>0)out.append('\n');
+            out.append(cleaned);
+        }
+        return out.toString().trim();
     }
 
     private void preserveExistingData(Song incoming,Song old){
