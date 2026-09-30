@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
         TextView head = Ui.title(this, "LIVESET");
         Ui.compactHeaderTitle(head,this);
         TextView version = new TextView(this);
-        version.setText("v0.47");
+        version.setText("v"+installedVersion());
         version.setTextColor(Color.LTGRAY);
         version.setTextSize(12);
         version.setPadding(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,16),0);
@@ -156,6 +156,15 @@ public class MainActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence s,int st,int before,int count){ if(libraryMode) showLibrary(); }
             public void afterTextChanged(Editable e){}
         });
+    }
+
+    private String installedVersion(){
+        try{
+            String version=getPackageManager().getPackageInfo(getPackageName(),0).versionName;
+            return version==null || version.trim().isEmpty() ? "?" : version.trim();
+        }catch(Exception ignored){
+            return "?";
+        }
     }
 
     private void showSetlists() {
