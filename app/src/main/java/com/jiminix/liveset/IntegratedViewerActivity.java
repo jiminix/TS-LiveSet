@@ -2,6 +2,7 @@ package com.jiminix.liveset;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -97,6 +98,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         LinearLayout top=new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
+        top.setBackgroundColor(Color.rgb(105,12,18));
 
         Button back=Ui.button(this,"‹");
         back.setTextSize(21);
@@ -128,6 +130,10 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         inProgressButton.setTextSize(9);
         Ui.compactHeaderButton(inProgressButton,this,58);
 
+        styleButton(inProgressButton,Color.rgb(198,40,40),Color.WHITE);
+        styleButton(zoomMinus,Color.BLACK,Color.WHITE);
+        styleButton(zoomPlus,Color.WHITE,Color.BLACK);
+
         top.addView(back);
         top.addView(appTitle);
         top.addView(zoomMinus);
@@ -143,6 +149,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         infoRow.setOrientation(LinearLayout.HORIZONTAL);
         infoRow.setGravity(Gravity.CENTER_VERTICAL);
         infoRow.setPadding(dp(2),0,dp(2),0);
+        infoRow.setBackgroundColor(Color.rgb(105,12,18));
 
         TextView slogan=new TextView(this);
         slogan.setText("Un pour tous, tous pour la même playlist.");
@@ -193,7 +200,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
         TextView footer=new TextView(this);
         footer.setText("Viewer intégré · synchronisation Internet active pour les autres téléphones");
-        footer.setTextColor(Color.DKGRAY);
+        footer.setTextColor(Color.WHITE);
+        footer.setBackgroundColor(Color.rgb(105,12,18));
         footer.setTextSize(10);
         footer.setGravity(Gravity.CENTER);
         footer.setPadding(0,dp(5),0,dp(2));
@@ -209,6 +217,11 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private void styleButton(Button button,int background,int foreground){
+        button.setBackgroundTintList(ColorStateList.valueOf(background));
+        button.setTextColor(foreground);
     }
 
     private void toggleInProgress(){
