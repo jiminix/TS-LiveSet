@@ -57,6 +57,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.74 diagnostic + manual En cours rebuild
     // Build V0.79 simplified playlist controls
     // Build V0.80 BPM after stage icons + validate En cours to principal playlist
+    // Build V0.81 multi-step undo
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -70,6 +71,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private ItemTouchHelper touchHelper;
     private final Set<String> expandedMedleys=new HashSet<>();
     private boolean enCoursRestoreAttempted=false;
+    private boolean playlistDragUndoRecorded=false;
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
@@ -169,6 +171,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .setTitle("Reconstruire « En cours »")
             .setMultiChoiceItems(labels,checked,(dialog,which,isChecked)->checked[which]=isChecked)
             .setPositiveButton("Restaurer",(d,w)->{
+                AppStore.recordUndoSnapshot(this,"Reconstruction EN COURS");
                 SetListModel progress=AppStore.getOrCreateInProgressSetlist(this);
                 progress.songIds.clear();
                 progress.disabledSongIds.clear();
@@ -233,6 +236,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         add.setTextSize(18);
         Ui.compactHeaderButton(add,this,30);
 
+        Button undo=Ui.button(this,"↶");
+        undo.setTextSize(18);
+        undo.setContentDescription("Annuler la dernière action");
+        Ui.compactHeaderButton(undo,this,32);
+
         Button pageUp=Ui.button(this,"↑");
         pageUp.setTextSize(16);
         Ui.compactHeaderButton(pageUp,this,30);
@@ -245,6 +253,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         head.addView(titleView);
         head.addView(pageUp);
         head.addView(pageDown);
+        head.addView(undo);
         head.addView(rename);
         head.addView(add);
         root.addView(head,new LinearLayout.LayoutParams(
@@ -283,6 +292,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             @Override public void onSelectedChanged(RecyclerView.ViewHolder vh,int actionState){
                 super.onSelectedChanged(vh,actionState);
                 if(vh!=null && actionState==ItemTouchHelper.ACTION_STATE_DRAG){
+                    if(!playlistDragUndoRecorded){
+                        AppStore.recordUndoSnapshot(PlaylistOverviewActivity.this,"Déplacement morceau");
+                        playlistDragUndoRecorded=true;
+                    }
                     vh.itemView.setBackgroundColor(Color.rgb(55,55,55));
                 }
             }
@@ -291,6 +304,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 super.clearView(rv,vh);
                 adapter.notifyDataSetChanged();
                 AppStore.upsertSetlist(PlaylistOverviewActivity.this,setlist);
+                playlistDragUndoRecorded=false;
             }
         };
         touchHelper=new ItemTouchHelper(callback);
@@ -342,6 +356,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         titleView.setOnClickListener(v->renameList());
         rename.setOnClickListener(v->renameList());
         add.setOnClickListener(v->showAddSongMenu());
+        undo.setOnClickListener(v->undoLastAction());
         importTitles.setOnClickListener(v->openImporter());
         fixTitles.setOnClickListener(v->findCorrectTitles());
         viewer.setOnClickListener(v->openViewer());
@@ -353,6 +368,30 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private void undoLastAction(){
+        String label=AppStore.undoLast(this);
+        if(label==null || label.trim().isEmpty()){
+            Toast.makeText(this,"Aucune action à annuler",Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        SetListModel restored=AppStore.isInProgressSetlist(setlistId)
+            ? AppStore.getOrCreateInProgressSetlist(this)
+            : AppStore.findSetlist(this,setlistId);
+
+        if(restored==null){
+            Toast.makeText(this,"Annulé : "+label,Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        setlist=restored;
+        if(currentSongId!=null && !setlist.songIds.contains(currentSongId))currentSongId=null;
+        updateCount();
+        if(adapter!=null)adapter.notifyDataSetChanged();
+        Toast.makeText(this,"Annulé : "+label,Toast.LENGTH_LONG).show();
     }
 
     private void styleButton(Button button,int background,int foreground){
@@ -479,6 +518,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .setPositiveButton("Enregistrer",(d,w)->{
                 String name=input.getText().toString().trim();
                 if(name.isEmpty())return;
+                AppStore.recordUndoSnapshot(this,"Renommage playlist");
                 setlist.name=name;
                 AppStore.upsertSetlist(this,setlist);
                 titleView.setText(name+" · "+setlist.songIds.size()+" titres");
@@ -661,6 +701,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .setTitle("Corrections proposées")
             .setMultiChoiceItems(labels,checked,(d,which,isChecked)->checked[which]=isChecked)
             .setPositiveButton("Appliquer",(d,w)->{
+                boolean anySelected=false;
+                for(boolean selected:checked)if(selected){anySelected=true;break;}
+                if(anySelected)AppStore.recordUndoSnapshot(this,"Correction titres");
                 int changed=0;
                 for(int i=0;i<corrections.size();i++){
                     if(!checked[i])continue;
@@ -700,11 +743,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .setPositiveButton("Enregistrer",(d,w)->{
                 String value=input.getText().toString().replaceAll("[^0-9]","");
                 if(value.length()>3)value=value.substring(0,3);
+                AppStore.recordUndoSnapshot(this,"Modification BPM");
                 s.bpm=value;
                 AppStore.upsertSong(this,s);
                 adapter.notifyItemChanged(pos);
             })
             .setNeutralButton("Effacer",(d,w)->{
+                AppStore.recordUndoSnapshot(this,"Effacement BPM");
                 s.bpm="";
                 AppStore.upsertSong(this,s);
                 adapter.notifyItemChanged(pos);
@@ -747,6 +792,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .setTitle("Insérer un morceau")
             .setItems(names,(d,which)->{
                 Song s=available.get(which);
+                AppStore.recordUndoSnapshot(this,"Ajout morceau");
                 setlist.songIds.add(s.id);
                 AppStore.upsertSetlist(this,setlist);
                 adapter.notifyItemInserted(setlist.songIds.size()-1);
@@ -826,6 +872,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 String b=n2.getText().toString().replaceAll("[^0-9]","");
                 if(a.length()>2)a=a.substring(0,2);
                 if(b.length()>2)b=b.substring(0,2);
+                AppStore.recordUndoSnapshot(this,"Modification scène");
                 s.stageNum1=a;
                 s.stageNum2=b;
                 s.stageGuitar=guitar.isChecked();
@@ -860,6 +907,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             return;
         }
 
+        AppStore.recordUndoSnapshot(this,"Validation EN COURS");
         boolean alreadyPresent=target.songIds.contains(songId);
         if(!alreadyPresent){
             target.songIds.add(songId);
@@ -897,6 +945,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private void toggleSongDisabled(int pos){
         if(pos<0 || pos>=setlist.songIds.size())return;
         String id=setlist.songIds.get(pos);
+        AppStore.recordUndoSnapshot(this,"OUT / réactivation");
         boolean disabled=setlist.disabledSongIds.contains(id);
         if(disabled){
             setlist.disabledSongIds.remove(id);
@@ -938,6 +987,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             .setTitle("Retirer ce morceau ?")
             .setMessage(name+" sera retiré de cette playlist. Il restera dans la bibliothèque avec ses paroles.")
             .setPositiveButton("Retirer",(d,w)->{
+                AppStore.recordUndoSnapshot(this,"Retrait morceau");
                 setlist.songIds.remove(pos);
                 setlist.disabledSongIds.remove(id);
                 AppStore.upsertSetlist(this,setlist);
