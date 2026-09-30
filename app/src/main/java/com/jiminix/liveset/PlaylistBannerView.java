@@ -46,11 +46,6 @@ public class PlaylistBannerView extends View {
         p.setTextSize(h*0.43f);
         canvas.drawText(main,w/2f,h*0.43f,p);
 
-        String sub="Un pour tous, tous pour la même playlist.";
-        p.setColor(Color.WHITE);
-        p.setTextSize(h*0.24f);
-        canvas.drawText(sub,w/2f,h*0.78f,p);
-
         p.setTextAlign(Paint.Align.LEFT);
     }
 }
