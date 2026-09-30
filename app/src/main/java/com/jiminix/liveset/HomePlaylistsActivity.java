@@ -31,6 +31,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
     // Build V0.76 show reserved En cours below its principal playlist
     // Build V0.77 global SAVE / RESTORE with backup timestamp
     // Build V0.79 simplified home controls
+    // Build V0.81 global multi-step undo
     private RecyclerView recycler;
     private PlaylistHomeAdapter adapter;
     private List<SetListModel> lists;
@@ -39,6 +40,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
     private ItemTouchHelper touchHelper;
     private TextView empty;
     private TextView backupInfo;
+    private boolean homeDragUndoRecorded=false;
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
@@ -72,11 +74,15 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
         Button saveAll=Ui.button(this,"SAVE TOUT");
         saveAll.setTextSize(12);
+        Button undo=Ui.button(this,"↶ ANNULER");
+        undo.setTextSize(12);
         Button restoreAll=Ui.button(this,"↻ RESTAURER");
         restoreAll.setTextSize(12);
         Ui.weight(saveAll,1);
+        Ui.weight(undo,1);
         Ui.weight(restoreAll,1);
         backupRow.addView(saveAll);
+        backupRow.addView(undo);
         backupRow.addView(restoreAll);
         root.addView(backupRow);
 
@@ -139,6 +145,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
                 saveRegularPlaylistOrder();
                 rebuildDisplayLists();
                 adapter.notifyDataSetChanged();
+                homeDragUndoRecorded=false;
                 return true;
             }
 
@@ -149,6 +156,10 @@ public class HomePlaylistsActivity extends AppCompatActivity {
             @Override public void onSelectedChanged(RecyclerView.ViewHolder vh,int actionState){
                 super.onSelectedChanged(vh,actionState);
                 if(vh!=null && actionState==ItemTouchHelper.ACTION_STATE_DRAG){
+                    if(!homeDragUndoRecorded){
+                        AppStore.recordUndoSnapshot(HomePlaylistsActivity.this,"Déplacement playlist");
+                        homeDragUndoRecorded=true;
+                    }
                     vh.itemView.setBackgroundColor(Color.rgb(48,48,48));
                 }
             }
@@ -165,11 +176,22 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
         addBottom.setOnClickListener(v->createPlaylist());
         saveAll.setOnClickListener(v->saveEverything());
+        undo.setOnClickListener(v->undoLastAction());
         restoreAll.setOnClickListener(v->confirmRestoreEverything());
 
         Ui.applySafeArea(root);
         setContentView(root);
         refreshBackupInfo();
+    }
+
+    private void undoLastAction(){
+        String label=AppStore.undoLast(this);
+        if(label==null || label.trim().isEmpty()){
+            Toast.makeText(this,"Aucune action à annuler",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        loadLists();
+        Toast.makeText(this,"Annulé : "+label,Toast.LENGTH_LONG).show();
     }
 
     private String formatBackupDate(long time){
@@ -446,6 +468,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
             .setPositiveButton("Créer",(d,w)->{
                 String n=input.getText().toString().trim();
                 if(n.isEmpty()) n="Nouvelle playlist";
+                AppStore.recordUndoSnapshot(this,"Création playlist");
                 SetListModel sl=new SetListModel();
                 sl.name=n;
                 AppStore.upsertSetlist(this,sl);
@@ -464,6 +487,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
                 ? "La playlist EN COURS est déjà vide."
                 : "Les "+count+" titre"+(count>1?"s":"")+" seront retirés de EN COURS. Les morceaux resteront dans la bibliothèque.")
             .setPositiveButton("Vider",(d,w)->{
+                AppStore.recordUndoSnapshot(this,"Vidage EN COURS");
                 AppStore.clearInProgressSetlist(this);
                 loadLists();
                 Toast.makeText(this,"EN COURS vidée",Toast.LENGTH_SHORT).show();
@@ -477,6 +501,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
             .setTitle("Supprimer la playlist ?")
             .setMessage("« "+sl.name+" » sera supprimée. Les morceaux et leurs paroles resteront dans la bibliothèque.")
             .setPositiveButton("Supprimer",(d,w)->{
+                AppStore.recordUndoSnapshot(this,"Suppression playlist");
                 lists.removeIf(x->x.id.equals(sl.id));
                 saveRegularPlaylistOrder();
                 loadLists();
