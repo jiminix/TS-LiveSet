@@ -2,6 +2,7 @@ package com.jiminix.liveset;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -45,6 +46,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.60 editable En cours playlist access
     // Build V0.61 explicit Google Docs import button in En cours
     // Build V0.63 enrich online song search metadata
+    // Build V0.65 red action buttons, black/white zoom and colored header/footer bands
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -88,6 +90,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         LinearLayout head=Ui.row(this);
         head.setPadding(Ui.dp(this,2),Ui.dp(this,2),Ui.dp(this,2),Ui.dp(this,2));
+        head.setBackgroundColor(Color.rgb(105,12,18));
 
         TextView back=new TextView(this);
         back.setText("‹");
@@ -188,6 +191,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         LinearLayout actions=Ui.row(this);
         actions.setPadding(Ui.dp(this,2),Ui.dp(this,1),Ui.dp(this,2),Ui.dp(this,1));
+        actions.setBackgroundColor(Color.rgb(105,12,18));
         boolean isInProgress=AppStore.isInProgressSetlist(setlist.id);
         Button addLibrary=Ui.button(this,"＋");
         Button importTitles=Ui.button(this,isInProgress?"Google Docs":"⇩");
@@ -203,6 +207,12 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         inProgress.setTextSize(10);
         zoomMinus.setTextSize(16);
         zoomPlus.setTextSize(16);
+
+        // Live UI colors.
+        styleButton(inProgress,Color.rgb(198,40,40),Color.WHITE);
+        if(isInProgress)styleButton(importTitles,Color.rgb(198,40,40),Color.WHITE);
+        styleButton(zoomMinus,Color.BLACK,Color.WHITE);
+        styleButton(zoomPlus,Color.WHITE,Color.BLACK);
         Ui.compactHeaderButton(addLibrary,this,34);
         Ui.compactHeaderButton(importTitles,this,isInProgress?78:34);
         Ui.compactHeaderButton(fixTitles,this,34);
@@ -241,6 +251,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         Ui.applySafeArea(root);
         setContentView(root);
+    }
+
+    private void styleButton(Button button,int background,int foreground){
+        button.setBackgroundTintList(ColorStateList.valueOf(background));
+        button.setTextColor(foreground);
     }
 
     private void repairMissingLyrics(){
