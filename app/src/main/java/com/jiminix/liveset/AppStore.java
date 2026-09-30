@@ -3,6 +3,7 @@ package com.jiminix.liveset;
 import android.content.Context;
 import android.content.SharedPreferences;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -14,6 +15,8 @@ public class AppStore {
     private static final String K_VIEWER_SETLIST = "viewer_setlist_id";
     private static final String K_IN_PROGRESS_BACKUP = "in_progress_song_ids_backup";
     private static final String K_IN_PROGRESS_DISABLED_BACKUP = "in_progress_disabled_song_ids_backup";
+    private static final String K_FULL_BACKUP = "full_backup_json";
+    private static final String K_FULL_BACKUP_TIME = "full_backup_time";
     public static final String IN_PROGRESS_SETLIST_ID = "__in_progress__";
 
     public static List<Song> loadSongs(Context c) {
@@ -263,6 +266,78 @@ public class AppStore {
 
     public static boolean isInProgressSetlist(String id) {
         return IN_PROGRESS_SETLIST_ID.equals(id);
+    }
+
+    public static JSONObject createFullBackup(Context c) throws Exception {
+        JSONObject backup = new JSONObject();
+        long now = System.currentTimeMillis();
+
+        backup.put("schema", 1);
+        backup.put("savedAt", now);
+        backup.put("songs", new JSONArray(prefs(c).getString(K_SONGS, "[]")));
+        backup.put("setlists", new JSONArray(prefs(c).getString(K_SETLISTS, "[]")));
+        backup.put("viewerSetlistId", prefs(c).getString(K_VIEWER_SETLIST, ""));
+
+        SharedPreferences view = c.getSharedPreferences("playlist_view", Context.MODE_PRIVATE);
+        JSONObject viewSettings = new JSONObject();
+        viewSettings.put("compact", view.getBoolean("compact", true));
+        viewSettings.put("textZoom", view.getInt("text_zoom", 0));
+        backup.put("playlistView", viewSettings);
+
+        return backup;
+    }
+
+    public static long saveFullBackupLocal(Context c, JSONObject backup) {
+        if (backup == null) return 0L;
+        long savedAt = backup.optLong("savedAt", System.currentTimeMillis());
+        prefs(c).edit()
+            .putString(K_FULL_BACKUP, backup.toString())
+            .putLong(K_FULL_BACKUP_TIME, savedAt)
+            .commit();
+        return savedAt;
+    }
+
+    public static JSONObject getFullBackupLocal(Context c) {
+        try {
+            String raw = prefs(c).getString(K_FULL_BACKUP, "");
+            if (raw == null || raw.trim().isEmpty()) return null;
+            return new JSONObject(raw);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    public static long getFullBackupTimestamp(Context c) {
+        return prefs(c).getLong(K_FULL_BACKUP_TIME, 0L);
+    }
+
+    public static boolean restoreFullBackup(Context c, JSONObject backup) {
+        if (backup == null) return false;
+        JSONArray songs = backup.optJSONArray("songs");
+        JSONArray setlists = backup.optJSONArray("setlists");
+        if (songs == null || setlists == null) return false;
+
+        String viewerId = backup.optString("viewerSetlistId", "");
+
+        boolean ok = prefs(c).edit()
+            .putString(K_SONGS, songs.toString())
+            .putString(K_SETLISTS, setlists.toString())
+            .putString(K_VIEWER_SETLIST, viewerId)
+            .commit();
+
+        JSONObject viewSettings = backup.optJSONObject("playlistView");
+        if (viewSettings != null) {
+            c.getSharedPreferences("playlist_view", Context.MODE_PRIVATE).edit()
+                .putBoolean("compact", viewSettings.optBoolean("compact", true))
+                .putInt("text_zoom", viewSettings.optInt("textZoom", 0))
+                .commit();
+        }
+
+        if (!ok) return false;
+
+        saveFullBackupLocal(c, backup);
+        getOrCreateInProgressSetlist(c);
+        return true;
     }
 
     public static void selectViewerSetlist(Context c, String id) {
