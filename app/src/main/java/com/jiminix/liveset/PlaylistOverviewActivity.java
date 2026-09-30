@@ -24,6 +24,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.text.Normalizer;
 import java.util.Locale;
 
@@ -48,6 +50,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.63 enrich online song search metadata
     // Build V0.65 red action buttons, black/white zoom and colored header/footer bands
     // Build V0.66 per-playlist disabled songs at 50% opacity
+    // Build V0.67 expandable Medley sub-playlists
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -59,6 +62,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private RecyclerView recycler;
     private PlaylistAdapter adapter;
     private ItemTouchHelper touchHelper;
+    private final Set<String> expandedMedleys=new HashSet<>();
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
