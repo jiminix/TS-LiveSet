@@ -51,6 +51,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.65 red action buttons, black/white zoom and colored header/footer bands
     // Build V0.66 per-playlist disabled songs at 50% opacity
     // Build V0.67 expandable Medley sub-playlists
+    // Build V0.70 dedicated Medley creator/editor
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -411,16 +412,24 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     }
 
     private void showAddSongMenu(){
-        String[] choices={"Depuis la bibliothèque","Recherche en ligne","Nouveau morceau"};
+        String[] choices={"Depuis la bibliothèque","Recherche en ligne","Nouveau morceau","Medley"};
         new AlertDialog.Builder(this)
             .setTitle("Ajouter un morceau")
             .setItems(choices,(d,which)->{
                 if(which==0) addSong();
                 else if(which==1) searchOnlineSongForInsert();
-                else createNewSong();
+                else if(which==2) createNewSong();
+                else createNewMedley();
             })
             .setNegativeButton("Annuler",null)
             .show();
+    }
+
+    private void createNewMedley(){
+        Intent i=new Intent(this,MedleyEditorActivity.class);
+        i.putExtra("target_setlist_id",setlist.id);
+        i.putExtra("new_medley",true);
+        startActivity(i);
     }
 
     private void createNewSong(){
@@ -761,7 +770,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     }
 
     private void openMedleyEditor(String songId){
-        Intent i=new Intent(this,EditSongActivity.class);
+        Intent i=new Intent(this,MedleyEditorActivity.class);
         i.putExtra("song_id",songId);
         startActivity(i);
     }
@@ -1100,7 +1109,9 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
                 for(int mi=0;mi<s.medleyItems.size();mi++){
                     TextView item=new TextView(PlaylistOverviewActivity.this);
-                    item.setText(String.format(Locale.ROOT,"%02d. %s",mi+1,s.medleyItems.get(mi)));
+                    String medleyArtist=mi<s.medleyArtists.size()?s.medleyArtists.get(mi):"";
+                    String medleyLabel=s.medleyItems.get(mi)+(medleyArtist==null || medleyArtist.trim().isEmpty()?"":" — "+medleyArtist.trim());
+                    item.setText(String.format(Locale.ROOT,"%02d. %s",mi+1,medleyLabel));
                     item.setTextColor(Color.WHITE);
                     item.setTextSize(zsp(12));
                     item.setPadding(zdp(8),zdp(2),0,zdp(2));
