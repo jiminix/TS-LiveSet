@@ -30,6 +30,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
     // Build V0.28
     // Build V0.76 show reserved En cours below its principal playlist
     // Build V0.77 global SAVE / RESTORE with backup timestamp
+    // Build V0.79 simplified home controls
     private RecyclerView recycler;
     private PlaylistHomeAdapter adapter;
     private List<SetListModel> lists;
@@ -57,26 +58,6 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
         PlaylistBannerView banner=new PlaylistBannerView(this);
         root.addView(banner,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        LinearLayout head=Ui.row(this);
-        head.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView spacer=new TextView(this);
-        spacer.setText("");
-        Ui.weight(spacer,1);
-
-        Button library=Ui.button(this,"Titres");
-        library.setTextSize(13);
-        Ui.compactHeaderButton(library,this,82);
-
-        Button add=Ui.button(this,"＋");
-        add.setTextSize(24);
-        Ui.compactHeaderButton(add,this,54);
-
-        head.addView(spacer);
-        head.addView(library);
-        head.addView(add);
-        root.addView(head);
 
         TextView version=new TextView(this);
         version.setText("LiveSet v"+installedVersion());
@@ -130,6 +111,15 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         recycler.setAdapter(adapter);
         root.addView(recycler,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
 
+        Button addBottom=Ui.button(this,"＋");
+        addBottom.setTextSize(36);
+        addBottom.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        addBottom.setContentDescription("Créer une nouvelle playlist");
+        root.addView(addBottom,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            Ui.dp(this,58)
+        ));
+
         ItemTouchHelper.Callback callback=new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP|ItemTouchHelper.DOWN,0){
             @Override public boolean onMove(RecyclerView rv,RecyclerView.ViewHolder from,RecyclerView.ViewHolder to){
                 int a=from.getBindingAdapterPosition();
@@ -173,8 +163,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         touchHelper=new ItemTouchHelper(callback);
         touchHelper.attachToRecyclerView(recycler);
 
-        library.setOnClickListener(v->startActivity(new Intent(this,MainActivity.class).putExtra("open_library",true)));
-        add.setOnClickListener(v->createPlaylist());
+        addBottom.setOnClickListener(v->createPlaylist());
         saveAll.setOnClickListener(v->saveEverything());
         restoreAll.setOnClickListener(v->confirmRestoreEverything());
 
@@ -421,7 +410,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
                 h.name.setText("↳  EN COURS\n"+sl.songIds.size()+" titre"+(sl.songIds.size()>1?"s":""));
                 h.name.setTextColor(Color.rgb(255,193,7));
                 h.itemView.setBackgroundColor(Color.rgb(55,20,20));
-                h.del.setVisibility(View.GONE);
+                h.del.setVisibility(View.VISIBLE);
                 h.handle.setVisibility(View.GONE);
                 h.open.setText("Ouvrir");
             }else{
@@ -436,7 +425,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
             h.name.setOnClickListener(v->openPlaylist(sl.id));
             h.open.setOnClickListener(v->openPlaylist(sl.id));
-            h.del.setOnClickListener(progress?null:v->confirmDelete(sl));
+            h.del.setOnClickListener(progress?v->confirmClearInProgress():v->confirmDelete(sl));
         }
 
         @Override public int getItemCount(){return displayLists.size();}
@@ -461,6 +450,23 @@ public class HomePlaylistsActivity extends AppCompatActivity {
                 sl.name=n;
                 AppStore.upsertSetlist(this,sl);
                 loadLists();
+            })
+            .setNegativeButton("Annuler",null)
+            .show();
+    }
+
+    private void confirmClearInProgress(){
+        int count=inProgress==null?0:inProgress.songIds.size();
+
+        new AlertDialog.Builder(this)
+            .setTitle("Vider « EN COURS » ?")
+            .setMessage(count==0
+                ? "La playlist EN COURS est déjà vide."
+                : "Les "+count+" titre"+(count>1?"s":"")+" seront retirés de EN COURS. Les morceaux resteront dans la bibliothèque.")
+            .setPositiveButton("Vider",(d,w)->{
+                AppStore.clearInProgressSetlist(this);
+                loadLists();
+                Toast.makeText(this,"EN COURS vidée",Toast.LENGTH_SHORT).show();
             })
             .setNegativeButton("Annuler",null)
             .show();
