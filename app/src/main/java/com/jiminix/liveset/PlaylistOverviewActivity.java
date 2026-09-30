@@ -53,6 +53,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     // Build V0.67 expandable Medley sub-playlists
     // Build V0.70 dedicated Medley creator/editor
     // Build V0.71 self-repair reserved En cours playlist
+    // Build V0.72 backup + cloud recovery for En cours
     private String setlistId;
     private SetListModel setlist;
     private String currentSongId=null;
@@ -65,6 +66,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private PlaylistAdapter adapter;
     private ItemTouchHelper touchHelper;
     private final Set<String> expandedMedleys=new HashSet<>();
+    private boolean enCoursRestoreAttempted=false;
 
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
@@ -79,6 +81,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         compact=getSharedPreferences("playlist_view",MODE_PRIVATE).getBoolean("compact",true);
         textZoom=Math.max(-5,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
         buildUi();
+        maybeRestoreEmptyInProgress();
     }
 
     @Override protected void onResume(){
@@ -91,7 +94,36 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             repairMissingLyrics();
             if(titleView!=null) titleView.setText(setlist.name+" · "+setlist.songIds.size()+" titres");
             if(adapter!=null) adapter.notifyDataSetChanged();
+            maybeRestoreEmptyInProgress();
         }
+    }
+
+    private void maybeRestoreEmptyInProgress(){
+        if(!AppStore.isInProgressSetlist(setlistId))return;
+        if(setlist==null || !setlist.songIds.isEmpty())return;
+        if(enCoursRestoreAttempted)return;
+        enCoursRestoreAttempted=true;
+
+        Toast.makeText(this,"En cours vide · tentative de récupération…",Toast.LENGTH_SHORT).show();
+        PlaylistCloudSync.restoreInProgressFromCloud(this,new PlaylistCloudSync.Listener(){
+            @Override public void onSuccess(String code){
+                SetListModel restored=AppStore.getOrCreateInProgressSetlist(PlaylistOverviewActivity.this);
+                if(restored!=null){
+                    setlist=restored;
+                    if(titleView!=null)titleView.setText(setlist.name+" · "+setlist.songIds.size()+" titres");
+                    if(adapter!=null)adapter.notifyDataSetChanged();
+                    Toast.makeText(PlaylistOverviewActivity.this,
+                        setlist.songIds.size()+" morceau"+(setlist.songIds.size()>1?"x":"")+" récupéré"+(setlist.songIds.size()>1?"s":"")+" dans En cours",
+                        Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override public void onError(String message){
+                Toast.makeText(PlaylistOverviewActivity.this,
+                    "En cours est vide. "+message,
+                    Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void buildUi(){
