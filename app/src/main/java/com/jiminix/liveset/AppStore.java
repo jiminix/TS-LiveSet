@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import org.json.JSONArray;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class AppStore {
     private static final String PREFS = "liveset_store";
@@ -20,7 +21,11 @@ public class AppStore {
         try {
             String raw = prefs(c).getString(K_SONGS, "[]");
             JSONArray a = new JSONArray(raw);
-            for (int i = 0; i < a.length(); i++) out.add(Song.fromJson(a.getJSONObject(i)));
+            for (int i = 0; i < a.length(); i++) {
+                Song s=Song.fromJson(a.getJSONObject(i));
+                normalizeSongTitles(s);
+                out.add(s);
+            }
         } catch (Exception ignored) {}
         return out;
     }
@@ -55,6 +60,7 @@ public class AppStore {
     }
 
     public static void upsertSong(Context c, Song song) {
+        normalizeSongTitles(song);
         List<Song> songs = loadSongs(c);
         boolean replaced = false;
         for (int i = 0; i < songs.size(); i++) {
@@ -62,6 +68,16 @@ public class AppStore {
         }
         if (!replaced) songs.add(song);
         saveSongs(c, songs);
+    }
+
+    private static void normalizeSongTitles(Song song) {
+        if (song == null) return;
+        song.title = song.title == null ? "" : song.title.toUpperCase(Locale.ROOT);
+
+        for (int i = 0; i < song.medleyItems.size(); i++) {
+            String item = song.medleyItems.get(i);
+            song.medleyItems.set(i, item == null ? "" : item.toUpperCase(Locale.ROOT));
+        }
     }
 
     public static void deleteSong(Context c, String id) {
