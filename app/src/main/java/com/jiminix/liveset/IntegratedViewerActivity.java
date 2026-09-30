@@ -56,6 +56,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         super.onCreate(b);
         setlistId=getIntent().getStringExtra("setlist_id");
         if(setlistId==null || setlistId.isEmpty())setlistId=AppStore.getViewerSetlistId(this);
+        showInProgress=getIntent().getBooleanExtra("show_in_progress",false);
         textZoom=Math.max(-5,Math.min(2,getSharedPreferences("playlist_view",MODE_PRIVATE).getInt("text_zoom",0)));
         buildUi();
     }
@@ -123,7 +124,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         cloud.setTextSize(9);
         Ui.compactHeaderButton(cloud,this,56);
 
-        inProgressButton=Ui.button(this,"En cours");
+        inProgressButton=Ui.button(this,showInProgress?"Principal":"En cours");
         inProgressButton.setTextSize(9);
         Ui.compactHeaderButton(inProgressButton,this,58);
 
