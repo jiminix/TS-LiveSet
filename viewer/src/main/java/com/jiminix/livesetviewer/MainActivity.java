@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     // Build V0.16 fit full slogan on one line
     // Build V0.17 Meryl title and count-only info line
     // Build V0.18 playlist name in top header and centered title count
+    // Build V0.19 direct Y6 pairing without registry lookup
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
@@ -404,6 +405,11 @@ public class MainActivity extends AppCompatActivity {
         if(raw==null)return "";
         String code=raw.trim().toUpperCase();
         if(!code.matches("[A-Z][0-9]"))return raw.trim();
+
+        // Y6 is the permanent direct pairing code for this playlist.
+        if(BOOTSTRAP_CODE.equals(code)){
+            return BOOTSTRAP_BLOB;
+        }
 
         Exception last=null;
         for(int attempt=0;attempt<3;attempt++){
