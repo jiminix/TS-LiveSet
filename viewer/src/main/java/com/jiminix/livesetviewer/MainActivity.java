@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     // Viewer V0.5 Internet sync
     // Viewer V0.6 SuperJSONBlob
     // Viewer V0.7 raw code parsing
+    // Viewer V0.28 current Manager-compatible build: same Y6/A0-Z9 code, En cours and Medley viewer
     private static final String API="https://superjsonblob.com/api/jsonBlob";
     private static final String SHORT_REGISTRY_ID="95af90a8-317b-4588-b7ab-5153db677527";
     private static final String SHORT_REGISTRY_API=API+"/"+SHORT_REGISTRY_ID;
@@ -535,7 +536,7 @@ public class MainActivity extends AppCompatActivity {
                     .header("Accept","application/json")
                     .header("Accept-Encoding","identity")
                     .header("Connection","close")
-                    .header("User-Agent","TS-Playlist-Viewer/0.6")
+                    .header("User-Agent","TS-Playlist-Viewer/0.28")
                     .get()
                     .build();
 
