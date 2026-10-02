@@ -62,7 +62,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.29</footer>
+<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.30</footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -88,6 +88,8 @@ let showInProgress=false;
 let expanded=new Set();
 let busy=false;
 let lastSignature="";
+let currentPayload=null;
+let currentCached=false;
 
 const $=id=>document.getElementById(id);
 function cleanCode(raw){
@@ -167,7 +169,9 @@ async function getPayload(){
 }
 function render(payload,cached=false){
   let source=payload;
-  if(showInProgress)source=payload?.in_progress;
+  if(showInProgress){
+    source=payload?.in_progress || payload?.en_cours || payload?.enCours || payload?.progress;
+  }
   if(!source?.available){
     $("list").innerHTML='<div class="empty">'+(showInProgress?"La playlist EN COURS est vide ou indisponible.":"Aucune playlist publiée.")+'</div>';
     $("playlistName").textContent=showInProgress?"EN COURS":"Aucune playlist";
@@ -217,18 +221,45 @@ async function sync(){
   busy=true;
   $("status").textContent="Synchronisation…";
   try{
-    const r=await getPayload(); render(r.payload,false);
+    const r=await getPayload();
+    currentPayload=r.payload;
+    currentCached=false;
+    lastSignature="";
+    render(currentPayload,false);
   }catch(e){
     const raw=localStorage.getItem(KEY_CACHE);
-    if(raw){try{render(JSON.parse(raw),true)}catch(_){}}
-    else {$("list").innerHTML='<div class="empty">Connexion Internet impossible.<br>'+String(e.message||e)+'</div>';$("status").textContent="Connexion impossible · serveur cloud inaccessible";}
+    if(raw){
+      try{
+        currentPayload=JSON.parse(raw);
+        currentCached=true;
+        lastSignature="";
+        render(currentPayload,true);
+      }catch(_){}
+    }else{
+      $("list").innerHTML='<div class="empty">Connexion Internet impossible.<br>'+String(e.message||e)+'</div>';
+      $("status").textContent="Connexion impossible · serveur cloud inaccessible";
+    }
   }finally{busy=false}
+}
+
+function switchPlaylist(){
+  showInProgress=!showInProgress;
+  $("progressBtn").textContent=showInProgress?"PRINCIPAL":"EN COURS";
+  lastSignature="";
+  if(currentPayload){
+    render(currentPayload,currentCached);
+  }else{
+    $("status").textContent="Synchronisation…";
+  }
+  // A refresh is still launched, but the button works immediately even if
+  // another sync is already in progress.
+  sync();
 }
 function openCode(){
   $("codeInput").value=localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE;
   $("modal").classList.add("show"); setTimeout(()=>$("codeInput").focus(),50);
 }
-$("progressBtn").onclick=()=>{showInProgress=!showInProgress;$("progressBtn").textContent=showInProgress?"PRINCIPAL":"EN COURS";lastSignature="";sync()};
+$("progressBtn").onclick=switchPlaylist;
 $("syncBtn").onclick=sync;
 $("codeBtn").onclick=openCode;
 $("cancelCode").onclick=()=>$("modal").classList.remove("show");
