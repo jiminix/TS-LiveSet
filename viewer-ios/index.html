@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#202830">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TS Playlist">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>TS Playlist Viewer</title>
+<style>
+:root{--bg:#10151a;--panel:#202830;--panel2:#181e23;--text:#fff;--muted:#aeb6bd;--red:#c62828;--line:#303941;--disabled:.5}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;min-height:100%;overscroll-behavior:none}
+body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+button,input{font:inherit}
+.top{position:sticky;top:0;z-index:10;background:var(--panel);padding:7px 8px 6px;border-bottom:1px solid #3a444d}
+.app{font-size:18px;font-weight:800;text-align:center;line-height:1.05}
+.headrow{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
+.playname{font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw;text-align:center}
+.count{font-size:16px;font-weight:800;white-space:nowrap}
+.actions{display:flex;gap:7px;margin-top:6px}
+.btn{border:0;border-radius:6px;background:#fff;color:#111;min-height:36px;padding:4px 12px;font-weight:800}
+.btn.red{background:var(--red);color:#fff}
+.btn.dark{background:#080b0e;color:#fff}
+.btn:active{transform:scale(.98)}
+.banner{margin:7px 8px;padding:8px;border-radius:7px;background:#171d22;color:#fff;text-align:center;font-size:11px;font-weight:700;line-height:1.2}
+.status{margin:0 8px 6px;color:var(--muted);font-size:10px;text-align:center}
+.list{padding:0 6px 70px}
+.song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:#11161b}
+.num{width:27px;text-align:center;font-weight:900;font-size:14px;flex:0 0 27px}
+.title{font-weight:800;font-size:15px;line-height:1.08;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bpm{font-size:11px;color:#d9dee2;min-width:32px;text-align:right}
+.medley{flex:0 0 34px;width:34px;height:32px;padding:0;border:0;border-radius:5px;background:#fff;color:#111;font-size:18px;font-weight:900}
+.song.disabled{opacity:.5}
+.sub{margin-left:32px;background:#171d22;border-left:3px solid #454f58;padding:2px 7px 5px;margin-bottom:3px;border-radius:0 0 5px 5px}
+.subrow{display:flex;gap:6px;padding:4px 2px;font-size:13px;font-weight:700;border-bottom:1px solid #2b333a}
+.empty{padding:35px 20px;text-align:center;color:var(--muted)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;z-index:30;padding:20px}
+.modal.show{display:flex}
+.card{width:min(420px,100%);background:var(--panel);border-radius:12px;padding:18px;box-shadow:0 12px 40px #000}
+.card h2{margin:0 0 12px;font-size:20px}
+.code{width:100%;height:48px;border:1px solid #55616b;border-radius:8px;background:#0d1115;color:#fff;text-align:center;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:2px}
+.small{color:var(--muted);font-size:12px;line-height:1.35;margin:9px 0 14px}
+.modal-actions{display:flex;gap:8px}
+.modal-actions .btn{flex:1}
+footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid #3a444d;text-align:center;font-size:10px;color:#b9c0c5;z-index:9}
+@media (max-width:380px){.playname{font-size:18px}.title{font-size:14px}.btn{padding:4px 9px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="app">TS Playlist 2026</div>
+  <div class="headrow"><div id="playlistName" class="playname">Connexion Viewer</div><div id="count" class="count">0 titres</div></div>
+  <div class="actions">
+    <button id="progressBtn" class="btn red">EN COURS</button>
+    <button id="syncBtn" class="btn dark">↻</button>
+    <button id="codeBtn" class="btn dark">CODE</button>
+  </div>
+</header>
+<div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
+<div id="status" class="status">Connexion…</div>
+<main id="list" class="list"><div class="empty">Chargement…</div></main>
+<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone</footer>
+
+<div id="modal" class="modal">
+  <div class="card">
+    <h2>Connexion Internet</h2>
+    <input id="codeInput" class="code" maxlength="36" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <div class="small">Entre le même code Internet que celui affiché/utilisé par TS Playlist Manager.<br>Le code est mémorisé sur cet iPhone.</div>
+    <div class="modal-actions"><button id="cancelCode" class="btn dark">ANNULER</button><button id="saveCode" class="btn red">CONNECTER</button></div>
+  </div>
+</div>
+
+<script>
+const API="https://superjsonblob.com/api/jsonBlob";
+const REGISTRY=API+"/95af90a8-317b-4588-b7ab-5153db677527";
+const BOOTSTRAP_CODE="Y6";
+const BOOTSTRAP_BLOB="d7e6c82a-82e0-4336-8e66-d49b9d013312";
+const KEY_CODE="ts_viewer_code";
+const KEY_CACHE="ts_viewer_cache";
+let showInProgress=false;
+let expanded=new Set();
+let busy=false;
+let lastSignature="";
+
+const $=id=>document.getElementById(id);
+function cleanCode(raw){
+  let code=(raw||"").trim();
+  const uuid=code.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  if(uuid)return uuid[0];
+  if(code.startsWith(API+"/"))code=code.slice((API+"/").length);
+  code=code.replace(/^.*\//,"").replace(/.*:/,"").replace(/[^A-Za-z0-9_-]/g,"");
+  if(/^[A-Za-z][0-9]$/i.test(code))return code.toUpperCase();
+  if(/^[A-Za-z0-9_-]{22}$/.test(code)){
+    try{
+      let s=code.replace(/-/g,"+").replace(/_/g,"/");
+      while(s.length%4)s+="=";
+      const bin=atob(s); if(bin.length===16){
+        const hex=[...bin].map(x=>x.charCodeAt(0).toString(16).padStart(2,"0")).join("");
+        return hex.slice(0,8)+"-"+hex.slice(8,12)+"-"+hex.slice(12,16)+"-"+hex.slice(16,20)+"-"+hex.slice(20);
+      }
+    }catch(e){}
+  }
+  return code;
+}
+async function resolveCode(raw){
+  const code=cleanCode(raw);
+  if(!/^[A-Z][0-9]$/.test(code))return code;
+  if(code===BOOTSTRAP_CODE)return BOOTSTRAP_BLOB;
+  const savedCode=localStorage.getItem("ts_resolved_code");
+  const savedBlob=localStorage.getItem("ts_resolved_blob");
+  if(savedCode===code && savedBlob)return savedBlob;
+  const res=await fetch(REGISTRY,{cache:"no-store"});
+  if(!res.ok)throw new Error("Registre HTTP "+res.status);
+  const reg=await res.json();
+  const blob=reg?.slots?.[code]?.blob;
+  if(!blob)throw new Error("Code "+code+" introuvable");
+  localStorage.setItem("ts_resolved_code",code);
+  localStorage.setItem("ts_resolved_blob",blob);
+  return blob;
+}
+async function getPayload(){
+  let code=localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE;
+  const resolved=await resolveCode(code);
+  const res=await fetch(API+"/"+resolved,{cache:"no-store"});
+  if(!res.ok)throw new Error("HTTP "+res.status);
+  const payload=await res.json();
+  localStorage.setItem(KEY_CACHE,JSON.stringify(payload));
+  return {payload,cached:false};
+}
+function render(payload,cached=false){
+  let source=payload;
+  if(showInProgress)source=payload?.in_progress;
+  if(!source?.available){
+    $("list").innerHTML='<div class="empty">'+(showInProgress?"La playlist EN COURS est vide ou indisponible.":"Aucune playlist publiée.")+'</div>';
+    $("playlistName").textContent=showInProgress?"EN COURS":"Aucune playlist";
+    $("count").textContent="0 titres";
+    return;
+  }
+  const songs=Array.isArray(source.songs)?source.songs:[];
+  const sig=(showInProgress?"1":"0")+"|"+JSON.stringify(songs)+"|"+source.playlist_name;
+  if(sig===lastSignature)return;
+  lastSignature=sig;
+  $("playlistName").textContent=(source.playlist_name||"Playlist").toUpperCase();
+  $("count").textContent=songs.length+" titre"+(songs.length>1?"s":"");
+  $("status").textContent=cached?"Internet indisponible · dernière copie enregistrée":"Internet · à jour";
+  $("banner").innerHTML="Un pour tous, tous pour la même playlist.<br>Synchro au Manager : "+(cached?"PAS OK":"OK")+"<br>Playlist TS 2026 importée<br>Viewer iPhone 13";
+  const frag=document.createDocumentFragment();
+  songs.forEach((s,i)=>{
+    const id=s.id||("song-"+i);
+    const row=document.createElement("div");
+    row.className="song"+(s.disabled?" disabled":"");
+    const num=document.createElement("div"); num.className="num"; num.textContent=i+1;
+    const title=document.createElement("div"); title.className="title"; title.textContent=(s.title||"").toUpperCase();
+    const bpm=document.createElement("div"); bpm.className="bpm"; bpm.textContent=s.bpm||"";
+    row.append(num);
+    const medley=Array.isArray(s.medleyItems)&&s.medleyItems.length>0 && /^med+d?ley\b/i.test(s.title||"");
+    if(medley){
+      const b=document.createElement("button"); b.className="medley"; b.textContent=expanded.has(id)?"−":"+";
+      b.onclick=()=>{expanded.has(id)?expanded.delete(id):expanded.add(id);lastSignature="";render(payload,cached)};
+      row.append(b);
+    }
+    row.append(title,bpm);
+    frag.append(row);
+    if(medley&&expanded.has(id)){
+      const sub=document.createElement("div"); sub.className="sub";
+      s.medleyItems.forEach((t,j)=>{
+        const r=document.createElement("div"); r.className="subrow";
+        const n=document.createElement("span"); n.textContent=(j+1)+".";
+        const tx=document.createElement("span"); tx.textContent=(t||"").toUpperCase();
+        r.append(n,tx); sub.append(r);
+      });
+      frag.append(sub);
+    }
+  });
+  $("list").replaceChildren(frag);
+}
+async function sync(){
+  if(busy)return;
+  busy=true;
+  $("status").textContent="Synchronisation…";
+  try{
+    const r=await getPayload(); render(r.payload,false);
+  }catch(e){
+    const raw=localStorage.getItem(KEY_CACHE);
+    if(raw){try{render(JSON.parse(raw),true)}catch(_){}}
+    else {$("list").innerHTML='<div class="empty">Connexion Internet impossible.<br>'+String(e.message||e)+'</div>';$("status").textContent="Connexion impossible";}
+  }finally{busy=false}
+}
+function openCode(){
+  $("codeInput").value=localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE;
+  $("modal").classList.add("show"); setTimeout(()=>$("codeInput").focus(),50);
+}
+$("progressBtn").onclick=()=>{showInProgress=!showInProgress;$("progressBtn").textContent=showInProgress?"PRINCIPAL":"EN COURS";lastSignature="";sync()};
+$("syncBtn").onclick=sync;
+$("codeBtn").onclick=openCode;
+$("cancelCode").onclick=()=>$("modal").classList.remove("show");
+$("saveCode").onclick=()=>{const c=cleanCode($("codeInput").value);if(!c){return}localStorage.setItem(KEY_CODE,c);localStorage.removeItem(KEY_CACHE);$("modal").classList.remove("show");lastSignature="";sync()};
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+sync();
+setInterval(sync,10000);
+</script>
+</body>
+</html>
