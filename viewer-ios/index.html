@@ -75,6 +75,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 
 <script>
 const API="https://superjsonblob.com/api/jsonBlob";
+const CORS_PROXY="https://api.allorigins.win/raw?url=";
 const REGISTRY=API+"/95af90a8-317b-4588-b7ab-5153db677527";
 const BOOTSTRAP_CODE="Y6";
 const BOOTSTRAP_BLOB="d7e6c82a-82e0-4336-8e66-d49b9d013312";
@@ -105,6 +106,23 @@ function cleanCode(raw){
   }
   return code;
 }
+async function cloudJson(target){
+  try{
+    const res=await fetch(target,{cache:"no-store"});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    return await res.json();
+  }catch(directError){
+    // GitHub Pages is a different origin from superjsonblob. If the browser
+    // blocks the direct request because of CORS, use the public read-only
+    // proxy as a compatibility fallback for the iPhone/Chrome Viewer.
+    const proxied=CORS_PROXY+encodeURIComponent(target);
+    const res=await fetch(proxied,{cache:"no-store"});
+    if(!res.ok)throw new Error("Proxy HTTP "+res.status);
+    const text=await res.text();
+    try{return JSON.parse(text)}catch(_){throw directError}
+  }
+}
+
 async function resolveCode(raw){
   const code=cleanCode(raw);
   if(!/^[A-Z][0-9]$/.test(code))return code;
@@ -112,9 +130,7 @@ async function resolveCode(raw){
   const savedCode=localStorage.getItem("ts_resolved_code");
   const savedBlob=localStorage.getItem("ts_resolved_blob");
   if(savedCode===code && savedBlob)return savedBlob;
-  const res=await fetch(REGISTRY,{cache:"no-store"});
-  if(!res.ok)throw new Error("Registre HTTP "+res.status);
-  const reg=await res.json();
+  const reg=await cloudJson(REGISTRY);
   const blob=reg?.slots?.[code]?.blob;
   if(!blob)throw new Error("Code "+code+" introuvable");
   localStorage.setItem("ts_resolved_code",code);
@@ -124,9 +140,7 @@ async function resolveCode(raw){
 async function getPayload(){
   let code=localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE;
   const resolved=await resolveCode(code);
-  const res=await fetch(API+"/"+resolved,{cache:"no-store"});
-  if(!res.ok)throw new Error("HTTP "+res.status);
-  const payload=await res.json();
+  const payload=await cloudJson(API+"/"+resolved);
   localStorage.setItem(KEY_CACHE,JSON.stringify(payload));
   return {payload,cached:false};
 }
