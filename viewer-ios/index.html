@@ -62,7 +62,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone</footer>
+<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.29</footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -75,7 +75,10 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 
 <script>
 const API="https://superjsonblob.com/api/jsonBlob";
-const CORS_PROXY="https://api.allorigins.win/raw?url=";
+const CORS_PROXIES=[
+  "https://api.allorigins.win/raw?url=",
+  "https://corsproxy.io/?key=webdemo1&url="
+];
 const REGISTRY=API+"/95af90a8-317b-4588-b7ab-5153db677527";
 const BOOTSTRAP_CODE="Y6";
 const BOOTSTRAP_BLOB="d7e6c82a-82e0-4336-8e66-d49b9d013312";
@@ -107,20 +110,38 @@ function cleanCode(raw){
   return code;
 }
 async function cloudJson(target){
+  const errors=[];
+  // 1) Direct request: Android works this way and some browsers may allow it.
   try{
     const res=await fetch(target,{cache:"no-store"});
-    if(!res.ok)throw new Error("HTTP "+res.status);
+    if(!res.ok)throw new Error("direct HTTP "+res.status);
     return await res.json();
-  }catch(directError){
-    // GitHub Pages is a different origin from superjsonblob. If the browser
-    // blocks the direct request because of CORS, use the public read-only
-    // proxy as a compatibility fallback for the iPhone/Chrome Viewer.
-    const proxied=CORS_PROXY+encodeURIComponent(target);
-    const res=await fetch(proxied,{cache:"no-store"});
-    if(!res.ok)throw new Error("Proxy HTTP "+res.status);
-    const text=await res.text();
-    try{return JSON.parse(text)}catch(_){throw directError}
+  }catch(e){errors.push("direct: "+(e.message||e))}
+
+  // 2) Public CORS fallbacks. GitHub Pages cannot proxy superjsonblob itself.
+  // AllOrigins is tried first; CorsProxy's shared demo key is the second path.
+  for(const prefix of CORS_PROXIES){
+    try{
+      const proxied=prefix+encodeURIComponent(target);
+      const res=await fetch(proxied,{cache:"no-store"});
+      if(!res.ok)throw new Error("proxy HTTP "+res.status);
+      const raw=await res.text();
+
+      // AllOrigins /get-style wrappers are also accepted if a proxy changes
+      // its response format.
+      try{
+        const parsed=JSON.parse(raw);
+        if(parsed && typeof parsed.contents==="string"){
+          return JSON.parse(parsed.contents);
+        }
+        return parsed;
+      }catch(_){
+        return JSON.parse(raw);
+      }
+    }catch(e){errors.push((prefix.includes("allorigins")?"allOrigins":"CorsProxy")+": "+(e.message||e))}
   }
+
+  throw new Error("Connexion cloud impossible · "+errors.join(" · "));
 }
 
 async function resolveCode(raw){
@@ -200,7 +221,7 @@ async function sync(){
   }catch(e){
     const raw=localStorage.getItem(KEY_CACHE);
     if(raw){try{render(JSON.parse(raw),true)}catch(_){}}
-    else {$("list").innerHTML='<div class="empty">Connexion Internet impossible.<br>'+String(e.message||e)+'</div>';$("status").textContent="Connexion impossible";}
+    else {$("list").innerHTML='<div class="empty">Connexion Internet impossible.<br>'+String(e.message||e)+'</div>';$("status").textContent="Connexion impossible · serveur cloud inaccessible";}
   }finally{busy=false}
 }
 function openCode(){
