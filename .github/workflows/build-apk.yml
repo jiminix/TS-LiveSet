@@ -9,6 +9,7 @@ name: Build LiveSet APK
 # V0.14 horizontal playlist header
 # V0.15 unified headers
 # V0.16 drag playlist and smaller lyrics
+# V0.28 current Android Viewer build
 on:
   workflow_dispatch:
   push:
@@ -65,7 +66,7 @@ jobs:
       - name: Upload Viewer APK
         uses: actions/upload-artifact@v4
         with:
-          name: TS-Playlist-Viewer-V0.10-debug
+          name: TS-Playlist-Viewer-V0.28-debug
           path: viewer/build/outputs/apk/debug/viewer-debug.apk
 
       - name: Publish stable Viewer updater APK
