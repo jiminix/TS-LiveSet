@@ -384,7 +384,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         String bpm=song==null?"":song.bpm;
         name.setText((medley?(medleyExpanded?"▾ ":"▸ "):"")+(title==null?"":title));
         name.setTextColor(Color.WHITE);
-        name.setTextSize(zsp(20));
+        name.setTextSize(zsp(22));
         name.setGravity(Gravity.CENTER_VERTICAL);
         name.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         name.setSingleLine(true);
