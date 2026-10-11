@@ -39,6 +39,7 @@ jobs:
           data=manifest.read_text()
           assert 'com.jiminix.liveset.playlists' in data
           data=data.replace('com.jiminix.liveset.playlists','com.jiminix.liveset.recoverytest.playlists')
+          data=data.replace('com.jiminix.liveset.permission.READ_VIEWER','com.jiminix.liveset.recoverytest.permission.READ_VIEWER')
           data=data.replace('android:label="TS Playlist Manager"','android:label="Manager TEST 0.87"')
           manifest.write_text(data)
           PY
@@ -48,5 +49,5 @@ jobs:
       - name: Upload recovery test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Manager-TEST-0.87-independent
+          name: Manager-TEST-0.87-permissions-fixed
           path: app/build/outputs/apk/debug/app-debug.apk
