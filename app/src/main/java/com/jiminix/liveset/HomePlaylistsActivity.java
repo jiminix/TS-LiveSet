@@ -434,8 +434,9 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
             TextView name=new TextView(HomePlaylistsActivity.this);
             name.setTextColor(Color.WHITE);
-            name.setTextSize(16);
-            name.setPadding(Ui.dp(HomePlaylistsActivity.this,6),Ui.dp(HomePlaylistsActivity.this,2),Ui.dp(HomePlaylistsActivity.this,6),Ui.dp(HomePlaylistsActivity.this,2));
+            name.setTextSize(19);
+            name.setPadding(Ui.dp(HomePlaylistsActivity.this,4),0,Ui.dp(HomePlaylistsActivity.this,2),0);
+            name.setIncludeFontPadding(false);
             name.setLayoutParams(new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
 
             Button open=Ui.button(HomePlaylistsActivity.this,"Ouvrir");
