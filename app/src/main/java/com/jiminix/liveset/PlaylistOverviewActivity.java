@@ -1526,7 +1526,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.num.setTextSize(zsp(compact?12:16));
             h.play.setTextSize(zsp(15));
             h.play.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
-            h.song.setTextSize(zsp(compact?14.3f:18.7f));
+            h.song.setTextSize(zsp(compact?15.7f:20.5f));
             h.song.setPadding(zdp(2),0,zdp(2),0);
             h.bpm.setTextSize(zsp(compact?12:15));
             h.bpm.setPadding(zdp(2),0,0,0);
