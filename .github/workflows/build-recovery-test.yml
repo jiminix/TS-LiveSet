@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/build-recovery-test.yml'
       - 'app/**'
+      - 'manager-icon.png'
 
 permissions:
   contents: read
@@ -47,8 +48,8 @@ jobs:
           # Use the existing manager artwork as a standard launcher icon in the isolated APK.
           data=data.replace('android:icon="@drawable/ic_launcher_manager"', 'android:icon="@mipmap/ic_launcher"')
           manifest.write_text(data)
-          icon=Path('app/src/main/res/drawable/ic_launcher_manager.png')
-          assert icon.is_file()
+          icon=Path('manager-icon.png')
+          assert icon.is_file(), 'Upload manager-icon.png to repository root first'
           target=Path('app/src/main/res/mipmap-nodpi/ic_launcher.png')
           target.parent.mkdir(parents=True,exist_ok=True)
           target.write_bytes(icon.read_bytes())
@@ -59,5 +60,5 @@ jobs:
       - name: Upload recovery test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Manager-TEST-0.88-larger-titles
+          name: Manager-TEST-0.88-custom-icon
           path: app/build/outputs/apk/debug/app-debug.apk
