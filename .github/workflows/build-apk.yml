@@ -63,6 +63,20 @@ jobs:
             done
           done
 
+      - name: Prepare transparent Viewer launcher icon
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          source=Path('viewer/src/main/res/drawable/file_000000000e948243825ee68afd727b33.png')
+          assert source.is_file(), 'Viewer logo not found'
+          icon=Path('viewer/src/main/res/drawable/tequila_viewer_icon.png')
+          shutil.copyfile(source,icon)
+          manifest=Path('viewer/src/main/AndroidManifest.xml')
+          text=manifest.read_text().replace('@drawable/ic_launcher_viewer','@drawable/tequila_viewer_icon')
+          manifest.write_text(text)
+          PY
+
       - name: Build debug APKs
         run: gradle :app:assembleDebug :viewer:assembleDebug
 
