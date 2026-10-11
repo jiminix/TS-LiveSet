@@ -44,7 +44,14 @@ jobs:
           data=data.replace('com.jiminix.liveset.playlists','com.jiminix.liveset.recoverytest.playlists')
           data=data.replace('com.jiminix.liveset.permission.READ_VIEWER','com.jiminix.liveset.recoverytest.permission.READ_VIEWER')
           data=data.replace('android:label="TS Playlist Manager"','android:label="Manager TEST 0.88"')
+          # Use the existing manager artwork as a standard launcher icon in the isolated APK.
+          data=data.replace('android:icon="@drawable/ic_launcher_manager"', 'android:icon="@mipmap/ic_launcher"')
           manifest.write_text(data)
+          icon=Path('app/src/main/res/drawable/ic_launcher_manager.png')
+          assert icon.is_file()
+          target=Path('app/src/main/res/mipmap-nodpi/ic_launcher.png')
+          target.parent.mkdir(parents=True,exist_ok=True)
+          target.write_bytes(icon.read_bytes())
           PY
           test -f .signing/liveset-debug.keystore
       - name: Build recovery test APK
