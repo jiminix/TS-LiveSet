@@ -54,6 +54,15 @@ jobs:
           fi
           keytool -list -keystore .signing/liveset-debug.keystore -storepass android -alias androiddebugkey
 
+      - name: Normalize uploaded drawable resource names
+        run: |
+          for dir in app/src/main/res/drawable viewer/src/main/res/drawable; do
+            for file in "$dir"/Meryl_*.png; do
+              [ -f "$file" ] || continue
+              mv "$file" "$(dirname "$file")/$(basename "$file" | tr '[:upper:]' '[:lower:]')"
+            done
+          done
+
       - name: Build debug APKs
         run: gradle :app:assembleDebug :viewer:assembleDebug
 
