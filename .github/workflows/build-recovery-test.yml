@@ -1,0 +1,52 @@
+name: Build isolated Manager recovery test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-recovery-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Restore signing key
+        uses: actions/cache/restore@v4
+        with:
+          path: .signing/liveset-debug.keystore
+          key: liveset-permanent-signing-v1
+      - name: Prepare isolated test application
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          gradle=Path('app/build.gradle')
+          data=gradle.read_text()
+          assert "applicationId 'com.jiminix.liveset'" in data
+          data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.recoverytest'")
+          gradle.write_text(data)
+          manifest=Path('app/src/main/AndroidManifest.xml')
+          data=manifest.read_text()
+          assert 'com.jiminix.liveset.playlists' in data
+          data=data.replace('com.jiminix.liveset.playlists','com.jiminix.liveset.recoverytest.playlists')
+          data=data.replace('android:label="TS Playlist Manager"','android:label="Manager TEST 0.87"')
+          manifest.write_text(data)
+          PY
+          test -f .signing/liveset-debug.keystore
+      - name: Build recovery test APK
+        run: gradle :app:assembleDebug
+      - name: Upload recovery test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Manager-TEST-0.87-independent
+          path: app/build/outputs/apk/debug/app-debug.apk
