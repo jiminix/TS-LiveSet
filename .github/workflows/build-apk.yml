@@ -46,12 +46,12 @@ jobs:
           path: .signing/liveset-debug.keystore
           key: liveset-permanent-signing-v1
 
-      - name: Create signing key once
+      - name: Verify permanent signing key
         run: |
           if [ ! -f .signing/liveset-debug.keystore ]; then
-            keytool -genkeypair -noprompt               -keystore .signing/liveset-debug.keystore               -storetype JKS               -storepass android               -alias androiddebugkey               -keypass android               -keyalg RSA               -keysize 2048               -validity 10000               -dname "CN=TS LiveSet,O=TS LiveSet,C=FR"
+            echo "::error::Permanent signing key missing from Actions cache. Build stopped to prevent incompatible APK signatures."
+            exit 1
           fi
-          test -f .signing/liveset-debug.keystore
           keytool -list -keystore .signing/liveset-debug.keystore -storepass android -alias androiddebugkey
 
       - name: Build debug APKs
