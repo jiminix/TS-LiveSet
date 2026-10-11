@@ -811,7 +811,7 @@ public class MainActivity extends AppCompatActivity {
         TextView name=new TextView(this);
         name.setText(title==null?"":title.toUpperCase(Locale.ROOT));
         name.setTextColor(Color.WHITE);
-        name.setTextSize(20);
+        name.setTextSize(22);
         name.setGravity(Gravity.CENTER_VERTICAL);
         name.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         name.setSingleLine(true);
