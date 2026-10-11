@@ -43,8 +43,10 @@ public class PlaylistBannerView extends View {
 
         String main="TS Playlist 2026";
         p.setColor(Color.rgb(255,196,30));
-        p.setTextSize(h*0.43f);
-        canvas.drawText(main,w/2f,h*0.43f,p);
+        p.setTextSize(fitText(main,w-2f*pad,h*0.46f));
+        Paint.FontMetrics fm=p.getFontMetrics();
+        float baseline=(h-fm.ascent-fm.descent)/2f;
+        canvas.drawText(main,w/2f,baseline,p);
 
         p.setTextAlign(Paint.Align.LEFT);
     }
