@@ -31,6 +31,10 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          # Android resource filenames must be lowercase; normalize both uploaded logos.
+          for folder in (Path('app/src/main/res/drawable'),Path('viewer/src/main/res/drawable')):
+              for source in folder.glob('Meryl_*.png'):
+                  source.rename(source.with_name(source.name.lower()))
           gradle=Path('app/build.gradle')
           data=gradle.read_text()
           assert "applicationId 'com.jiminix.liveset'" in data
@@ -47,7 +51,7 @@ jobs:
           # Use the existing manager artwork as a standard launcher icon in the isolated APK.
           data=data.replace('android:icon="@drawable/ic_launcher_manager"', 'android:icon="@mipmap/ic_launcher"')
           manifest.write_text(data)
-          icon=Path('app/src/main/res/drawable/Meryl_20261011_161701_0000.png')
+          icon=Path('app/src/main/res/drawable/meryl_20261011_161701_0000.png')
           assert icon.is_file(), 'Manager custom icon not found'
           target=Path('app/src/main/res/mipmap-nodpi/ic_launcher.png')
           target.parent.mkdir(parents=True,exist_ok=True)
