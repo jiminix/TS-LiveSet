@@ -27,6 +27,8 @@ jobs:
         with:
           path: .signing/liveset-debug.keystore
           key: liveset-permanent-signing-v1
+      - name: Install image tools
+        run: python3 -m pip install --quiet Pillow
       - name: Prepare isolated test application
         run: |
           python3 - <<'PY'
@@ -39,8 +41,8 @@ jobs:
           data=gradle.read_text()
           assert "applicationId 'com.jiminix.liveset'" in data
           data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.recoverytest'")
-          data=data.replace('versionCode 87','versionCode 88')
-          data=data.replace("versionName '0.87'","versionName '0.88-test'")
+          data=data.replace('versionCode 87','versionCode 89')
+          data=data.replace("versionName '0.87'","versionName '0.89-test'")
           gradle.write_text(data)
           manifest=Path('app/src/main/AndroidManifest.xml')
           data=manifest.read_text()
@@ -53,13 +55,23 @@ jobs:
           manifest.write_text(data)
           icon=Path('app/src/main/res/drawable/meryl_20261011_161701_0000.png')
           assert icon.is_file(), 'Manager custom icon not found'
+          from PIL import Image
+          artwork=Image.open(icon).convert('RGBA')
+          artwork.thumbnail((340,340),Image.Resampling.LANCZOS)
+          # The legacy icon is opaque, so the Samsung launcher cannot show a blank tile.
+          legacy=Image.new('RGBA',(432,432),(15,15,22,255))
+          legacy.alpha_composite(artwork,((432-artwork.width)//2,(432-artwork.height)//2))
           target=Path('app/src/main/res/mipmap-nodpi/ic_launcher.png')
           target.parent.mkdir(parents=True,exist_ok=True)
-          target.write_bytes(icon.read_bytes())
-          # Use the same artwork for adaptive launcher icons on recent Samsung phones.
+          legacy.save(target)
+          # Adaptive icon: direct foreground drawable, never a self-referencing mipmap.
+          foreground=Image.new('RGBA',(432,432),(0,0,0,0))
+          foreground.alpha_composite(artwork,((432-artwork.width)//2,(432-artwork.height)//2))
+          fg_path=Path('app/src/main/res/drawable/tequila_manager_foreground.png')
+          foreground.save(fg_path)
           adaptive=Path('app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml')
           adaptive.parent.mkdir(parents=True,exist_ok=True)
-          adaptive.write_text('''<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@android:color/black"/>\n    <foreground android:drawable="@mipmap/ic_launcher"/>\n</adaptive-icon>\n''')
+          adaptive.write_text('''<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@android:color/black"/>\n    <foreground android:drawable="@drawable/tequila_manager_foreground"/>\n</adaptive-icon>\n''')
           PY
           test -f .signing/liveset-debug.keystore
       - name: Build recovery test APK
@@ -67,5 +79,5 @@ jobs:
       - name: Upload recovery test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Manager-TEST-0.88-custom-icon
+          name: Manager-TEST-0.89-icon-fixed
           path: app/build/outputs/apk/debug/app-debug.apk
