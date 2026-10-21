@@ -218,6 +218,52 @@ public class Ts2026RecoveryActivity extends Activity {
         results.addView(copy);
     }
 
+
+    // TS 2026 is the second row, first two cells of the opening 70-row table.
+    // Preserve the raw overview because titles and BPM are concatenated.
+    private static String readTs2026Overview(JSONObject body) throws JSONException {
+        if(body==null)return "";
+        JSONArray content=body.optJSONArray("content");
+        if(content==null)return "";
+        for(int i=0;i<Math.min(8,content.length());i++){
+            JSONObject block=content.optJSONObject(i);
+            JSONObject table=block==null?null:block.optJSONObject("table");
+            JSONArray rows=table==null?null:table.optJSONArray("tableRows");
+            if(rows==null||rows.length()<3)continue;
+            JSONObject header=rows.optJSONObject(0);
+            JSONArray hc=header==null?null:header.optJSONArray("tableCells");
+            if(hc==null||hc.length()<2)continue;
+            StringBuilder label=new StringBuilder();
+            collectText(hc.optJSONObject(0),label);
+            if(!label.toString().toUpperCase(Locale.ROOT).contains("PLAYLIST 2026"))continue;
+            JSONObject second=rows.optJSONObject(1);
+            JSONArray cells=second==null?null:second.optJSONArray("tableCells");
+            if(cells==null||cells.length()<2)return "";
+            StringBuilder overview=new StringBuilder();
+            collectText(cells.optJSONObject(0),overview);
+            overview.append("\\n--- COLONNE 2 ---\\n");
+            collectText(cells.optJSONObject(1),overview);
+            return overview.toString();
+        }
+        return "";
+    }
+    private void showOverview(String overview){
+        results.removeAllViews();boxes.clear();missing.clear();
+        status.setText("Sommaire TS 2026 identifié : ligne 2, colonnes 1 et 2. Aucun ajout proposé tant que les titres ne sont pas séparés de manière fiable.");
+        TextView content=new TextView(this);
+        content.setTextColor(Color.WHITE);
+        content.setTextSize(15);
+        content.setText(overview);
+        results.addView(content);
+        Button copy=new Button(this);
+        copy.setText("Copier uniquement le sommaire TS 2026");
+        copy.setOnClickListener(v->{
+            android.content.ClipboardManager manager=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+            manager.setPrimaryClip(android.content.ClipData.newPlainText("Sommaire TS 2026",overview));
+            Toast.makeText(this,"Sommaire copié",Toast.LENGTH_SHORT).show();
+        });
+        results.addView(copy);
+    }
     private void readDocument(String accessToken){
         status.setText("Lecture authentifiée de Google Docs…");
         new Thread(()->{
@@ -258,14 +304,19 @@ public class Ts2026RecoveryActivity extends Activity {
                     JSONObject body=doc.optJSONObject("body");
                     inspectOpening(body==null?null:body.optJSONArray("content"),layout,0);
                 }
-                List<String> index=recoverOpeningIndex(text.toString());
-                if(index.isEmpty()){
+                JSONObject firstBody=null;
+                if(tabs!=null && tabs.length()>0){
+                    JSONObject first=tabs.optJSONObject(0);
+                    JSONObject documentTab=first==null?null:first.optJSONObject("documentTab");
+                    firstBody=documentTab==null?null:documentTab.optJSONObject("body");
+                }else firstBody=doc.optJSONObject("body");
+                String overview=readTs2026Overview(firstBody);
+                if(!overview.isEmpty()){
+                    runOnUiThread(()->{if(!isFinishing())showOverview(overview);});
+                }else{
                     String diagnostic=layout.toString();
                     runOnUiThread(()->{if(!isFinishing())showDiagnostic(diagnostic);});
-                    return;
                 }
-                final List<String> detected=new ArrayList<>(index);
-                runOnUiThread(()->{if(!isFinishing())render(detected,"Google Docs (lecture autorisée) — titres à vérifier");});
             }catch(Exception e){
                 runOnUiThread(()->{if(!isFinishing())status.setText("Lecture impossible : "+e.getMessage());});
             }finally{if(connection!=null)connection.disconnect();}
