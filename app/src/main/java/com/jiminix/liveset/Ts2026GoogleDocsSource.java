@@ -71,8 +71,19 @@ public final class Ts2026GoogleDocsSource {
                     }
                     html = new String(out.toByteArray(), StandardCharsets.UTF_8);
                 }
-                if (!html.toLowerCase(java.util.Locale.ROOT).contains("<html"))
+                String lower = html.toLowerCase(java.util.Locale.ROOT);
+                if (!lower.contains("<html"))
                     throw new java.io.IOException("Réponse Google Docs non HTML");
+                // Do not cache a Google login/permission page as song lyrics.
+                if (lower.contains("accounts.google.com") ||
+                    lower.contains("sign in to continue") ||
+                    lower.contains("request access") ||
+                    lower.contains("you need access"))
+                    throw new java.io.IOException("Document privé : accès Google nécessaire");
+                // Confirm the export actually contains a known song before replacing cache.
+                if (!lower.contains("mustang sally") && !lower.contains("proud mary") &&
+                    !lower.contains("cocaine") && !lower.contains("jesus he knows me"))
+                    throw new java.io.IOException("Document reçu sans paroles TS 2026 reconnues");
                 app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                     .edit().putString(CACHE_KEY, html).apply();
                 final String result = html;
