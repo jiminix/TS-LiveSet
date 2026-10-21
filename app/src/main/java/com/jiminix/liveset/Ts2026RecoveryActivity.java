@@ -154,6 +154,8 @@ public class Ts2026RecoveryActivity extends Activity {
             JSONObject object=(JSONObject)node;
             JSONObject textRun=object.optJSONObject("textRun");
             if(textRun!=null)out.append(textRun.optString("content",""));
+            JSONArray elements=object.optJSONArray("elements");
+            if(elements!=null)for(int i=0;i<elements.length();i++)collectText(elements.get(i),out);
             JSONArray content=object.optJSONArray("content");
             if(content!=null)for(int i=0;i<content.length();i++)collectText(content.get(i),out);
             JSONObject paragraph=object.optJSONObject("paragraph");
@@ -198,7 +200,7 @@ public class Ts2026RecoveryActivity extends Activity {
                 }else collectText(doc.optJSONObject("body"),text);
                 List<String> index=parseIndex(text.toString());
                 if(index.isEmpty())index=recoverAutoNumberedIndex(text.toString());
-                if(index.isEmpty())throw new IOException("Liste non reconnue : pas assez de titres communs pour une récupération sûre.");
+                if(index.isEmpty())throw new IOException("Liste non reconnue. Texte extrait : "+text.length()+" caractères, "+text.toString().split("\\n").length+" lignes. Aucune modification effectuée.");
                 final List<String> detected=new ArrayList<>(index);
                 runOnUiThread(()->{if(!isFinishing())render(detected,"Google Docs (lecture autorisée) — titres à vérifier");});
             }catch(Exception e){
