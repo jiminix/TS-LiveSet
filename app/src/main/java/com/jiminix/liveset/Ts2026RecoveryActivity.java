@@ -2,6 +2,15 @@ package com.jiminix.liveset;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
+import android.content.Intent;
+import com.google.android.gms.auth.api.identity.AuthorizationRequest;
+import com.google.android.gms.auth.api.identity.AuthorizationResult;
+import com.google.android.gms.auth.api.identity.Identity;
+import com.google.android.gms.common.api.Scope;
+import org.json.*;
+import java.net.*;
+import java.io.*;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Html;
@@ -13,6 +22,7 @@ import java.util.regex.*;
 
 /** Explicit, non-destructive import of missing TS 2026 titles from the Docs index. */
 public class Ts2026RecoveryActivity extends Activity {
+    private static final int AUTH_REQUEST=2907;
     private String playlistId;
     private LinearLayout results;
     private TextView status;
@@ -36,14 +46,14 @@ public class Ts2026RecoveryActivity extends Activity {
         status.setText("Comparaison avec l'index Google Docs…");
         root.addView(status);
         Button refresh=new Button(this);refresh.setText("Relire Google Docs");
-        refresh.setOnClickListener(v->load(true));root.addView(refresh);
+        refresh.setOnClickListener(v->authorizeAndRead());root.addView(refresh);
         ScrollView scroll=new ScrollView(this);
         results=new LinearLayout(this);results.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(results);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         Button add=new Button(this);add.setText("Ajouter les titres cochés à TS 2026");
         add.setOnClickListener(v->confirmAdd());root.addView(add);
         setContentView(root);
-        load(false);
+        authorizeAndRead();
     }
 
     private static String plain(String html) {
@@ -55,8 +65,7 @@ public class Ts2026RecoveryActivity extends Activity {
         String n=Normalizer.normalize(s,Normalizer.Form.NFD).replaceAll("\\p{M}+","");
         return n.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+","");
     }
-    private static List<String> parseIndex(String html){
-        String text=plain(html);
+    private static List<String> parseIndex(String text){
         // Only use the opening numbered index, never numbered lyrics sections.
         String[] lines=text.split("\\n");
         LinkedHashMap<String,String> found=new LinkedHashMap<>();
@@ -75,24 +84,90 @@ public class Ts2026RecoveryActivity extends Activity {
         }
         return new ArrayList<>(found.values());
     }
-    private void load(boolean network){
-        if(!network){
-            String cached=Ts2026GoogleDocsSource.cachedHtml(this);
-            if(!cached.isEmpty()){render(cached,"Copie Google Docs en cache");return;}
-        }
-        status.setText("Chargement de Google Docs…");
-        Ts2026GoogleDocsSource.refresh(this,new Ts2026GoogleDocsSource.Callback(){
-            @Override public void onSuccess(String html,boolean fromCache){if(!isFinishing())render(html,"Google Docs actualisé");}
-            @Override public void onError(String message,String cached){
-                if(isFinishing())return;
-                if(!cached.isEmpty())render(cached,"Copie locale (connexion indisponible : "+message+")");
-                else status.setText("Impossible de lire le document : "+message);
-            }
-        });
+    private void authorizeAndRead(){
+        status.setText("Autorisation Google pour lire les titres TS 2026…");
+        AuthorizationRequest request=AuthorizationRequest.builder()
+            .setRequestedScopes(Arrays.asList(new Scope("https://www.googleapis.com/auth/documents")))
+            .build();
+        Identity.getAuthorizationClient(this).authorize(request)
+            .addOnSuccessListener(this::handleAuth)
+            .addOnFailureListener(e->status.setText("Connexion Google impossible : "+e.getMessage()));
     }
-    private void render(String html,String source){
+    private void handleAuth(AuthorizationResult result){
+        if(result.hasResolution()){
+            try{
+                PendingIntent pending=result.getPendingIntent();
+                startIntentSenderForResult(pending.getIntentSender(),AUTH_REQUEST,null,0,0,0);
+            }catch(Exception e){status.setText("Autorisation : "+e.getMessage());}
+        }else if(result.getAccessToken()!=null){
+            readDocument(result.getAccessToken());
+        }else status.setText("Autorisation Google sans jeton. Réessaie.");
+    }
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=AUTH_REQUEST)return;
+        if(resultCode!=RESULT_OK){status.setText("Autorisation annulée.");return;}
+        try{
+            handleAuth(Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data));
+        }catch(Exception e){status.setText("Autorisation : "+e.getMessage());}
+    }
+    private static void collectText(Object node,StringBuilder out) throws JSONException {
+        if(node instanceof JSONObject){
+            JSONObject object=(JSONObject)node;
+            JSONObject textRun=object.optJSONObject("textRun");
+            if(textRun!=null)out.append(textRun.optString("content",""));
+            JSONArray content=object.optJSONArray("content");
+            if(content!=null)for(int i=0;i<content.length();i++)collectText(content.get(i),out);
+            JSONObject paragraph=object.optJSONObject("paragraph");
+            if(paragraph!=null)collectText(paragraph,out);
+            JSONObject table=object.optJSONObject("table");
+            if(table!=null)collectText(table,out);
+            JSONArray rows=object.optJSONArray("tableRows");
+            if(rows!=null)for(int i=0;i<rows.length();i++)collectText(rows.get(i),out);
+            JSONArray cells=object.optJSONArray("tableCells");
+            if(cells!=null)for(int i=0;i<cells.length();i++)collectText(cells.get(i),out);
+        }
+    }
+    private void readDocument(String accessToken){
+        status.setText("Lecture authentifiée de Google Docs…");
+        new Thread(()->{
+            HttpURLConnection connection=null;
+            try{
+                URL url=new URL("https://docs.googleapis.com/v1/documents/"+
+                    Ts2026GoogleDocsSource.DOCUMENT_ID+"?includeTabsContent=true");
+                connection=(HttpURLConnection)url.openConnection();
+                connection.setConnectTimeout(12000);connection.setReadTimeout(20000);
+                connection.setRequestProperty("Authorization","Bearer "+accessToken);
+                int http=connection.getResponseCode();
+                if(http!=200)throw new IOException("Google Docs API HTTP "+http);
+                ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+                try(InputStream in=connection.getInputStream()){
+                    byte[] buf=new byte[8192];int n;
+                    while((n=in.read(buf))!=-1){
+                        if(bytes.size()+n>8*1024*1024)throw new IOException("Document trop volumineux");
+                        bytes.write(buf,0,n);
+                    }
+                }
+                JSONObject doc=new JSONObject(bytes.toString("UTF-8"));
+                StringBuilder text=new StringBuilder();
+                JSONArray tabs=doc.optJSONArray("tabs");
+                if(tabs!=null && tabs.length()>0){
+                    for(int i=0;i<tabs.length();i++){
+                        JSONObject tab=tabs.getJSONObject(i);
+                        JSONObject documentTab=tab.optJSONObject("documentTab");
+                        if(documentTab!=null)collectText(documentTab.optJSONObject("body"),text);
+                    }
+                }else collectText(doc.optJSONObject("body"),text);
+                List<String> index=parseIndex(text.toString());
+                if(index.isEmpty())throw new IOException("Index numéroté introuvable dans le document.");
+                runOnUiThread(()->{if(!isFinishing())render(index,"Google Docs (lecture autorisée)");});
+            }catch(Exception e){
+                runOnUiThread(()->{if(!isFinishing())status.setText("Lecture impossible : "+e.getMessage());});
+            }finally{if(connection!=null)connection.disconnect();}
+        },"Ts2026AuthorizedRead").start();
+    }
+    private void render(List<String> index,String source){
         results.removeAllViews();boxes.clear();missing.clear();
-        List<String> index=parseIndex(html);
         SetListModel list=AppStore.findSetlist(this,playlistId);
         if(list==null)return;
         Set<String> existing=new HashSet<>();
@@ -135,7 +210,7 @@ public class Ts2026RecoveryActivity extends Activity {
                 AppStore.saveSongs(this,library);
                 AppStore.upsertSetlist(this,list);
                 Toast.makeText(this,count+" titre(s) ajoutés à TS 2026",Toast.LENGTH_LONG).show();
-                load(false);
+                authorizeAndRead();
             }).show();
     }
 }
