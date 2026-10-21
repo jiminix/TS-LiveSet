@@ -261,7 +261,7 @@ public class Ts2026RecoveryActivity extends Activity {
         t=t.replaceFirst("\\s+\\d{2,3}\\s*$", "");
         // Medley timing such as "..04 ..07.8" can leave a stray 8.
         // Strip trailing numeric timing fragments before title matching.
-        t=t.replaceFirst("(?i)\\\\s+(?:\\\\d{1,3}(?:[.,]\\\\d{1,2})?\\\\s*)+$", "");
+        t=t.replaceFirst("\\s+(?:\\d{1,3}(?:[.,]\\d{1,2})?\\s*)+$", "");
         t=t.replaceAll("\\s+", " ").trim();
         return t;
     }
