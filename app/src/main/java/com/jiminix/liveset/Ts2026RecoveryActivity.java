@@ -444,6 +444,22 @@ public class Ts2026RecoveryActivity extends Activity {
         }
     }
 
+    private void applyDocsOrder(SetListModel list){
+        if(docsOrder.isEmpty())return;
+        Map<String,String> byTitle=new HashMap<>();
+        for(String id:list.songIds){
+            Song song=AppStore.findSong(this,id);
+            if(song!=null)byTitle.put(canonicalTitle(song.title),id);
+        }
+        List<String> ordered=new ArrayList<>();
+        for(String title:docsOrder){
+            String id=byTitle.get(title);
+            if(id!=null && !ordered.contains(id))ordered.add(id);
+        }
+        for(String id:list.songIds)if(!ordered.contains(id))ordered.add(id);
+        list.songIds.clear();
+        list.songIds.addAll(ordered);
+    }
     private void confirmReorder(){
         SetListModel playlist=AppStore.findSetlist(this,playlistId);
         if(playlist==null || docsOrder.isEmpty())return;
@@ -539,8 +555,11 @@ public class Ts2026RecoveryActivity extends Activity {
                     current.add(canonicalTitle(name));
                 }
                 AppStore.saveSongs(this,library);
+                // Insert newly recovered songs in the Google Docs index order.
+                // Songs absent from the index remain at the end, never deleted.
+                applyDocsOrder(list);
                 AppStore.upsertSetlist(this,list);
-                Toast.makeText(this,count+" titre(s) ajoutés à TS 2026",Toast.LENGTH_LONG).show();
+                Toast.makeText(this,count+" titre(s) ajoutés et classés selon Google Docs",Toast.LENGTH_LONG).show();
                 authorizeAndRead();
             }).show();
     }
