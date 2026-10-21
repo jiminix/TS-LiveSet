@@ -9,6 +9,8 @@ import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.content.Intent;
+import android.net.Uri;
 
 /**
  * Read-only full-document preview, to validate formatting and access before
@@ -37,9 +39,23 @@ public class Ts2026DocsPreviewActivity extends Activity {
         status.setText("TS 2026 · chargement Google Docs…");
         header.addView(status, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         layout.addView(header);
+        LinearLayout actions = new LinearLayout(this);
+        Button retry = new Button(this);
+        retry.setText("Actualiser");
+        retry.setOnClickListener(v -> refreshDocument());
+        actions.addView(retry, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        Button open = new Button(this);
+        open.setText("Ouvrir Google Docs");
+        open.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW,
+            Uri.parse("https://docs.google.com/document/d/" +
+                Ts2026GoogleDocsSource.DOCUMENT_ID + "/edit"))));
+        actions.addView(open, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        layout.addView(actions);
         browser = new WebView(this);
         browser.setBackgroundColor(Color.BLACK);
         browser.getSettings().setJavaScriptEnabled(false);
+        browser.getSettings().setAllowFileAccess(false);
+        browser.getSettings().setAllowContentAccess(false);
         browser.setWebViewClient(new android.webkit.WebViewClient() {
             @Override public void onPageFinished(WebView view, String url) {
                 if (!targetTitle.isEmpty()) view.findAllAsync(targetTitle);
@@ -56,17 +72,22 @@ public class Ts2026DocsPreviewActivity extends Activity {
             showHtml(cached);
             status.setText("TS 2026 · copie locale · actualisation…");
         }
+        refreshDocument();
+    }
+
+    private void refreshDocument() {
+        status.setText("TS 2026 · vérification Google Docs…");
         Ts2026GoogleDocsSource.refresh(this, new Ts2026GoogleDocsSource.Callback() {
             @Override public void onSuccess(String html, boolean fromCache) {
                 if (isFinishing() || isDestroyed()) return;
                 showHtml(html);
-                status.setText("TS 2026 · Google Docs à jour");
+                status.setText(fromCache ? "TS 2026 · copie locale" : "TS 2026 · Google Docs à jour");
             }
             @Override public void onError(String message, String cachedHtml) {
                 if (isFinishing() || isDestroyed()) return;
                 status.setText(cachedHtml.isEmpty() ?
                     "Accès Google Docs indisponible : " + message :
-                    "Hors ligne · dernière copie conservée");
+                    "Copie locale affichée · accès Google Docs indisponible : " + message);
             }
         });
     }
