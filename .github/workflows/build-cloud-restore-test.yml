@@ -26,6 +26,9 @@ jobs:
         run: |
           mkdir -p .signing
           keytool -genkeypair -noprompt -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Cloud Restore Test, O=TS LiveSet, C=FR"
+      - name: Show OAuth Android certificate fingerprint
+        run: |
+          keytool -list -v -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android | grep -E 'SHA1:|SHA256:'
       - name: Install image tools
         run: python3 -m pip install --quiet Pillow
       - name: Prepare isolated test application
