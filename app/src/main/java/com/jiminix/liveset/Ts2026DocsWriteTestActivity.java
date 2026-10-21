@@ -20,6 +20,9 @@ import java.io.OutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Explicit OAuth authorization + append-only write probe on a USER-SUPPLIED COPY.
@@ -53,6 +56,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         index.setText("Exporter la liste TS 2026 vers la COPIE");
         index.setOnClickListener(v->confirmIndexExport());
         layout.addView(index);
+        Button names=new Button(this);
+        names.setText("Prévisualiser les noms Manager → COPIE");
+        names.setOnClickListener(v->previewManagerNames());
+        layout.addView(names);
         status=new TextView(this);status.setTextColor(Color.WHITE);
         status.setText("Non connecté. La connexion nécessite la configuration OAuth Android du projet dans Google Cloud.");
         layout.addView(status);
@@ -234,6 +241,192 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                 if(post!=null)post.disconnect();
             }
         },"Ts2026IndexExport").start();
+    }
+
+    private static final class Rename {
+        final int start,end;
+        final String from,to;
+        Rename(int start,int end,String from,String to){
+            this.start=start;this.end=end;this.from=from;this.to=to;
+        }
+    }
+    private static String normalized(String title){
+        String value=java.text.Normalizer.normalize(title,java.text.Normalizer.Form.NFD)
+            .replaceAll("\\p{M}+","");
+        return value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+","");
+    }
+    private static String alias(String title){
+        String key=normalized(title);
+        if(key.equals("alalalalong")||key.equals("sweatalalalalalong"))return "sweatalalalalalong";
+        if(key.equals("loireetcher")||key.equals("leloiretcher"))return "leloiretcher";
+        if(key.equals("whenyourheartis")||key.equals("whenyourheartisweak"))return "whenyourheartisweak";
+        if(key.equals("shouldistay")||key.equals("shouldistayorshouldigo"))return "shouldistayorshouldigo";
+        if(key.equals("meddleycine")||key.equals("medleycine"))return "medleycine";
+        if(key.equals("dontyouforget")||key.equals("dontyouforgetaboutme"))return "dontyouforgetaboutme";
+        return key;
+    }
+    private void previewManagerNames(){
+        if(!validCopy())return;
+        if(token==null||token.isEmpty()){
+            status.setText("Autorise Google Docs d'abord.");return;
+        }
+        SetListModel list=null;
+        for(SetListModel item:AppStore.loadSetlists(this)){
+            if(Ts2026GoogleDocsSource.isTs2026(item.name)){list=item;break;}
+        }
+        if(list==null){status.setText("TS 2026 introuvable.");return;}
+        final java.util.Map<String,String> titles=new java.util.HashMap<>();
+        for(String songId:list.songIds){
+            Song song=AppStore.findSong(this,songId);
+            if(song!=null)titles.put(alias(song.title),song.title);
+        }
+        String destination=id(),accessToken=token;
+        status.setText("Analyse de la COPIE, sans modification…");
+        new Thread(()->{
+            HttpURLConnection get=null;
+            try{
+                get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+"?includeTabsContent=true").openConnection();
+                get.setConnectTimeout(12000);get.setReadTimeout(20000);
+                get.setRequestProperty("Authorization","Bearer "+accessToken);
+                if(get.getResponseCode()!=200)throw new java.io.IOException("Lecture refusée HTTP "+get.getResponseCode());
+                JSONObject doc=new JSONObject(readResponse(get));
+                String revision=doc.optString("revisionId","");
+                if(revision.isEmpty())throw new java.io.IOException("Révision Google Docs manquante");
+                JSONArray tabs=doc.optJSONArray("tabs");
+                JSONObject body=null;
+                if(tabs!=null && tabs.length()>0){
+                    JSONObject tab=tabs.optJSONObject(0);
+                    JSONObject dt=tab==null?null:tab.optJSONObject("documentTab");
+                    body=dt==null?null:dt.optJSONObject("body");
+                }else body=doc.optJSONObject("body");
+                List<Rename> changes=collectRenameCandidates(body,titles);
+                runOnUiThread(()->{
+                    if(changes.isEmpty()){
+                        status.setText("Aucun nom à harmoniser dans les cellules TS 2026 de la COPIE.");
+                        return;
+                    }
+                    StringBuilder preview=new StringBuilder();
+                    for(Rename c:changes)preview.append(c.from).append(" → ").append(c.to).append("\n");
+                    new AlertDialog.Builder(this)
+                        .setTitle("Modifier "+changes.size()+" nom(s) dans la COPIE ?")
+                        .setMessage(preview.toString()+"\nSeuls les noms des cellules du sommaire TS 2026 seront remplacés. BPM, icônes, paroles et document ORIGINAL préservés.")
+                        .setNegativeButton("Annuler",null)
+                        .setPositiveButton("Appliquer à la COPIE",(d,w)->applyRenames(destination,accessToken,revision,changes))
+                        .show();
+                });
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Prévisualisation impossible : "+e.getMessage()));
+            }finally{if(get!=null)get.disconnect();}
+        },"DocsCopyNamePreview").start();
+    }
+    private static List<Rename> collectRenameCandidates(JSONObject body,java.util.Map<String,String> titles) throws Exception{
+        List<Rename> changes=new ArrayList<>();
+        if(body==null)return changes;
+        JSONArray blocks=body.optJSONArray("content");
+        if(blocks==null)return changes;
+        for(int i=0;i<Math.min(blocks.length(),8);i++){
+            JSONObject block=blocks.optJSONObject(i);
+            JSONObject table=block==null?null:block.optJSONObject("table");
+            JSONArray rows=table==null?null:table.optJSONArray("tableRows");
+            if(rows==null||rows.length()<2)continue;
+            JSONArray header=rows.optJSONObject(0).optJSONArray("tableCells");
+            if(header==null||header.length()<2)continue;
+            StringBuilder headerText=new StringBuilder();
+            gatherText(header.optJSONObject(0),headerText);
+            if(!headerText.toString().contains("PLAYLIST 2026"))continue;
+            JSONArray cells=rows.optJSONObject(1).optJSONArray("tableCells");
+            if(cells==null||cells.length()<2)return changes;
+            for(int col=0;col<2;col++){
+                JSONObject cell=cells.optJSONObject(col);
+                JSONArray content=cell==null?null:cell.optJSONArray("content");
+                if(content==null)continue;
+                for(int j=0;j<content.length();j++){
+                    JSONObject paragraph=content.optJSONObject(j);
+                    JSONObject p=paragraph==null?null:paragraph.optJSONObject("paragraph");
+                    JSONArray elements=p==null?null:p.optJSONArray("elements");
+                    if(elements==null)continue;
+                    for(int k=0;k<elements.length();k++){
+                        JSONObject element=elements.optJSONObject(k);
+                        JSONObject run=element==null?null:element.optJSONObject("textRun");
+                        if(run==null)continue;
+                        String text=run.optString("content","");
+                        String[] lines=text.split("(?<=\\n)");
+                        int offset=0;
+                        for(String line:lines){
+                            String cleaned=line.trim();
+                            java.util.regex.Matcher marker=java.util.regex.Pattern
+                                .compile("[🎸🎹🔺🔻🔀🔁⏩⇻➤]|\\s+\\d{2,3}\\s*$|\\.{2,}")
+                                .matcher(cleaned);
+                            int end=marker.find()?marker.start():cleaned.length();
+                            String candidate=cleaned.substring(0,end).trim();
+                            String official=titles.get(alias(candidate));
+                            if(official!=null && !normalized(candidate).equals(normalized(official))){
+                                int prefix=line.indexOf(candidate);
+                                if(prefix>=0){
+                                    int startIndex=element.optInt("startIndex",-1)+offset+prefix;
+                                    if(startIndex>=0)changes.add(new Rename(startIndex,startIndex+candidate.length(),candidate,official));
+                                }
+                            }
+                            offset+=line.length();
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        return changes;
+    }
+    private static void gatherText(Object node,StringBuilder out) throws Exception{
+        if(!(node instanceof JSONObject))return;
+        JSONObject o=(JSONObject)node;
+        JSONObject run=o.optJSONObject("textRun");
+        if(run!=null)out.append(run.optString("content",""));
+        for(String field:new String[]{"content","elements","tableRows","tableCells"}){
+            JSONArray arr=o.optJSONArray(field);
+            if(arr!=null)for(int i=0;i<arr.length();i++)gatherText(arr.opt(i),out);
+        }
+        for(String field:new String[]{"paragraph","table"}){
+            JSONObject child=o.optJSONObject(field);
+            if(child!=null)gatherText(child,out);
+        }
+    }
+    private void applyRenames(String destination,String accessToken,String revision,List<Rename> changes){
+        status.setText("Mise à jour des noms dans la COPIE…");
+        new Thread(()->{
+            HttpURLConnection post=null;
+            try{
+                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                    throw new java.io.IOException("Original interdit");
+                JSONArray requests=new JSONArray();
+                // Reverse order: editing text never shifts the earlier indices.
+                changes.sort((a,b)->Integer.compare(b.start,a.start));
+                for(Rename change:changes){
+                    JSONObject range=new JSONObject().put("startIndex",change.start).put("endIndex",change.end);
+                    requests.put(new JSONObject().put("deleteContentRange",new JSONObject().put("range",range)));
+                    requests.put(new JSONObject().put("insertText",new JSONObject()
+                        .put("location",new JSONObject().put("index",change.start))
+                        .put("text",change.to)));
+                }
+                JSONObject payload=new JSONObject()
+                    .put("requests",requests)
+                    .put("writeControl",new JSONObject().put("requiredRevisionId",revision));
+                post=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+":batchUpdate").openConnection();
+                post.setRequestMethod("POST");post.setDoOutput(true);
+                post.setConnectTimeout(12000);post.setReadTimeout(20000);
+                post.setRequestProperty("Authorization","Bearer "+accessToken);
+                post.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                try(OutputStream out=post.getOutputStream()){
+                    out.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                int http=post.getResponseCode();
+                if(http<200||http>=300)throw new java.io.IOException("Écriture refusée HTTP "+http);
+                runOnUiThread(()->status.setText(changes.size()+" nom(s) harmonisés dans la COPIE. L'original est inchangé."));
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Écriture non confirmée : "+e.getMessage()));
+            }finally{if(post!=null)post.disconnect();}
+        },"DocsCopyNameWrite").start();
     }
 
 }
