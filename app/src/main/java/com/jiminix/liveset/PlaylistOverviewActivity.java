@@ -264,6 +264,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         titleView.setPadding(Ui.dp(this,2),0,Ui.dp(this,2),0);
         titleView.setLayoutParams(new LinearLayout.LayoutParams(0,Ui.dp(this,40),1));
         titleView.setClickable(true);
+        // TS 2026 only: long-press the playlist title to preview the live
+        // Google Docs layout. This is strictly read-only: no playlist reorder.
+        titleView.setOnLongClickListener(v -> {
+            if (!Ts2026GoogleDocsSource.isTs2026(setlist.name)) return false;
+            startActivity(new Intent(this, Ts2026DocsPreviewActivity.class));
+            return true;
+        });
 
         Button rename=Ui.button(this,"✎");
         rename.setTextSize(14);
