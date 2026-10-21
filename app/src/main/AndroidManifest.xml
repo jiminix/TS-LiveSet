@@ -15,6 +15,7 @@
             android:authorities="com.jiminix.liveset.playlists"
             android:exported="true"
             android:readPermission="com.jiminix.liveset.permission.READ_VIEWER" />
+        <activity android:name=".Ts2026DocsWriteTestActivity" android:exported="false" />
         <activity android:name=".Ts2026RecoveryActivity" android:exported="false" />
         <activity android:name=".Ts2026DocsPreviewActivity" android:exported="false" />
         <activity android:name=".IntegratedViewerActivity" />
