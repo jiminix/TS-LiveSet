@@ -60,6 +60,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         names.setText("Prévisualiser les noms Manager → COPIE");
         names.setOnClickListener(v->previewManagerNames());
         layout.addView(names);
+        Button lyrics=new Button(this);
+        lyrics.setText("Tester une nouvelle section de paroles → COPIE");
+        lyrics.setOnClickListener(v->chooseNewLyricsSection());
+        layout.addView(lyrics);
         status=new TextView(this);status.setTextColor(Color.WHITE);
         status.setText("Non connecté. La connexion nécessite la configuration OAuth Android du projet dans Google Cloud.");
         layout.addView(status);
@@ -427,6 +431,92 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                 runOnUiThread(()->status.setText("Écriture non confirmée : "+e.getMessage()));
             }finally{if(post!=null)post.disconnect();}
         },"DocsCopyNameWrite").start();
+    }
+
+    // Safe first milestone: append a new empty lyrics section to the copy.
+    // The rich-text overview is intentionally untouched until its insertion
+    // points and formatting can be validated independently.
+    private void chooseNewLyricsSection(){
+        if(!validCopy())return;
+        if(token==null||token.isEmpty()){
+            status.setText("Autorise Google Docs d'abord.");return;
+        }
+        SetListModel list=null;
+        for(SetListModel candidate:AppStore.loadSetlists(this)){
+            if(Ts2026GoogleDocsSource.isTs2026(candidate.name)){list=candidate;break;}
+        }
+        if(list==null){status.setText("TS 2026 introuvable.");return;}
+        List<Song> songs=new ArrayList<>();
+        for(String songId:list.songIds){
+            Song song=AppStore.findSong(this,songId);
+            if(song!=null && song.title!=null && !song.title.trim().isEmpty())songs.add(song);
+        }
+        if(songs.isEmpty()){status.setText("Aucun morceau TS 2026.");return;}
+        String[] labels=new String[songs.size()];
+        for(int i=0;i<songs.size();i++)labels[i]=songs.get(i).title;
+        new AlertDialog.Builder(this)
+            .setTitle("Créer une section de paroles dans la COPIE")
+            .setItems(labels,(dialog,which)->{
+                Song selected=songs.get(which);
+                new AlertDialog.Builder(this)
+                    .setTitle(selected.title)
+                    .setMessage("Ajouter une section vide à la fin de la COPIE ?\n"+
+                        "Aucune modification du sommaire ou des paroles existantes.\n"+
+                        "L'original est interdit.")
+                    .setNegativeButton("Annuler",null)
+                    .setPositiveButton("Créer dans la COPIE",(d,w)->
+                        appendLyricsSection(id(),token,selected.title))
+                    .show();
+            }).show();
+    }
+    private void appendLyricsSection(String destination,String accessToken,String title){
+        status.setText("Vérification de la copie et des doublons…");
+        new Thread(()->{
+            HttpURLConnection get=null,post=null;
+            try{
+                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                    throw new java.io.IOException("Document original interdit");
+                get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+"?includeTabsContent=true").openConnection();
+                get.setConnectTimeout(12000);get.setReadTimeout(20000);
+                get.setRequestProperty("Authorization","Bearer "+accessToken);
+                if(get.getResponseCode()!=200)
+                    throw new java.io.IOException("Lecture HTTP "+get.getResponseCode());
+                JSONObject doc=new JSONObject(readResponse(get));
+                String revision=doc.optString("revisionId","");
+                if(revision.isEmpty())throw new java.io.IOException("Révision indisponible");
+                String marker="TS2026-NEW-SONG:"+normalized(title);
+                if(doc.toString().contains(marker))
+                    throw new java.io.IOException("Section de test déjà créée pour ce titre.");
+                String insertion="\n\n"+title+"\n[Paroles à compléter]\n"+
+                    "[Repère de synchronisation : "+marker+"]\n";
+                JSONObject insert=new JSONObject()
+                    .put("endOfSegmentLocation",new JSONObject())
+                    .put("text",insertion);
+                JSONObject payload=new JSONObject()
+                    .put("requests",new JSONArray().put(
+                        new JSONObject().put("insertText",insert)))
+                    .put("writeControl",new JSONObject().put("requiredRevisionId",revision));
+                post=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+":batchUpdate").openConnection();
+                post.setRequestMethod("POST");post.setDoOutput(true);
+                post.setConnectTimeout(12000);post.setReadTimeout(20000);
+                post.setRequestProperty("Authorization","Bearer "+accessToken);
+                post.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                try(OutputStream out=post.getOutputStream()){
+                    out.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                int http=post.getResponseCode();
+                if(http<200||http>=300)throw new java.io.IOException("Écriture HTTP "+http);
+                runOnUiThread(()->status.setText("Section de paroles créée à la fin de la COPIE pour : "+title+
+                    ". Sommaire inchangé. Vérifie la mise en page dans Google Docs."));
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Aucune écriture confirmée : "+e.getMessage()));
+            }finally{
+                if(get!=null)get.disconnect();
+                if(post!=null)post.disconnect();
+            }
+        },"Ts2026CopyLyricsSection").start();
     }
 
 }
