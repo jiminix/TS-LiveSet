@@ -172,7 +172,7 @@ public class Ts2026RecoveryActivity extends Activity {
             if(paragraph!=null){
                 StringBuilder line=new StringBuilder();
                 collectText(paragraph,line);
-                String title=line.toString().replace('\\n',' ').trim();
+                String title=line.toString().replace('\n',' ').trim();
                 if(title.length()>105)title=title.substring(0,105)+"…";
                 diagnostic.append("P").append(i+1)
                     .append(paragraph.has("bullet")?" [liste] ":" ")
@@ -190,7 +190,7 @@ public class Ts2026RecoveryActivity extends Activity {
                         JSONObject cell=cells.optJSONObject(col);
                         StringBuilder cellText=new StringBuilder();
                         if(cell!=null)collectText(cell,cellText);
-                        String txt=cellText.toString().replace('\\n',' ').trim();
+                        String txt=cellText.toString().replace('\n',' ').trim();
                         if(txt.length()>85)txt=txt.substring(0,85)+"…";
                         diagnostic.append("[").append(txt).append("] ");
                     }
