@@ -1,0 +1,82 @@
+name: Build separate cloud-restore verification Manager
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-cloud-restore-test.yml'
+      - 'app/**'
+
+permissions:
+  contents: read
+
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Create isolated signing key (NOT compatible with installed Manager)
+        run: |
+          mkdir -p .signing
+          keytool -genkeypair -noprompt -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Cloud Restore Test, O=TS LiveSet, C=FR"
+      - name: Install image tools
+        run: python3 -m pip install --quiet Pillow
+      - name: Prepare isolated test application
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          # Android resource filenames must be lowercase; normalize both uploaded logos.
+          for folder in (Path('app/src/main/res/drawable'),Path('viewer/src/main/res/drawable')):
+              for source in folder.glob('Meryl_*.png'):
+                  source.rename(source.with_name(source.name.lower()))
+          gradle=Path('app/build.gradle')
+          data=gradle.read_text()
+          assert "applicationId 'com.jiminix.liveset'" in data
+          data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.cloudrestoretest'")
+          data=data.replace('versionCode 87','versionCode 90')
+          data=data.replace("versionName '0.87'","versionName '0.90-restore-test'")
+          gradle.write_text(data)
+          manifest=Path('app/src/main/AndroidManifest.xml')
+          data=manifest.read_text()
+          assert 'com.jiminix.liveset.playlists' in data
+          data=data.replace('com.jiminix.liveset.playlists','com.jiminix.liveset.cloudrestoretest.playlists')
+          data=data.replace('com.jiminix.liveset.permission.READ_VIEWER','com.jiminix.liveset.cloudrestoretest.permission.READ_VIEWER')
+          data=data.replace('android:label="TS Playlist Manager"','android:label="Manager RESTORE TEST"')
+          # Use the existing manager artwork as a standard launcher icon in the isolated APK.
+          data=data.replace('android:icon="@drawable/ic_launcher_manager"', 'android:icon="@mipmap/ic_launcher"')
+          manifest.write_text(data)
+          icon=Path('app/src/main/res/drawable/file_000000009be48210a05eb858507ea6eb.png')
+          assert icon.is_file(), 'Manager custom icon not found'
+          from PIL import Image
+          artwork=Image.open(icon).convert('RGBA')
+          artwork.thumbnail((340,340),Image.Resampling.LANCZOS)
+          # The legacy icon is opaque, so the Samsung launcher cannot show a blank tile.
+          legacy=Image.new('RGBA',(432,432),(0,0,0,0))
+          legacy.alpha_composite(artwork,((432-artwork.width)//2,(432-artwork.height)//2))
+          target=Path('app/src/main/res/mipmap-nodpi/ic_launcher.png')
+          target.parent.mkdir(parents=True,exist_ok=True)
+          legacy.save(target)
+          # Adaptive icon: direct foreground drawable, never a self-referencing mipmap.
+          foreground=Image.new('RGBA',(432,432),(0,0,0,0))
+          foreground.alpha_composite(artwork,((432-artwork.width)//2,(432-artwork.height)//2))
+          fg_path=Path('app/src/main/res/drawable/tequila_manager_foreground.png')
+          foreground.save(fg_path)
+          adaptive=Path('app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml')
+          adaptive.parent.mkdir(parents=True,exist_ok=True)
+          adaptive.write_text('''<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@android:color/transparent"/>\n    <foreground android:drawable="@drawable/tequila_manager_foreground"/>\n</adaptive-icon>\n''')
+          PY
+          test -f .signing/liveset-debug.keystore
+      - name: Build recovery test APK
+        run: gradle :app:assembleDebug
+      - name: Upload recovery test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Manager-CLOUD-RESTORE-TEST-isolated
+          path: app/build/outputs/apk/debug/app-debug.apk
