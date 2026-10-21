@@ -51,6 +51,11 @@ public class Ts2026DocsPreviewActivity extends Activity {
                 Ts2026GoogleDocsSource.DOCUMENT_ID + "/edit"))));
         actions.addView(open, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         layout.addView(actions);
+        Button copyTest = new Button(this);
+        copyTest.setText("Connexion Google · test sur copie");
+        copyTest.setOnClickListener(v -> startActivity(
+            new Intent(this, Ts2026DocsWriteTestActivity.class)));
+        layout.addView(copyTest);
         browser = new WebView(this);
         browser.setBackgroundColor(Color.BLACK);
         browser.getSettings().setJavaScriptEnabled(false);
