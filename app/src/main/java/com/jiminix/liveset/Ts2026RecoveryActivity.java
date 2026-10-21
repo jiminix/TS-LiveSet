@@ -161,6 +161,63 @@ public class Ts2026RecoveryActivity extends Activity {
             if(cells!=null)for(int i=0;i<cells.length();i++)collectText(cells.get(i),out);
         }
     }
+    // Diagnostic only: show the real top-level layout (paragraphs/tables).
+    // Does not infer or import song titles.
+    private static void inspectOpening(JSONArray content,StringBuilder diagnostic,int depth){
+        if(content==null || diagnostic.length()>9000)return;
+        for(int i=0;i<content.length() && diagnostic.length()<9000 && i<65;i++){
+            JSONObject item=content.optJSONObject(i);
+            if(item==null)continue;
+            JSONObject paragraph=item.optJSONObject("paragraph");
+            if(paragraph!=null){
+                StringBuilder line=new StringBuilder();
+                collectText(paragraph,line);
+                String title=line.toString().replace('\\n',' ').trim();
+                if(title.length()>105)title=title.substring(0,105)+"…";
+                diagnostic.append("P").append(i+1)
+                    .append(paragraph.has("bullet")?" [liste] ":" ")
+                    .append(title).append("\\n");
+            }
+            JSONObject table=item.optJSONObject("table");
+            if(table!=null){
+                JSONArray rows=table.optJSONArray("tableRows");
+                diagnostic.append("TABLEAU ").append(rows==null?0:rows.length()).append(" lignes\\n");
+                if(rows!=null)for(int row=0;row<Math.min(rows.length(),36);row++){
+                    JSONObject obj=rows.optJSONObject(row);
+                    JSONArray cells=obj==null?null:obj.optJSONArray("tableCells");
+                    diagnostic.append("  ").append(row+1).append(": ");
+                    if(cells!=null)for(int col=0;col<cells.length();col++){
+                        JSONObject cell=cells.optJSONObject(col);
+                        StringBuilder cellText=new StringBuilder();
+                        if(cell!=null)collectText(cell,cellText);
+                        String txt=cellText.toString().replace('\\n',' ').trim();
+                        if(txt.length()>85)txt=txt.substring(0,85)+"…";
+                        diagnostic.append("[").append(txt).append("] ");
+                    }
+                    diagnostic.append("\\n");
+                }
+            }
+        }
+    }
+    private void showDiagnostic(String message){
+        results.removeAllViews();boxes.clear();missing.clear();
+        status.setText("Index non reconnu. Aucun titre proposé. Structure de début du document :");
+        TextView details=new TextView(this);
+        details.setTextColor(Color.WHITE);
+        details.setTextSize(13);
+        details.setText(message);
+        results.addView(details);
+        Button copy=new Button(this);
+        copy.setText("Copier le diagnostic");
+        copy.setOnClickListener(v->{
+            android.content.ClipboardManager clipboard=(android.content.ClipboardManager)
+                getSystemService(CLIPBOARD_SERVICE);
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Diagnostic TS 2026",message));
+            Toast.makeText(this,"Diagnostic copié",Toast.LENGTH_SHORT).show();
+        });
+        results.addView(copy);
+    }
+
     private void readDocument(String accessToken){
         status.setText("Lecture authentifiée de Google Docs…");
         new Thread(()->{
@@ -191,8 +248,22 @@ public class Ts2026RecoveryActivity extends Activity {
                         if(documentTab!=null)collectText(documentTab.optJSONObject("body"),text);
                     }
                 }else collectText(doc.optJSONObject("body"),text);
+                StringBuilder layout=new StringBuilder();
+                if(tabs!=null && tabs.length()>0){
+                    JSONObject firstTab=tabs.optJSONObject(0);
+                    JSONObject documentTab=firstTab==null?null:firstTab.optJSONObject("documentTab");
+                    JSONObject body=documentTab==null?null:documentTab.optJSONObject("body");
+                    inspectOpening(body==null?null:body.optJSONArray("content"),layout,0);
+                }else{
+                    JSONObject body=doc.optJSONObject("body");
+                    inspectOpening(body==null?null:body.optJSONArray("content"),layout,0);
+                }
                 List<String> index=recoverOpeningIndex(text.toString());
-                if(index.isEmpty())throw new IOException("Playlist du début non reconnue avec certitude. Aucun titre proposé. Texte extrait : "+text.length()+" caractères, "+text.toString().split("\\n").length+" lignes. Aucune modification effectuée.");
+                if(index.isEmpty()){
+                    String diagnostic=layout.toString();
+                    runOnUiThread(()->{if(!isFinishing())showDiagnostic(diagnostic);});
+                    return;
+                }
                 final List<String> detected=new ArrayList<>(index);
                 runOnUiThread(()->{if(!isFinishing())render(detected,"Google Docs (lecture autorisée) — titres à vérifier");});
             }catch(Exception e){
