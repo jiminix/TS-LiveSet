@@ -84,6 +84,44 @@ public class Ts2026RecoveryActivity extends Activity {
         }
         return new ArrayList<>(found.values());
     }
+    // Google Docs stores automatic list numbers in paragraph.bullet, not textRun.
+    // Fallback only if the index contains a substantial overlap with the Manager.
+    private List<String> recoverAutoNumberedIndex(String documentText){
+        Set<String> known=new HashSet<>();
+        SetListModel list=AppStore.findSetlist(this,playlistId);
+        if(list==null)return Collections.emptyList();
+        for(String id:list.songIds){
+            Song song=AppStore.findSong(this,id);
+            if(song!=null)known.add(key(song.title));
+        }
+        String[] lines=documentText.split("\\n");
+        List<String> candidates=new ArrayList<>();
+        for(String raw:lines){
+            String line=raw.trim().replaceAll("\\s+"," ");
+            if(line.length()<3 || line.length()>100)continue;
+            if(line.matches("(?i)^(page|sommaire|setlist|ts 2026|index|repertoire|répertoire).*"))continue;
+            candidates.add(line);
+            if(candidates.size()>=130)break;
+        }
+        // Find a dense 32-title region, with at least 12 known songs, rather
+        // than guessing that every short lyric line is a title.
+        int bestStart=-1,bestScore=0;
+        for(int start=0;start<candidates.size();start++){
+            int end=Math.min(candidates.size(),start+40),score=0;
+            for(int i=start;i<end;i++)if(known.contains(key(candidates.get(i))))score++;
+            if(score>bestScore){bestScore=score;bestStart=start;}
+        }
+        if(bestScore<12)return Collections.emptyList();
+        LinkedHashMap<String,String> found=new LinkedHashMap<>();
+        for(int i=bestStart;i<Math.min(candidates.size(),bestStart+40);i++){
+            String line=candidates.get(i);
+            line=line.replaceFirst("^(?:0?[1-9]|[12][0-9]|3[0-9])\\s*[.)–:-]\\s*","");
+            String normalized=key(line);
+            if(!normalized.isEmpty())found.putIfAbsent(normalized,line);
+        }
+        return new ArrayList<>(found.values());
+    }
+
     private void authorizeAndRead(){
         status.setText("Autorisation Google pour lire les titres TS 2026…");
         AuthorizationRequest request=AuthorizationRequest.builder()
@@ -159,8 +197,10 @@ public class Ts2026RecoveryActivity extends Activity {
                     }
                 }else collectText(doc.optJSONObject("body"),text);
                 List<String> index=parseIndex(text.toString());
-                if(index.isEmpty())throw new IOException("Index numéroté introuvable dans le document.");
-                runOnUiThread(()->{if(!isFinishing())render(index,"Google Docs (lecture autorisée)");});
+                if(index.isEmpty())index=recoverAutoNumberedIndex(text.toString());
+                if(index.isEmpty())throw new IOException("Liste non reconnue : pas assez de titres communs pour une récupération sûre.");
+                final List<String> detected=new ArrayList<>(index);
+                runOnUiThread(()->{if(!isFinishing())render(detected,"Google Docs (lecture autorisée) — titres à vérifier");});
             }catch(Exception e){
                 runOnUiThread(()->{if(!isFinishing())status.setText("Lecture impossible : "+e.getMessage());});
             }finally{if(connection!=null)connection.disconnect();}
