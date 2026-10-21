@@ -84,9 +84,10 @@ public class Ts2026RecoveryActivity extends Activity {
         }
         return new ArrayList<>(found.values());
     }
-    // Google Docs stores automatic list numbers in paragraph.bullet, not textRun.
-    // Fallback only if the index contains a substantial overlap with the Manager.
-    private List<String> recoverAutoNumberedIndex(String documentText){
+    // Read only the opening index block, never the lyrics following it.
+    // The first 32 numbered entries are the intended source; a missing
+    // boundary or insufficient overlap fails closed rather than guessing.
+    private List<String> recoverOpeningIndex(String text){
         Set<String> known=new HashSet<>();
         SetListModel list=AppStore.findSetlist(this,playlistId);
         if(list==null)return Collections.emptyList();
@@ -94,31 +95,23 @@ public class Ts2026RecoveryActivity extends Activity {
             Song song=AppStore.findSong(this,id);
             if(song!=null)known.add(key(song.title));
         }
-        String[] lines=documentText.split("\\n");
-        List<String> candidates=new ArrayList<>();
+        String[] lines=text.split("\\n");
+        LinkedHashMap<String,String> found=new LinkedHashMap<>();
+        int overlap=0, scanned=0;
         for(String raw:lines){
+            if(scanned++>=48 || found.size()>=32)break;
             String line=raw.trim().replaceAll("\\s+"," ");
+            line=line.replaceFirst("^(?:0?[1-9]|[12][0-9]|3[0-9])\\s*[.)–:-]\\s*","");
             if(line.length()<3 || line.length()>100)continue;
             if(line.matches("(?i)^(page|sommaire|setlist|ts 2026|index|repertoire|répertoire).*"))continue;
-            candidates.add(line);
-            if(candidates.size()>=130)break;
-        }
-        // Find a dense 32-title region, with at least 12 known songs, rather
-        // than guessing that every short lyric line is a title.
-        int bestStart=-1,bestScore=0;
-        for(int start=0;start<candidates.size();start++){
-            int end=Math.min(candidates.size(),start+40),score=0;
-            for(int i=start;i<end;i++)if(known.contains(key(candidates.get(i))))score++;
-            if(score>bestScore){bestScore=score;bestStart=start;}
-        }
-        if(bestScore<12)return Collections.emptyList();
-        LinkedHashMap<String,String> found=new LinkedHashMap<>();
-        for(int i=bestStart;i<Math.min(candidates.size(),bestStart+40);i++){
-            String line=candidates.get(i);
-            line=line.replaceFirst("^(?:0?[1-9]|[12][0-9]|3[0-9])\\s*[.)–:-]\\s*","");
             String normalized=key(line);
-            if(!normalized.isEmpty())found.putIfAbsent(normalized,line);
+            if(!normalized.isEmpty()&&!found.containsKey(normalized)){
+                found.put(normalized,line);
+                if(known.contains(normalized))overlap++;
+            }
         }
+        // Never offer lyrics if the opening section cannot be confidently found.
+        if(overlap<20 || found.size()<28 || found.size()>32)return Collections.emptyList();
         return new ArrayList<>(found.values());
     }
 
@@ -198,9 +191,8 @@ public class Ts2026RecoveryActivity extends Activity {
                         if(documentTab!=null)collectText(documentTab.optJSONObject("body"),text);
                     }
                 }else collectText(doc.optJSONObject("body"),text);
-                List<String> index=parseIndex(text.toString());
-                if(index.isEmpty())index=recoverAutoNumberedIndex(text.toString());
-                if(index.isEmpty())throw new IOException("Liste non reconnue. Texte extrait : "+text.length()+" caractères, "+text.toString().split("\\n").length+" lignes. Aucune modification effectuée.");
+                List<String> index=recoverOpeningIndex(text.toString());
+                if(index.isEmpty())throw new IOException("Playlist du début non reconnue avec certitude. Aucun titre proposé. Texte extrait : "+text.length()+" caractères, "+text.toString().split("\\n").length+" lignes. Aucune modification effectuée.");
                 final List<String> detected=new ArrayList<>(index);
                 runOnUiThread(()->{if(!isFinishing())render(detected,"Google Docs (lecture autorisée) — titres à vérifier");});
             }catch(Exception e){
