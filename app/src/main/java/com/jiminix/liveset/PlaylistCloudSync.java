@@ -358,12 +358,16 @@ public final class PlaylistCloudSync {
                 if(backup!=null)remoteTime=backup.optLong("savedAt",0L);
             }catch(Exception ignored){}
 
-            long best=Math.max(local,remoteTime);
-            if(best>0L){
-                final String result=String.valueOf(best);
+            // Report only a confirmed remote timestamp as an online success.
+            // A local-only backup must never be mistaken for a cloud backup.
+            if(remoteTime>0L){
+                final String result=String.valueOf(remoteTime);
                 if(listener!=null)MAIN.post(()->listener.onSuccess(result));
             }else if(listener!=null){
-                MAIN.post(()->listener.onError("Aucune sauvegarde"));
+                final String reason=local>0L
+                    ? "Sauvegarde locale uniquement ; aucune sauvegarde en ligne confirmée"
+                    : "Aucune sauvegarde en ligne confirmée";
+                MAIN.post(()->listener.onError(reason));
             }
         },"TS-Global-Backup-Date").start();
     }
