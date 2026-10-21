@@ -350,6 +350,20 @@ public class Ts2026RecoveryActivity extends Activity {
             TextView none=new TextView(this);none.setTextColor(Color.LTGRAY);
             none.setText("Aucun.");results.addView(none);
         }
+        TextView positions=new TextView(this);
+        positions.setTextColor(Color.LTGRAY);
+        StringBuilder positionReport=new StringBuilder("Positions Google Docs détectées :\\n");
+        String[] targets={"cacestvraimenttoi","ladamedehautesavoie","sledgehammer"};
+        for(String target:targets){
+            int found=-1;
+            for(int i=0;i<docsOrder.size();i++){
+                if(docsOrder.get(i).equals(target)){found=i+1;break;}
+            }
+            positionReport.append(target.equals("cacestvraimenttoi")?"ÇA C'EST VRAIMENT TOI":target.equals("ladamedehautesavoie")?"LA DAME DE HAUTE-SAVOIE":"SLEDGE HAMMER")
+                .append(" : ").append(found<0?"non reconnu":("#"+found)).append("\\n");
+        }
+        positions.setText(positionReport.toString());
+        results.addView(positions);
         Button reorder=new Button(this);
         reorder.setText("Aligner l'ordre de TS 2026 sur Google Docs");
         reorder.setOnClickListener(v->confirmReorder());
@@ -478,7 +492,9 @@ public class Ts2026RecoveryActivity extends Activity {
             if(!ordered.contains(id)){ordered.add(id);unmatched++;}
         }
         if(ordered.equals(playlist.songIds)){
-            Toast.makeText(this,"Ordre déjà identique pour les titres reconnus.",Toast.LENGTH_LONG).show();
+            new AlertDialog.Builder(this).setTitle("Aucun déplacement possible")
+                .setMessage("L’ordre actuel correspond déjà à celui des titres reconnus. Vérifie les positions Google Docs détectées affichées sur cet écran : les titres non reconnus restent à la fin.")
+                .setPositiveButton("OK",null).show();
             return;
         }
         final int leftovers=unmatched;
