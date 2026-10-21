@@ -259,6 +259,9 @@ public class Ts2026RecoveryActivity extends Activity {
         t=t.replaceAll("[🎸🎹🔺🔻🔀🔁⏩⇻➤]", " ");
         t=t.replaceAll("(?:\\.{2,}\\s*\\d{1,3}\\s*)+", " ");
         t=t.replaceFirst("\\s+\\d{2,3}\\s*$", "");
+        // Medley timing such as "..04 ..07.8" can leave a stray 8.
+        // Strip trailing numeric timing fragments before title matching.
+        t=t.replaceFirst("(?i)\\\\s+(?:\\\\d{1,3}(?:[.,]\\\\d{1,2})?\\\\s*)+$", "");
         t=t.replaceAll("\\s+", " ").trim();
         return t;
     }
@@ -268,7 +271,7 @@ public class Ts2026RecoveryActivity extends Activity {
         if(k.equals("loireetcher")||k.equals("leloiretcher"))return "leloiretcher";
         if(k.equals("whenyourheartis")||k.equals("whenyourheartisweak"))return "whenyourheartisweak";
         if(k.equals("shouldistay")||k.equals("shouldistayorshouldigo"))return "shouldistayorshouldigo";
-        if(k.equals("meddleycine")||k.equals("medleycine"))return "medleycine";
+        if(k.equals("meddleycine")||k.equals("medleycine")||k.matches("medd?leycine[0-9]{1,3}"))return "medleycine";
         if(k.equals("dontyouforget")||k.equals("dontyouforgetaboutme"))return "dontyouforgetaboutme";
         return k;
     }
