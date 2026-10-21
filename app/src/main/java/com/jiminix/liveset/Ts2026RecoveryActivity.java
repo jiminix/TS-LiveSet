@@ -163,7 +163,7 @@ public class Ts2026RecoveryActivity extends Activity {
     }
     // Diagnostic only: show the real top-level layout (paragraphs/tables).
     // Does not infer or import song titles.
-    private static void inspectOpening(JSONArray content,StringBuilder diagnostic,int depth){
+    private static void inspectOpening(JSONArray content,StringBuilder diagnostic,int depth) throws JSONException {
         if(content==null || diagnostic.length()>9000)return;
         for(int i=0;i<content.length() && diagnostic.length()<9000 && i<65;i++){
             JSONObject item=content.optJSONObject(i);
