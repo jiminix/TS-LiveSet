@@ -46,6 +46,20 @@ jobs:
           path: .signing/liveset-debug.keystore
           key: liveset-permanent-signing-v1
 
+      - name: Restore original signing key from repository secret (if cache is missing)
+        env:
+          LIVESET_SIGNING_KEYSTORE_BASE64: ${{ secrets.LIVESET_SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p .signing
+          if [ ! -s .signing/liveset-debug.keystore ] && [ -n "$LIVESET_SIGNING_KEYSTORE_BASE64" ]; then
+            printf '%s' "$LIVESET_SIGNING_KEYSTORE_BASE64" | base64 --decode > .signing/liveset-debug.keystore
+          fi
+          if [ ! -s .signing/liveset-debug.keystore ]; then
+            echo "::error::Original signing key unavailable. Add the ORIGINAL keystore as LIVESET_SIGNING_KEYSTORE_BASE64; never generate a replacement."
+            exit 1
+          fi
+          keytool -list -keystore .signing/liveset-debug.keystore -storepass android -alias androiddebugkey
+
       - name: Verify permanent signing key
         run: |
           if [ ! -f .signing/liveset-debug.keystore ]; then
