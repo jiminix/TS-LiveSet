@@ -262,14 +262,24 @@ public class Ts2026RecoveryActivity extends Activity {
         t=t.replaceAll("\\s+", " ").trim();
         return t;
     }
+    private static String canonicalTitle(String title){
+        String k=key(title);
+        if(k.equals("alalalalong")||k.equals("sweatalalalalalong"))return "sweatalalalalalong";
+        if(k.equals("loireetcher")||k.equals("leloiretcher"))return "leloiretcher";
+        if(k.equals("whenyourheartis")||k.equals("whenyourheartisweak"))return "whenyourheartisweak";
+        if(k.equals("shouldistay")||k.equals("shouldistayorshouldigo"))return "shouldistayorshouldigo";
+        if(k.equals("meddleycine")||k.equals("medleycine"))return "medleycine";
+        if(k.equals("dontyouforget")||k.equals("dontyouforgetaboutme"))return "dontyouforgetaboutme";
+        return k;
+    }
     private static String matchKnownTitle(String candidate,Map<String,Song> known){
-        String normalized=key(candidate);
+        String normalized=canonicalTitle(candidate);
         if(known.containsKey(normalized))return normalized;
         String best="";
         // Extra musical markers may survive normalization. Only accept
         // unambiguous prefixes; never use fuzzy distance to create new songs.
         for(String k:known.keySet()){
-            if(k.length()>=6 && normalized.startsWith(k) && k.length()>best.length())
+            if(k.length()>=8 && normalized.startsWith(k) && k.length()>best.length())
                 best=k;
         }
         return best;
@@ -282,7 +292,7 @@ public class Ts2026RecoveryActivity extends Activity {
         LinkedHashMap<String,Song> manager=new LinkedHashMap<>();
         for(String songId:playlist.songIds){
             Song song=AppStore.findSong(this,songId);
-            if(song!=null)manager.put(key(song.title),song);
+            if(song!=null)manager.put(canonicalTitle(song.title),song);
         }
         LinkedHashMap<String,String> docs=new LinkedHashMap<>();
         LinkedHashMap<String,String> normalizedDocs=new LinkedHashMap<>();
@@ -291,7 +301,7 @@ public class Ts2026RecoveryActivity extends Activity {
             String title=titleFromOverviewLine(raw);
             if(title.length()<3 || title.length()>100)continue;
             String matched=matchKnownTitle(title,manager);
-            String id=matched.isEmpty()?key(title):matched;
+            String id=matched.isEmpty()?canonicalTitle(title):matched;
             if(!id.isEmpty()){
                 docs.putIfAbsent(id,raw.trim());
                 normalizedDocs.putIfAbsent(id,title);
@@ -437,7 +447,7 @@ public class Ts2026RecoveryActivity extends Activity {
         Map<String,String> byTitle=new HashMap<>();
         for(String id:playlist.songIds){
             Song song=AppStore.findSong(this,id);
-            if(song!=null)byTitle.put(key(song.title),id);
+            if(song!=null)byTitle.put(canonicalTitle(song.title),id);
         }
         List<String> ordered=new ArrayList<>();
         for(String title:docsOrder){
@@ -515,15 +525,15 @@ public class Ts2026RecoveryActivity extends Activity {
                 AppStore.recordUndoSnapshot(this,"Récupération titres Google Docs TS 2026");
                 List<Song> library=AppStore.loadSongs(this);
                 Set<String> current=new HashSet<>();
-                for(String id:list.songIds){Song s=AppStore.findSong(this,id);if(s!=null)current.add(key(s.title));}
+                for(String id:list.songIds){Song s=AppStore.findSong(this,id);if(s!=null)current.add(canonicalTitle(s.title));}
                 int count=0;
                 for(String name:chosen){
-                    if(current.contains(key(name)))continue;
+                    if(current.contains(canonicalTitle(name)))continue;
                     Song match=null;
-                    for(Song song:library)if(key(song.title).equals(key(name))){match=song;break;}
+                    for(Song song:library)if(canonicalTitle(song.title).equals(canonicalTitle(name))){match=song;break;}
                     if(match==null){match=new Song();match.title=name;library.add(match);}
                     if(!list.songIds.contains(match.id)){list.songIds.add(match.id);count++;}
-                    current.add(key(name));
+                    current.add(canonicalTitle(name));
                 }
                 AppStore.saveSongs(this,library);
                 AppStore.upsertSetlist(this,list);
