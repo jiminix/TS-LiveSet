@@ -279,6 +279,12 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         Button add=Ui.button(this,"＋");
         add.setTextSize(18);
         Ui.compactHeaderButton(add,this,30);
+        add.setOnLongClickListener(v -> {
+            if (!Ts2026GoogleDocsSource.isTs2026(setlist.name)) return false;
+            startActivity(new Intent(this, Ts2026RecoveryActivity.class)
+                .putExtra("setlist_id", setlistId));
+            return true;
+        });
 
         Button undo=Ui.button(this,"↶");
         undo.setTextSize(18);
