@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "feature": "google-docs-lyrics",
+  "status": "configuration-only",
+  "playlist": "TS 2026",
+  "source": {
+    "provider": "google-docs",
+    "documentId": "1kfLp1alEdnLunA-es-s13V58WcS-uV4HYVP8hl45zhE",
+    "url": "https://docs.google.com/document/d/1kfLp1alEdnLunA-es-s13V58WcS-uV4HYVP8hl45zhE/edit",
+    "structure": "playlist-summary-then-individual-song-tables",
+    "format": "rich-text-tables",
+    "preferredRendering": "html-webview"
+  },
+  "syncPolicy": {
+    "scope": "TS 2026 only",
+    "import": ["song-title", "song-metadata", "lyrics", "rich-text-formatting"],
+    "neverImport": ["song-order", "playlist-position"],
+    "preserveLocalSongOrder": true,
+    "preserveOtherPlaylists": true,
+    "preserveExistingLyricsUntilSuccessfulSync": true,
+    "cacheLastSuccessfulVersion": true,
+    "matching": "stable-song-id-with-normalized-title-fallback",
+    "conflictPolicy": "do-not-overwrite-unmatched-songs"
+  },
+  "formatting": {
+    "preserve": ["font-size", "font-color", "font-weight", "font-style", "underline", "alignment", "line-spacing", "paragraph-spacing", "line-breaks", "tables", "columns"],
+    "androidDisplay": "WebView with viewport scaling"
+  },
+  "notes": [
+    "This file prepares integration only; it does not enable Google Docs access or synchronization.",
+    "The document summary numbering and lyric-section numbering are not reliable song identifiers.",
+    "Google Docs access must be configured with an authorized read-only connection or a deliberately published export.",
+    "Never reorder the playlist when refreshing Google Docs."
+  ]
+}
