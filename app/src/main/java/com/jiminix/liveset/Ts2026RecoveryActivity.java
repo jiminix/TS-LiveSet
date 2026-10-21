@@ -249,13 +249,27 @@ public class Ts2026RecoveryActivity extends Activity {
     }
 
     private static String titleFromOverviewLine(String line){
-        String cleaned=line.trim();
-        if(cleaned.isEmpty()||cleaned.startsWith("--- COLONNE"))return "";
-        // Preserve the raw line for the UI; strip only trailing performance metadata
-        // for matching against the Manager song title.
-        cleaned=cleaned.replaceFirst("\\s*[🎸🎹⏩⇻➤🔺🔻🔀🔁].*$","");
-        cleaned=cleaned.replaceFirst("\\s+(?:\\.{2,}\\s*)?(?:\\d{2,3})(?:\\s*BPM)?\\s*$","");
-        return cleaned.trim();
+        String t=line.trim();
+        if(t.isEmpty() || t.startsWith("--- COLONNE"))return "";
+        // Remove BPM/arrangement markers from the display title, not the raw
+        // source. Do not discard the original line: it contains useful metadata.
+        t=t.replaceAll("[🎸🎹🔺🔻🔀🔁⏩⇻➤]", " ");
+        t=t.replaceAll("(?:\\.{2,}\\s*\\d{1,3}\\s*)+", " ");
+        t=t.replaceFirst("\\s+\\d{2,3}\\s*$", "");
+        t=t.replaceAll("\\s+", " ").trim();
+        return t;
+    }
+    private static String matchKnownTitle(String candidate,Map<String,Song> known){
+        String normalized=key(candidate);
+        if(known.containsKey(normalized))return normalized;
+        String best="";
+        // Extra musical markers may survive normalization. Only accept
+        // unambiguous prefixes; never use fuzzy distance to create new songs.
+        for(String k:known.keySet()){
+            if(k.length()>=6 && normalized.startsWith(k) && k.length()>best.length())
+                best=k;
+        }
+        return best;
     }
     private void showOverview(String overview){
         results.removeAllViews();boxes.clear();missing.clear();
@@ -267,60 +281,61 @@ public class Ts2026RecoveryActivity extends Activity {
             if(song!=null)manager.put(key(song.title),song);
         }
         LinkedHashMap<String,String> docs=new LinkedHashMap<>();
+        LinkedHashMap<String,String> normalizedDocs=new LinkedHashMap<>();
         String[] lines=overview.replace("\\n","\n").split("\n");
         for(String raw:lines){
             String title=titleFromOverviewLine(raw);
             if(title.length()<3 || title.length()>100)continue;
-            docs.putIfAbsent(key(title),raw.trim());
+            String matched=matchKnownTitle(title,manager);
+            String id=matched.isEmpty()?key(title):matched;
+            if(!id.isEmpty()){
+                docs.putIfAbsent(id,raw.trim());
+                normalizedDocs.putIfAbsent(id,title);
+            }
         }
         int matched=0;
-        for(String titleKey:docs.keySet())if(manager.containsKey(titleKey))matched++;
-        // Fail closed: no automatic imports, even if the format is ambiguous.
-        status.setText("Comparaison TS 2026 (lecture seule) : "+docs.size()+
-            " lignes Docs, "+manager.size()+" titres Manager, "+matched+
-            " correspondances exactes. BPM, icônes et annotations conservés ci-dessous.");
-        TextView intro=new TextView(this);
-        intro.setTextColor(Color.LTGRAY);
-        intro.setText("DOCS UNIQUEMENT / À VÉRIFIER :");
-        results.addView(intro);
-        int docsOnly=0;
-        for(Map.Entry<String,String> entry:docs.entrySet()){
-            if(manager.containsKey(entry.getKey()))continue;
-            docsOnly++;
-            TextView row=new TextView(this);
-            row.setTextColor(Color.WHITE);row.setTextSize(16);
-            row.setPadding(0,9,0,9);
-            row.setText("Docs → "+entry.getValue());
-            results.addView(row);
-        }
-        if(docsOnly==0){
-            TextView none=new TextView(this);none.setTextColor(Color.LTGRAY);
-            none.setText("Aucune différence détectée.");results.addView(none);
-        }
+        for(String k:docs.keySet())if(manager.containsKey(k))matched++;
+        status.setText("TS 2026 · "+docs.size()+" entrées Google Docs · "+manager.size()+
+            " titres Manager · "+matched+" reconnus.\n"+
+            "Coche uniquement les véritables titres absents. Les BPM et icônes restent visibles et ne sont pas encore synchronisés.");
         TextView heading=new TextView(this);
         heading.setTextColor(Color.LTGRAY);
-        heading.setText("\nMANAGER UNIQUEMENT / À VÉRIFIER :");
+        heading.setText("DANS GOOGLE DOCS, PAS RECONNU DANS LE MANAGER :");
         results.addView(heading);
-        int managerOnly=0;
+        for(Map.Entry<String,String> entry:docs.entrySet()){
+            if(manager.containsKey(entry.getKey()))continue;
+            String candidate=normalizedDocs.get(entry.getKey());
+            missing.add(candidate);
+            CheckBox cb=new CheckBox(this);
+            cb.setText(candidate+"\n   Docs : "+entry.getValue());
+            cb.setTextColor(Color.WHITE);cb.setTextSize(15);cb.setChecked(false);
+            results.addView(cb);boxes.add(cb);
+        }
+        if(missing.isEmpty()){
+            TextView none=new TextView(this);none.setTextColor(Color.LTGRAY);
+            none.setText("Aucun titre manquant détecté.");results.addView(none);
+        }
+        TextView managerHeading=new TextView(this);
+        managerHeading.setTextColor(Color.LTGRAY);
+        managerHeading.setText("\nDANS LE MANAGER, PAS RECONNU DANS GOOGLE DOCS :");
+        results.addView(managerHeading);
+        int unmatched=0;
         for(Map.Entry<String,Song> entry:manager.entrySet()){
             if(docs.containsKey(entry.getKey()))continue;
-            managerOnly++;
-            Song song=entry.getValue();
-            TextView row=new TextView(this);
-            row.setTextColor(Color.WHITE);row.setTextSize(16);
-            row.setPadding(0,9,0,9);
-            row.setText("Manager → "+song.title+" · "+song.bpm+" BPM");
-            results.addView(row);
+            unmatched++;
+            TextView row=new TextView(this);row.setTextColor(Color.WHITE);
+            row.setText(entry.getValue().title+" · "+entry.getValue().bpm+" BPM");
+            row.setPadding(0,8,0,8);results.addView(row);
         }
-        if(managerOnly==0){
+        if(unmatched==0){
             TextView none=new TextView(this);none.setTextColor(Color.LTGRAY);
-            none.setText("Aucune différence détectée.");results.addView(none);
+            none.setText("Aucun.");results.addView(none);
         }
         Button copy=new Button(this);
-        copy.setText("Copier le sommaire brut pour vérifier les BPM et icônes");
+        copy.setText("Copier le sommaire brut");
         copy.setOnClickListener(v->{
-            android.content.ClipboardManager managerClipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-            managerClipboard.setPrimaryClip(android.content.ClipData.newPlainText("Sommaire TS 2026",overview));
+            android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("Sommaire TS 2026",overview));
             Toast.makeText(this,"Sommaire copié",Toast.LENGTH_SHORT).show();
         });
         results.addView(copy);
