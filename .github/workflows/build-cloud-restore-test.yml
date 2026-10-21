@@ -22,10 +22,30 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Create isolated signing key (NOT compatible with installed Manager)
+      # Reuse one signing certificate for all future CLOUD RESTORE TEST builds.
+      # For durable storage, set the GitHub Actions secret
+      # CLOUD_RESTORE_TEST_KEYSTORE_BASE64 to the base64 of this keystore.
+      # The fixed-key cache is a fallback only (GitHub may evict caches).
+      - name: Restore isolated signing certificate cache
+        uses: actions/cache@v4
+        with:
+          path: .signing/liveset-debug.keystore
+          key: cloud-restore-test-signing-v1
+      - name: Restore signing certificate or create it once
+        env:
+          TEST_KEYSTORE_BASE64: ${{ secrets.CLOUD_RESTORE_TEST_KEYSTORE_BASE64 }}
         run: |
           mkdir -p .signing
-          keytool -genkeypair -noprompt -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Cloud Restore Test, O=TS LiveSet, C=FR"
+          if [ -n "$TEST_KEYSTORE_BASE64" ]; then
+            printf '%s' "$TEST_KEYSTORE_BASE64" | base64 --decode > .signing/liveset-debug.keystore
+            echo "Signing with GitHub secret"
+          elif [ -s .signing/liveset-debug.keystore ]; then
+            echo "Signing with restored fixed-key cache"
+          else
+            echo "::warning::No stored test certificate. Creating a new one; back it up as CLOUD_RESTORE_TEST_KEYSTORE_BASE64 to prevent future loss."
+            keytool -genkeypair -noprompt -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Cloud Restore Test, O=TS LiveSet, C=FR"
+          fi
+          keytool -list -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android >/dev/null
       - name: Show OAuth Android certificate fingerprint
         run: |
           keytool -list -v -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android | grep -E 'SHA1:|SHA256:'
