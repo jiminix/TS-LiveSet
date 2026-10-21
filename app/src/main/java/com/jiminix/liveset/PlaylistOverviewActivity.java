@@ -120,6 +120,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         if(fresh!=null){
             setlist=fresh;
             repairMissingLyrics();
+            removeAlreadyPublishedFromInProgress();
             if(titleView!=null) titleView.setText(setlist.name+" · "+setlist.songIds.size()+" titres");
             if(adapter!=null) adapter.notifyDataSetChanged();
             maybeRestoreEmptyInProgress();
@@ -139,6 +140,45 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             audioWeb=null;
         }
         super.onDestroy();
+    }
+
+    /**
+     * EN COURS is a staging queue, not a second copy of the main playlist.
+     * Reconcile songs already published (including older app versions) on resume.
+     * Only change the staging list; never delete Song library records or lyrics.
+     */
+    private void removeAlreadyPublishedFromInProgress(){
+        if(!AppStore.isInProgressSetlist(setlistId))return;
+        String targetId=AppStore.getViewerSetlistId(this);
+        if(targetId==null || AppStore.isInProgressSetlist(targetId))return;
+        SetListModel main=AppStore.findSetlist(this,targetId);
+        if(main==null)return;
+        java.util.Set<String> publishedIds=new java.util.HashSet<>(main.songIds);
+        java.util.Set<String> publishedTitles=new java.util.HashSet<>();
+        for(String id:main.songIds){
+            Song song=AppStore.findSong(this,id);
+            if(song!=null && song.title!=null && !song.title.trim().isEmpty())
+                publishedTitles.add(normalizedTitle(song.title));
+        }
+        java.util.List<String> obsolete=new java.util.ArrayList<>();
+        for(String id:setlist.songIds){
+            if(publishedIds.contains(id)){obsolete.add(id);continue;}
+            Song song=AppStore.findSong(this,id);
+            if(song!=null && song.title!=null && !song.title.trim().isEmpty()
+                && publishedTitles.contains(normalizedTitle(song.title)))obsolete.add(id);
+        }
+        if(obsolete.isEmpty())return;
+        AppStore.recordUndoSnapshot(this,"Nettoyage EN COURS déjà publiés");
+        setlist.songIds.removeAll(obsolete);
+        setlist.disabledSongIds.removeAll(obsolete);
+        // Persist an intentionally empty staging list without triggering cloud recovery.
+        if(setlist.songIds.isEmpty()){
+            AppStore.clearInProgressSetlist(this);
+            setlist=AppStore.getOrCreateInProgressSetlist(this);
+        }else{
+            AppStore.upsertSetlist(this,setlist);
+        }
+        Toast.makeText(this,obsolete.size()+" titre(s) déjà dans la playlist principale retiré(s) de EN COURS",Toast.LENGTH_LONG).show();
     }
 
     private void maybeRestoreEmptyInProgress(){
