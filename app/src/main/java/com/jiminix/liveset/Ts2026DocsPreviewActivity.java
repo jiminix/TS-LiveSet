@@ -17,9 +17,12 @@ import android.widget.TextView;
 public class Ts2026DocsPreviewActivity extends Activity {
     private WebView browser;
     private TextView status;
+    private String targetTitle = "";
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        targetTitle = getIntent().getStringExtra("song_title");
+        if (targetTitle == null) targetTitle = "";
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setBackgroundColor(Color.BLACK);
@@ -37,6 +40,11 @@ public class Ts2026DocsPreviewActivity extends Activity {
         browser = new WebView(this);
         browser.setBackgroundColor(Color.BLACK);
         browser.getSettings().setJavaScriptEnabled(false);
+        browser.setWebViewClient(new android.webkit.WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                if (!targetTitle.isEmpty()) view.findAllAsync(targetTitle);
+            }
+        });
         browser.getSettings().setBuiltInZoomControls(true);
         browser.getSettings().setDisplayZoomControls(false);
         browser.getSettings().setUseWideViewPort(true);
