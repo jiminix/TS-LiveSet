@@ -247,19 +247,80 @@ public class Ts2026RecoveryActivity extends Activity {
         }
         return "";
     }
+
+    private static String titleFromOverviewLine(String line){
+        String cleaned=line.trim();
+        if(cleaned.isEmpty()||cleaned.startsWith("--- COLONNE"))return "";
+        // Preserve the raw line for the UI; strip only trailing performance metadata
+        // for matching against the Manager song title.
+        cleaned=cleaned.replaceFirst("\\s*[🎸🎹⏩⇻➤🔺🔻🔀🔁].*$","");
+        cleaned=cleaned.replaceFirst("\\s+(?:\\.{2,}\\s*)?(?:\\d{2,3})(?:\\s*BPM)?\\s*$","");
+        return cleaned.trim();
+    }
     private void showOverview(String overview){
         results.removeAllViews();boxes.clear();missing.clear();
-        status.setText("Sommaire TS 2026 identifié : ligne 2, colonnes 1 et 2. Aucun ajout proposé tant que les titres ne sont pas séparés de manière fiable.");
-        TextView content=new TextView(this);
-        content.setTextColor(Color.WHITE);
-        content.setTextSize(15);
-        content.setText(overview);
-        results.addView(content);
+        SetListModel playlist=AppStore.findSetlist(this,playlistId);
+        if(playlist==null)return;
+        LinkedHashMap<String,Song> manager=new LinkedHashMap<>();
+        for(String songId:playlist.songIds){
+            Song song=AppStore.findSong(this,songId);
+            if(song!=null)manager.put(key(song.title),song);
+        }
+        LinkedHashMap<String,String> docs=new LinkedHashMap<>();
+        String[] lines=overview.replace("\\n","\n").split("\n");
+        for(String raw:lines){
+            String title=titleFromOverviewLine(raw);
+            if(title.length()<3 || title.length()>100)continue;
+            docs.putIfAbsent(key(title),raw.trim());
+        }
+        int matched=0;
+        for(String titleKey:docs.keySet())if(manager.containsKey(titleKey))matched++;
+        // Fail closed: no automatic imports, even if the format is ambiguous.
+        status.setText("Comparaison TS 2026 (lecture seule) : "+docs.size()+
+            " lignes Docs, "+manager.size()+" titres Manager, "+matched+
+            " correspondances exactes. BPM, icônes et annotations conservés ci-dessous.");
+        TextView intro=new TextView(this);
+        intro.setTextColor(Color.LTGRAY);
+        intro.setText("DOCS UNIQUEMENT / À VÉRIFIER :");
+        results.addView(intro);
+        int docsOnly=0;
+        for(Map.Entry<String,String> entry:docs.entrySet()){
+            if(manager.containsKey(entry.getKey()))continue;
+            docsOnly++;
+            TextView row=new TextView(this);
+            row.setTextColor(Color.WHITE);row.setTextSize(16);
+            row.setPadding(0,9,0,9);
+            row.setText("Docs → "+entry.getValue());
+            results.addView(row);
+        }
+        if(docsOnly==0){
+            TextView none=new TextView(this);none.setTextColor(Color.LTGRAY);
+            none.setText("Aucune différence détectée.");results.addView(none);
+        }
+        TextView heading=new TextView(this);
+        heading.setTextColor(Color.LTGRAY);
+        heading.setText("\nMANAGER UNIQUEMENT / À VÉRIFIER :");
+        results.addView(heading);
+        int managerOnly=0;
+        for(Map.Entry<String,Song> entry:manager.entrySet()){
+            if(docs.containsKey(entry.getKey()))continue;
+            managerOnly++;
+            Song song=entry.getValue();
+            TextView row=new TextView(this);
+            row.setTextColor(Color.WHITE);row.setTextSize(16);
+            row.setPadding(0,9,0,9);
+            row.setText("Manager → "+song.title+" · "+song.bpm+" BPM");
+            results.addView(row);
+        }
+        if(managerOnly==0){
+            TextView none=new TextView(this);none.setTextColor(Color.LTGRAY);
+            none.setText("Aucune différence détectée.");results.addView(none);
+        }
         Button copy=new Button(this);
-        copy.setText("Copier uniquement le sommaire TS 2026");
+        copy.setText("Copier le sommaire brut pour vérifier les BPM et icônes");
         copy.setOnClickListener(v->{
-            android.content.ClipboardManager manager=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-            manager.setPrimaryClip(android.content.ClipData.newPlainText("Sommaire TS 2026",overview));
+            android.content.ClipboardManager managerClipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+            managerClipboard.setPrimaryClip(android.content.ClipData.newPlainText("Sommaire TS 2026",overview));
             Toast.makeText(this,"Sommaire copié",Toast.LENGTH_SHORT).show();
         });
         results.addView(copy);
