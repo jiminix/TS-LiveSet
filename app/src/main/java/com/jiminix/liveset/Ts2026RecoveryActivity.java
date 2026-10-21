@@ -28,6 +28,9 @@ public class Ts2026RecoveryActivity extends Activity {
     private TextView status;
     private final List<String> missing = new ArrayList<>();
     private final List<CheckBox> boxes = new ArrayList<>();
+    private final List<String> docsOrder = new ArrayList<>();
+    private final List<String> managerOnlyIds = new ArrayList<>();
+    private final List<CheckBox> removeBoxes = new ArrayList<>();
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -273,6 +276,7 @@ public class Ts2026RecoveryActivity extends Activity {
     }
     private void showOverview(String overview){
         results.removeAllViews();boxes.clear();missing.clear();
+        docsOrder.clear();managerOnlyIds.clear();removeBoxes.clear();
         SetListModel playlist=AppStore.findSetlist(this,playlistId);
         if(playlist==null)return;
         LinkedHashMap<String,Song> manager=new LinkedHashMap<>();
@@ -293,6 +297,7 @@ public class Ts2026RecoveryActivity extends Activity {
                 normalizedDocs.putIfAbsent(id,title);
             }
         }
+        docsOrder.addAll(docs.keySet());
         int matched=0;
         for(String k:docs.keySet())if(manager.containsKey(k))matched++;
         status.setText("TS 2026 · "+docs.size()+" entrées Google Docs · "+manager.size()+
@@ -323,14 +328,23 @@ public class Ts2026RecoveryActivity extends Activity {
         for(Map.Entry<String,Song> entry:manager.entrySet()){
             if(docs.containsKey(entry.getKey()))continue;
             unmatched++;
-            TextView row=new TextView(this);row.setTextColor(Color.WHITE);
+            CheckBox row=new CheckBox(this);row.setTextColor(Color.WHITE);
             row.setText(entry.getValue().title+" · "+entry.getValue().bpm+" BPM");
-            row.setPadding(0,8,0,8);results.addView(row);
+            row.setChecked(false);row.setPadding(0,8,0,8);results.addView(row);
+            managerOnlyIds.add(entry.getValue().id);removeBoxes.add(row);
         }
         if(unmatched==0){
             TextView none=new TextView(this);none.setTextColor(Color.LTGRAY);
             none.setText("Aucun.");results.addView(none);
         }
+        Button reorder=new Button(this);
+        reorder.setText("Aligner l'ordre de TS 2026 sur Google Docs");
+        reorder.setOnClickListener(v->confirmReorder());
+        results.addView(reorder);
+        Button remove=new Button(this);
+        remove.setText("Retirer les titres cochés de TS 2026");
+        remove.setOnClickListener(v->confirmRemove());
+        results.addView(remove);
         Button copy=new Button(this);
         copy.setText("Copier le sommaire brut");
         copy.setOnClickListener(v->{
@@ -415,6 +429,78 @@ public class Ts2026RecoveryActivity extends Activity {
             CheckBox cb=new CheckBox(this);cb.setText(title);cb.setTextColor(Color.WHITE);
             cb.setChecked(false);results.addView(cb);boxes.add(cb);
         }
+    }
+
+    private void confirmReorder(){
+        SetListModel playlist=AppStore.findSetlist(this,playlistId);
+        if(playlist==null || docsOrder.isEmpty())return;
+        Map<String,String> byTitle=new HashMap<>();
+        for(String id:playlist.songIds){
+            Song song=AppStore.findSong(this,id);
+            if(song!=null)byTitle.put(key(song.title),id);
+        }
+        List<String> ordered=new ArrayList<>();
+        for(String title:docsOrder){
+            String id=byTitle.get(title);
+            if(id!=null && !ordered.contains(id))ordered.add(id);
+        }
+        int unmatched=0;
+        for(String id:playlist.songIds){
+            if(!ordered.contains(id)){ordered.add(id);unmatched++;}
+        }
+        if(ordered.equals(playlist.songIds)){
+            Toast.makeText(this,"Ordre déjà identique pour les titres reconnus.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        final int leftovers=unmatched;
+        new AlertDialog.Builder(this)
+            .setTitle("Aligner l'ordre de TS 2026 ?")
+            .setMessage("Les titres reconnus suivront l'ordre du sommaire Google Docs. "+
+                leftovers+" titre(s) non reconnu(s) resteront à la fin, sans suppression. "+
+                "Les autres playlists, les paroles et les métadonnées restent intactes.")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Réorganiser",(d,w)->{
+                SetListModel current=AppStore.findSetlist(this,playlistId);
+                if(current==null)return;
+                if(!new HashSet<>(current.songIds).equals(new HashSet<>(playlist.songIds))){
+                    Toast.makeText(this,"Playlist modifiée entre-temps : relis Google Docs.",Toast.LENGTH_LONG).show();
+                    return;
+                }
+                AppStore.recordUndoSnapshot(this,"Alignement ordre TS 2026 Google Docs");
+                current.songIds.clear();
+                current.songIds.addAll(ordered);
+                AppStore.upsertSetlist(this,current);
+                Toast.makeText(this,"Ordre TS 2026 actualisé.",Toast.LENGTH_LONG).show();
+                authorizeAndRead();
+            }).show();
+    }
+    private void confirmRemove(){
+        List<String> selected=new ArrayList<>();
+        List<String> titles=new ArrayList<>();
+        for(int i=0;i<removeBoxes.size();i++){
+            if(!removeBoxes.get(i).isChecked())continue;
+            selected.add(managerOnlyIds.get(i));
+            Song song=AppStore.findSong(this,managerOnlyIds.get(i));
+            titles.add(song==null?managerOnlyIds.get(i):song.title);
+        }
+        if(selected.isEmpty()){
+            Toast.makeText(this,"Coche d'abord les morceaux à retirer.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("Retirer "+selected.size()+" morceau(x) de TS 2026 ?")
+            .setMessage(android.text.TextUtils.join("\n",titles)+
+                "\n\nRetrait de cette playlist UNIQUEMENT. Les morceaux restent dans la bibliothèque et les autres playlists.")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Retirer de TS 2026",(d,w)->{
+                SetListModel list=AppStore.findSetlist(this,playlistId);
+                if(list==null)return;
+                AppStore.recordUndoSnapshot(this,"Retrait titres TS 2026 Google Docs");
+                list.songIds.removeAll(selected);
+                AppStore.upsertSetlist(this,list);
+                Toast.makeText(this,"Titres retirés de TS 2026 uniquement.",Toast.LENGTH_LONG).show();
+                authorizeAndRead();
+            }).show();
     }
     private void confirmAdd(){
         List<String> chosen=new ArrayList<>();
