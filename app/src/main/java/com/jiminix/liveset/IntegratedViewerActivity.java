@@ -207,38 +207,9 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             ViewGroup.LayoutParams.WRAP_CONTENT
         ));
 
-        if(tabletLayout){
-            LinearLayout content=new LinearLayout(this);
-            content.setOrientation(LinearLayout.HORIZONTAL);
-            content.addView(scroll,new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.MATCH_PARENT,0.46f));
-            LinearLayout detail=new LinearLayout(this);
-            detail.setOrientation(LinearLayout.VERTICAL);
-            detail.setBackgroundColor(Color.rgb(19,19,19));
-            detail.setPadding(dp(16),dp(12),dp(12),dp(8));
-            tabletSongTitle=new TextView(this);
-            tabletSongTitle.setText("Sélectionne un titre à gauche");
-            tabletSongTitle.setTextColor(Color.rgb(255,196,30));
-            tabletSongTitle.setTextSize(21);
-            tabletSongTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-            detail.addView(tabletSongTitle);
-            ScrollView lyricScroll=new ScrollView(this);
-            tabletLyrics=new TextView(this);
-            tabletLyrics.setText("Les paroles du morceau sélectionné apparaîtront ici.");
-            tabletLyrics.setTextColor(Color.WHITE);
-            tabletLyrics.setTextSize(21);
-            tabletLyrics.setPadding(0,dp(12),dp(8),dp(20));
-            lyricScroll.addView(tabletLyrics);
-            detail.addView(lyricScroll,new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,0,1));
-            content.addView(detail,new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.MATCH_PARENT,0.54f));
-            root.addView(content,new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,0,1));
-        }else{
-            root.addView(scroll,new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,0,1));
-        }
+        root.addView(scroll,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,0,1
+        ));
 
         TextView footer=new TextView(this);
         footer.setText("Viewer intégré · synchronisation Internet active pour les autres téléphones");
@@ -328,9 +299,28 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         info.setText(songs.size()+" titre"+(songs.size()>1?"s":""));
         songsBox.removeAllViews();
 
-        for(int i=0;i<songs.size();i++){
-            Song s=songs.get(i);
-            addSongRow(i+1,s,list.disabledSongIds.contains(s.id));
+        if(tabletLayout){
+            songsBox.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout left=new LinearLayout(this);
+            LinearLayout right=new LinearLayout(this);
+            left.setOrientation(LinearLayout.VERTICAL);
+            right.setOrientation(LinearLayout.VERTICAL);
+            songsBox.addView(left,new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,1));
+            songsBox.addView(right,new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,1));
+            int split=(songs.size()+1)/2;
+            for(int i=0;i<songs.size();i++){
+                Song song=songs.get(i);
+                addSongRow(i+1,song,list.disabledSongIds.contains(song.id),
+                    i<split?left:right);
+            }
+        }else{
+            songsBox.setOrientation(LinearLayout.VERTICAL);
+            for(int i=0;i<songs.size();i++){
+                Song song=songs.get(i);
+                addSongRow(i+1,song,list.disabledSongIds.contains(song.id),songsBox);
+            }
         }
     }
 
@@ -391,10 +381,28 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
     private void openSongLyrics(Song song,int index){
         if(song==null)return;
-        if(tabletLayout && tabletLyrics!=null){
-            tabletSongTitle.setText(song.title==null?"":song.title);
+        if(tabletLayout){
+            ScrollView scroller=new ScrollView(this);
+            TextView body=new TextView(this);
             String lyrics=song.lyrics==null?"":song.lyrics.trim();
-            tabletLyrics.setText(lyrics.isEmpty()?"Aucune parole enregistrée pour ce morceau.":lyrics);
+            body.setText(lyrics.isEmpty()?"Aucune parole enregistrée pour ce morceau.":lyrics);
+            body.setTextColor(Color.WHITE);
+            body.setTextSize(22);
+            body.setPadding(dp(18),dp(12),dp(18),dp(24));
+            scroller.addView(body);
+            AlertDialog dialog=new AlertDialog.Builder(this)
+                .setTitle(song.title)
+                .setView(scroller)
+                .setPositiveButton("Fermer",null)
+                .create();
+            dialog.setOnShowListener(d->{
+                if(dialog.getWindow()!=null){
+                    dialog.getWindow().setLayout(
+                        (int)(getResources().getDisplayMetrics().widthPixels*0.85f),
+                        (int)(getResources().getDisplayMetrics().heightPixels*0.85f));
+                }
+            });
+            dialog.show();
             return;
         }
         Intent intent=new Intent(this,LiveSongActivity.class);
@@ -412,7 +420,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         refreshPlaylist();
     }
 
-    private void addSongRow(int number,Song song,boolean disabled){
+    private void addSongRow(int number,Song song,boolean disabled,LinearLayout target){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -542,7 +550,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             row.setOnClickListener(v->openSongLyrics(song,number-1));
         }
 
-        songsBox.addView(row,new LinearLayout.LayoutParams(
+        target.addView(row,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ));
@@ -585,7 +593,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 }
             }
 
-            songsBox.addView(medleyBox,new LinearLayout.LayoutParams(
+            target.addView(medleyBox,new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ));
@@ -593,7 +601,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
         View sep=new View(this);
         sep.setBackgroundColor(Color.rgb(45,45,45));
-        songsBox.addView(sep,new LinearLayout.LayoutParams(
+        target.addView(sep,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,Math.max(1,zdp(1))
         ));
     }
