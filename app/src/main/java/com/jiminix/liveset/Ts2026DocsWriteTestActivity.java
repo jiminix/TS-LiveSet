@@ -37,6 +37,8 @@ public class Ts2026DocsWriteTestActivity extends Activity {
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
         pendingSongId=getIntent().getStringExtra("sync_song_id");
+        ScrollView scroll=new ScrollView(this);
+        scroll.setFillViewport(true);
         LinearLayout layout=new LinearLayout(this);
         layout.setPadding(24,24,24,24);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -51,6 +53,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         copyId.setHintTextColor(Color.GRAY);copyId.setHint("Identifiant ou lien Google Docs de la copie");
         copyId.setText(getPreferences(MODE_PRIVATE).getString("test_copy_id",""));
         layout.addView(copyId,new LinearLayout.LayoutParams(-1,-2));
+        status=new TextView(this);status.setTextColor(Color.WHITE);
+        status.setText("Non connecté · autorisation Google nécessaire.");
+        status.setTextSize(15);status.setPadding(8,12,8,12);
+        layout.addView(status);
         Button authorize=new Button(this);authorize.setText("Autoriser Google Docs");
         authorize.setOnClickListener(v->authorize());layout.addView(authorize);
         Button write=new Button(this);write.setText("Écrire une ligne TEST dans la copie");
@@ -71,10 +77,6 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         missingTwo.setText("Préparer SMOOTH OPERATOR + IS IT A CRIME → COPIE");
         missingTwo.setOnClickListener(v->confirmMissingTwo());
         layout.addView(missingTwo);
-        Button official=new Button(this);
-        official.setText("NOUVEAU DOCS OFFICIEL · ajouter les 2 sections");
-        official.setOnClickListener(v->confirmOfficialMissingTwo());
-        layout.addView(official);
         if(pendingSongId!=null){
             Button retryIndex=new Button(this);
             retryIndex.setText("Réessayer le sommaire uniquement → COPIE");
@@ -88,10 +90,8 @@ public class Ts2026DocsWriteTestActivity extends Activity {
             });
             layout.addView(retryIndex);
         }
-        status=new TextView(this);status.setTextColor(Color.WHITE);
-        status.setText("Non connecté. La connexion nécessite la configuration OAuth Android du projet dans Google Cloud.");
-        layout.addView(status);
-        setContentView(layout);
+        scroll.addView(layout);
+        setContentView(scroll);
         if(pendingSongId!=null){
             status.setText("Morceau validé dans TS 2026. Autorise Google Docs puis confirme l’ajout de sa section dans la COPIE.");
         }
