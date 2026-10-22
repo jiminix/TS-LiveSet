@@ -1269,6 +1269,17 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 ? title+" déjà dans « "+target.name+" » · retiré de EN COURS"
                 : title+" ajouté à « "+target.name+" »",
             Toast.LENGTH_LONG).show();
+        if(!alreadyPresent && Ts2026GoogleDocsSource.isTs2026(target.name)){
+            new AlertDialog.Builder(this)
+                .setTitle("Google Docs · copie de test")
+                .setMessage("Le morceau est ajouté à TS 2026. Ouvrir la synchronisation de test pour créer sa section de paroles dans une COPIE Google Docs ? Le document original ne sera pas modifié.")
+                .setNegativeButton("Plus tard",null)
+                .setPositiveButton("Ouvrir",(d,w)->{
+                    Intent intent=new Intent(this,Ts2026DocsWriteTestActivity.class);
+                    intent.putExtra("sync_song_id",songId);
+                    startActivity(intent);
+                }).show();
+        }
     }
 
     private void toggleSongDisabled(int pos){
