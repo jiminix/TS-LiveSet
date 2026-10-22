@@ -71,6 +71,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         missingTwo.setText("Préparer SMOOTH OPERATOR + IS IT A CRIME → COPIE");
         missingTwo.setOnClickListener(v->confirmMissingTwo());
         layout.addView(missingTwo);
+        Button official=new Button(this);
+        official.setText("NOUVEAU DOCS OFFICIEL · ajouter les 2 sections");
+        official.setOnClickListener(v->confirmOfficialMissingTwo());
+        layout.addView(official);
         if(pendingSongId!=null){
             Button retryIndex=new Button(this);
             retryIndex.setText("Réessayer le sommaire uniquement → COPIE");
@@ -91,6 +95,39 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         if(pendingSongId!=null){
             status.setText("Morceau validé dans TS 2026. Autorise Google Docs puis confirme l’ajout de sa section dans la COPIE.");
         }
+    }
+
+    private void confirmOfficialMissingTwo(){
+        if(token==null||token.isEmpty()){
+            status.setText("Autorise Google Docs avant toute écriture.");return;
+        }
+        Song smooth=null,crime=null;
+        SetListModel playlist=null;
+        for(SetListModel item:AppStore.loadSetlists(this))
+            if(Ts2026GoogleDocsSource.isTs2026(item.name)){playlist=item;break;}
+        if(playlist==null){status.setText("Playlist TS 2026 introuvable.");return;}
+        for(String songId:playlist.songIds){
+            Song song=AppStore.findSong(this,songId);
+            if(song==null)continue;
+            if(normalized(song.title).equals("smoothoperator"))smooth=song;
+            if(normalized(song.title).equals("isitacrime"))crime=song;
+        }
+        if(smooth==null||crime==null){
+            status.setText("Les deux titres doivent être présents dans TS 2026.");return;
+        }
+        final Song first=smooth,second=crime;
+        String preview=preparedSongSection(first)+preparedSongSection(second);
+        new AlertDialog.Builder(this)
+            .setTitle("ÉCRITURE DANS LE NOUVEAU GOOGLE DOCS")
+            .setMessage("ATTENTION : ceci modifie réellement le document reformatté.\n"+
+                "Deux sections seront ajoutées à la fin. Les 32 titres existants et leur sommaire ne seront PAS modifiés à cette étape.\n"+
+                "Aucune parole ne sera inventée.\n\n"+
+                preview.substring(0,Math.min(preview.length(),1400))+
+                "\n\nConfirmer l'écriture dans le document officiel ?")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Confirmer l'ajout",(d,w)->appendMissingTwo(
+                Ts2026GoogleDocsSource.PREPARED_DOCUMENT_ID,token,first,second,true))
+            .show();
     }
 
     private void confirmMissingTwo(){
@@ -134,11 +171,17 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         return text.toString();
     }
     private void appendMissingTwo(String destination,String accessToken,Song first,Song second){
-        status.setText("Vérification de la COPIE avant écriture…");
+        appendMissingTwo(destination,accessToken,first,second,false);
+    }
+    private void appendMissingTwo(String destination,String accessToken,Song first,Song second,boolean official){
+        status.setText(official?"Vérification du document officiel…":"Vérification de la COPIE avant écriture…");
         new Thread(()->{
             HttpURLConnection get=null,post=null;
             try{
-                if(isProtectedDocument(destination))throw new IllegalArgumentException("Document protégé");
+                if(official){
+                    if(!Ts2026GoogleDocsSource.PREPARED_DOCUMENT_ID.equals(destination))
+                        throw new IllegalArgumentException("Destination officielle invalide");
+                }else if(isProtectedDocument(destination))throw new IllegalArgumentException("Document protégé");
                 get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
                     destination+"?includeTabsContent=true").openConnection();
                 get.setConnectTimeout(12000);get.setReadTimeout(20000);
@@ -170,7 +213,9 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                 }
                 if(post.getResponseCode()<200||post.getResponseCode()>=300)
                     throw new java.io.IOException("Écriture refusée HTTP "+post.getResponseCode());
-                runOnUiThread(()->status.setText("Deux sections ajoutées à la COPIE. Sommaire original inchangé."));
+                runOnUiThread(()->status.setText(official ?
+                    "Deux sections ajoutées au NOUVEAU document officiel. Sommaire encore à actualiser." :
+                    "Deux sections ajoutées à la COPIE. Sommaire original inchangé."));
             }catch(Exception e){
                 runOnUiThread(()->status.setText("Aucune écriture confirmée : "+e.getMessage()));
             }finally{
