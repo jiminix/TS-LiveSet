@@ -33,8 +33,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
     private EditText copyId;
     private TextView status;
     private String token;
+    private String pendingSongId;
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
+        pendingSongId=getIntent().getStringExtra("sync_song_id");
         LinearLayout layout=new LinearLayout(this);
         layout.setPadding(24,24,24,24);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -47,6 +49,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         explanation.setTextColor(Color.LTGRAY);layout.addView(explanation);
         copyId=new EditText(this);copyId.setSingleLine(true);copyId.setTextColor(Color.WHITE);
         copyId.setHintTextColor(Color.GRAY);copyId.setHint("Identifiant ou lien Google Docs de la copie");
+        copyId.setText(getPreferences(MODE_PRIVATE).getString("test_copy_id",""));
         layout.addView(copyId,new LinearLayout.LayoutParams(-1,-2));
         Button authorize=new Button(this);authorize.setText("Autoriser Google Docs");
         authorize.setOnClickListener(v->authorize());layout.addView(authorize);
@@ -68,6 +71,9 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         status.setText("Non connecté. La connexion nécessite la configuration OAuth Android du projet dans Google Cloud.");
         layout.addView(status);
         setContentView(layout);
+        if(pendingSongId!=null){
+            status.setText("Morceau validé dans TS 2026. Autorise Google Docs puis confirme l’ajout de sa section dans la COPIE.");
+        }
     }
     private String id(){
         String value=copyId.getText().toString().trim();
@@ -105,6 +111,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         }else{
             token=result.getAccessToken();
             status.setText(token==null?"Jeton Google absent.":"Google Docs autorisé. Choisis une COPIE pour le test.");
+            if(token!=null && pendingSongId!=null)confirmPendingSong();
         }
     }
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
@@ -436,6 +443,19 @@ public class Ts2026DocsWriteTestActivity extends Activity {
     // Safe first milestone: append a new empty lyrics section to the copy.
     // The rich-text overview is intentionally untouched until its insertion
     // points and formatting can be validated independently.
+    private void confirmPendingSong(){
+        if(!validCopy())return;
+        Song song=AppStore.findSong(this,pendingSongId);
+        if(song==null || song.title==null || song.title.trim().isEmpty())return;
+        String destination=id();
+        new AlertDialog.Builder(this).setTitle("Synchroniser sur la COPIE ?")
+            .setMessage("Créer à la fin de la COPIE une section de paroles pour « "+song.title+" » ? Le sommaire ne sera pas encore modifié.")
+            .setNegativeButton("Plus tard",null)
+            .setPositiveButton("Créer",(d,w)->{
+                getPreferences(MODE_PRIVATE).edit().putString("test_copy_id",destination).apply();
+                appendLyricsSection(destination,token,song.title);
+            }).show();
+    }
     private void chooseNewLyricsSection(){
         if(!validCopy())return;
         if(token==null||token.isEmpty()){
