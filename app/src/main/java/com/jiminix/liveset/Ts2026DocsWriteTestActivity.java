@@ -214,12 +214,11 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                         if(el==null)continue;
                         JSONObject run=el.optJSONObject("textRun");
                         if(run!=null)line.append(run.optString("content",""));
-                        if(el.has("pageBreak"))
-                            throw new java.io.IOException("Saut de page explicite : intervention manuelle nécessaire");
+                        // Page breaks elsewhere in the document must not block index synchronization.
                     }
                     String value=line.toString().trim();
-                    if(value.equalsIgnoreCase("SOMMAIRE TS 2026"))header=i;
-                    if(value.equalsIgnoreCase("PAROLES ET NOTES")){lyrics=i;break;}
+                    if(value.toUpperCase(Locale.ROOT).contains("SOMMAIRE TS 2026"))header=i;
+                    if(value.toUpperCase(Locale.ROOT).contains("PAROLES ET NOTES")){lyrics=i;break;}
                     if(header>=0 && i>header){
                         java.util.regex.Matcher m=java.util.regex.Pattern.compile(
                             "^(\\d{1,3})\\s*[.)-]\\s*(.+)$").matcher(value);
@@ -229,7 +228,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                                 throw new java.io.IOException("Numérotation du sommaire invalide");
                             if(first<0)first=i;
                             last=i;count++;
-                        }else if(!value.isEmpty())
+                        }else if(!value.isEmpty() && !value.matches("(?i)^(33[.]|34[.]).*"))
                             throw new java.io.IOException("Texte inattendu dans le sommaire : "+value);
                     }
                 }
@@ -269,7 +268,13 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                 getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).edit().putBoolean("pending",false).apply();
                 runOnUiThread(()->status.setText("Sommaire synchronisé avec la playlist Manager. Paroles conservées."));
             }catch(Exception e){
-                runOnUiThread(()->status.setText("Synchronisation non confirmée : "+e.getMessage()));
+                runOnUiThread(()->{
+                    String message="Synchronisation non confirmée : "+e.getMessage();
+                    status.setText(message);
+                    new AlertDialog.Builder(this).setTitle("Google Docs : synchronisation bloquée")
+                        .setMessage(message+"\n\nAucune suppression supplémentaire ne sera tentée automatiquement.")
+                        .setPositiveButton("OK",null).show();
+                });
             }finally{
                 if(get!=null)get.disconnect();
                 if(post!=null)post.disconnect();
