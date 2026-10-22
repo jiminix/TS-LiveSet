@@ -67,6 +67,19 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         lyrics.setText("Tester une nouvelle section de paroles → COPIE");
         lyrics.setOnClickListener(v->chooseNewLyricsSection());
         layout.addView(lyrics);
+        if(pendingSongId!=null){
+            Button retryIndex=new Button(this);
+            retryIndex.setText("Réessayer le sommaire uniquement → COPIE");
+            retryIndex.setOnClickListener(v->{
+                if(!validCopy())return;
+                if(token==null||token.isEmpty()){
+                    status.setText("Autorise Google Docs avant de réessayer.");return;
+                }
+                Song pending=AppStore.findSong(this,pendingSongId);
+                if(pending!=null)previewIndexInsertion(id(),token,pending);
+            });
+            layout.addView(retryIndex);
+        }
         status=new TextView(this);status.setTextColor(Color.WHITE);
         status.setText("Non connecté. La connexion nécessite la configuration OAuth Android du projet dans Google Cloud.");
         layout.addView(status);
