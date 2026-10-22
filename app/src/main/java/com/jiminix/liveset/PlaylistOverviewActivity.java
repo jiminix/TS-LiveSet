@@ -457,7 +457,22 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         rename.setOnClickListener(v->renameList());
         add.setOnClickListener(v->showAddSongMenu());
         undo.setOnClickListener(v->undoLastAction());
-        importTitles.setOnClickListener(v->openImporter());
+        importTitles.setOnClickListener(v->{
+            if(Ts2026GoogleDocsSource.isTs2026(setlist.name)){
+                new AlertDialog.Builder(this)
+                    .setTitle("Google Docs · TS 2026")
+                    .setItems(new String[]{
+                        "Synchroniser le nouveau Google Docs",
+                        "Vérifier les titres Google Docs",
+                        "Importer un document"
+                    },(dialog,which)->{
+                        if(which==0)startActivity(new Intent(this,Ts2026DocsWriteTestActivity.class));
+                        else if(which==1)startActivity(new Intent(this,Ts2026RecoveryActivity.class)
+                            .putExtra("setlist_id",setlistId));
+                        else openImporter();
+                    }).show();
+            }else openImporter();
+        });
         fixTitles.setOnClickListener(v->findCorrectTitles());
         viewer.setOnClickListener(v->openViewer());
         inProgress.setOnClickListener(v->openInProgressPlaylist());
