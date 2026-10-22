@@ -1340,9 +1340,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         String signature=android.text.TextUtils.join("|",setlist.songIds);
         if(signature.equals(prefs.getString("last_attempt_signature","")))return;
         prefs.edit().putString("last_attempt_signature",signature).putBoolean("pending",true).apply();
-        Intent intent=new Intent(this,Ts2026DocsWriteTestActivity.class);
-        intent.putExtra("auto_playlist_sync",true);
-        startActivity(intent);
+        Ts2026DocsSyncWorker.configure(this,true);
+        Ts2026DocsSyncWorker.enqueue(this);
     }
 
     private void confirmRemoveSong(int pos){
