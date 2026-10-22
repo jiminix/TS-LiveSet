@@ -97,7 +97,12 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     }
 
     private void buildUi(){
-        tabletLayout=getResources().getConfiguration().smallestScreenWidthDp>=600;
+        // 7-inch emulators can report smallestScreenWidthDp below 600 even
+        // when their current landscape viewport is wide enough for two panes.
+        android.content.res.Configuration cfg=getResources().getConfiguration();
+        tabletLayout=cfg.smallestScreenWidthDp>=600 ||
+            (cfg.orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                && cfg.screenWidthDp>=700);
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
