@@ -504,9 +504,18 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                         JSONObject run=elements.optJSONObject(k).optJSONObject("textRun");
                         if(run!=null)line.append(run.optString("content",""));
                     }
-                    String value=line.toString().trim();
-                    if(value.length()>0 && alias(value).startsWith(alias(neighbor.title))){
-                        return new IndexLocation(paragraph.optInt("startIndex",-1),neighbor.title);
+                    String value=line.toString();
+                    // Docs index lines start with a number and may contain BPM,
+                    // instrument icons and stage markers after the title.
+                    String wanted=alias(neighbor.title);
+                    int offset=0;
+                    for(String raw:value.split("\\n",-1)){
+                        String cleaned=raw.trim().replaceFirst("^\\\\d{1,3}\\\\s*[.)-]\\\\s*","");
+                        if(!wanted.isEmpty() && alias(cleaned).startsWith(wanted)){
+                            int start=paragraph.optInt("startIndex",-1);
+                            if(start>0)return new IndexLocation(start+offset,neighbor.title);
+                        }
+                        offset+=raw.length()+1;
                     }
                 }
             }
