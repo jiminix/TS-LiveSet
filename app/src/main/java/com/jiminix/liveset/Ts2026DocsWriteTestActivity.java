@@ -136,6 +136,140 @@ public class Ts2026DocsWriteTestActivity extends Activity {
 
 
 
+
+    private void confirmPlaylistSync(){
+        if(token==null||token.isEmpty()){
+            status.setText("Autorise Google Docs avant la synchronisation.");return;
+        }
+        SetListModel playlist=null;
+        for(SetListModel item:AppStore.loadSetlists(this))
+            if(Ts2026GoogleDocsSource.isTs2026(item.name)){playlist=item;break;}
+        if(playlist==null){status.setText("Playlist TS 2026 introuvable.");return;}
+        StringBuilder snapshot=new StringBuilder();
+        java.util.Set<String> keys=new java.util.HashSet<>();
+        int count=0;
+        for(String id:playlist.songIds){
+            Song song=AppStore.findSong(this,id);
+            if(song==null||song.title==null||song.title.trim().isEmpty()){
+                status.setText("Titre Manager introuvable : synchronisation annulée.");return;
+            }
+            String key=normalized(song.title);
+            if(!keys.add(key)){status.setText("Titre en double dans le Manager : synchronisation annulée.");return;}
+            snapshot.append(String.format(Locale.FRANCE,"%02d. %s",++count,song.title.trim()));
+            if(song.bpm!=null&&!song.bpm.trim().isEmpty())
+                snapshot.append(" · ").append(song.bpm.trim());
+            snapshot.append("\n");
+        }
+        if(count<1||count>100){status.setText("Nombre de titres invalide.");return;}
+        final String desired=snapshot.toString();
+        final String auth=token;
+        new AlertDialog.Builder(this)
+            .setTitle("Synchroniser "+count+" titres vers Google Docs")
+            .setMessage("Le sommaire du document officiel sera remplacé par l'ordre actuel de TS 2026.\n"+
+                "Les titres retirés du Manager disparaîtront UNIQUEMENT du sommaire.\n"+
+                "Les paroles, les morceaux de la bibliothèque et l'ancien Google Docs resteront intacts.\n\n"+
+                "Aucune écriture sans validation de la structure actuelle du document.")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Synchroniser",(d,w)->syncOfficialPlaylist(auth,desired))
+            .show();
+    }
+    private void syncOfficialPlaylist(String accessToken,String desired){
+        status.setText("Vérification du sommaire Google Docs…");
+        new Thread(()->{
+            HttpURLConnection get=null,post=null;
+            try{
+                String dest=Ts2026GoogleDocsSource.PREPARED_DOCUMENT_ID;
+                get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    dest+"?includeTabsContent=true").openConnection();
+                get.setConnectTimeout(12000);get.setReadTimeout(20000);
+                get.setRequestProperty("Authorization","Bearer "+accessToken);
+                if(get.getResponseCode()!=200)throw new java.io.IOException("Lecture HTTP "+get.getResponseCode());
+                JSONObject doc=new JSONObject(readResponse(get));
+                JSONArray tabs=doc.optJSONArray("tabs");
+                JSONObject tab=tabs!=null&&tabs.length()>0?tabs.optJSONObject(0):null;
+                JSONObject dt=tab==null?null:tab.optJSONObject("documentTab");
+                JSONObject body=dt==null?doc.optJSONObject("body"):dt.optJSONObject("body");
+                if(body==null)throw new java.io.IOException("Corps du document absent");
+                JSONObject props=tab==null?null:tab.optJSONObject("tabProperties");
+                String tabId=props==null?"":props.optString("tabId","");
+                JSONArray blocks=body.optJSONArray("content");
+                if(blocks==null)throw new java.io.IOException("Paragraphes indisponibles");
+                int header=-1,lyrics=-1,first=-1,last=-1,count=0;
+                java.util.Set<Integer> numbers=new java.util.HashSet<>();
+                for(int i=0;i<blocks.length();i++){
+                    JSONObject block=blocks.optJSONObject(i);
+                    JSONObject paragraph=block==null?null:block.optJSONObject("paragraph");
+                    if(paragraph==null)continue;
+                    JSONArray elements=paragraph.optJSONArray("elements");
+                    if(elements==null)continue;
+                    StringBuilder line=new StringBuilder();
+                    for(int j=0;j<elements.length();j++){
+                        JSONObject el=elements.optJSONObject(j);
+                        if(el==null)continue;
+                        JSONObject run=el.optJSONObject("textRun");
+                        if(run!=null)line.append(run.optString("content",""));
+                        if(el.has("pageBreak"))
+                            throw new java.io.IOException("Saut de page explicite : intervention manuelle nécessaire");
+                    }
+                    String value=line.toString().trim();
+                    if(value.equalsIgnoreCase("SOMMAIRE TS 2026"))header=i;
+                    if(value.equalsIgnoreCase("PAROLES ET NOTES")){lyrics=i;break;}
+                    if(header>=0 && i>header){
+                        java.util.regex.Matcher m=java.util.regex.Pattern.compile(
+                            "^(\\d{1,3})\\s*[.)-]\\s*(.+)$").matcher(value);
+                        if(m.matches()){
+                            int n=Integer.parseInt(m.group(1));
+                            if(n<1||n>100||!numbers.add(n))
+                                throw new java.io.IOException("Numérotation du sommaire invalide");
+                            if(first<0)first=i;
+                            last=i;count++;
+                        }else if(!value.isEmpty())
+                            throw new java.io.IOException("Texte inattendu dans le sommaire : "+value);
+                    }
+                }
+                if(header<0||lyrics<0||first<0||last<first||count<1)
+                    throw new java.io.IOException("Sommaire non reconnu");
+                for(int n=1;n<=count;n++)
+                    if(!numbers.contains(n))throw new java.io.IOException("Numérotation discontinue");
+                // Only edit the index paragraphs, never the heading or the lyrics heading.
+                JSONObject firstBlock=blocks.getJSONObject(first),lastBlock=blocks.getJSONObject(last);
+                int start=firstBlock.optInt("startIndex",-1),end=lastBlock.optInt("endIndex",-1);
+                int lyricsStart=blocks.getJSONObject(lyrics).optInt("startIndex",-1);
+                if(start<1||end<=start||lyricsStart<end)
+                    throw new java.io.IOException("Limites du sommaire invalides");
+                String revision=doc.optString("revisionId","");
+                if(revision.isEmpty())throw new java.io.IOException("Révision Google Docs manquante");
+                JSONObject range=new JSONObject().put("startIndex",start).put("endIndex",end);
+                if(!tabId.isEmpty())range.put("tabId",tabId);
+                JSONObject location=new JSONObject().put("index",start);
+                if(!tabId.isEmpty())location.put("tabId",tabId);
+                JSONArray requests=new JSONArray()
+                    .put(new JSONObject().put("deleteContentRange",new JSONObject().put("range",range)))
+                    .put(new JSONObject().put("insertText",new JSONObject()
+                        .put("location",location).put("text",desired)));
+                JSONObject payload=new JSONObject().put("requests",requests)
+                    .put("writeControl",new JSONObject().put("requiredRevisionId",revision));
+                post=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    dest+":batchUpdate").openConnection();
+                post.setRequestMethod("POST");post.setConnectTimeout(12000);post.setReadTimeout(20000);
+                post.setDoOutput(true);
+                post.setRequestProperty("Authorization","Bearer "+accessToken);
+                post.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                try(OutputStream out=post.getOutputStream()){
+                    out.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                int code=post.getResponseCode();
+                if(code<200||code>=300)throw new java.io.IOException("Écriture refusée HTTP "+code);
+                runOnUiThread(()->status.setText("Sommaire synchronisé avec la playlist Manager. Paroles conservées."));
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Synchronisation non confirmée : "+e.getMessage()));
+            }finally{
+                if(get!=null)get.disconnect();
+                if(post!=null)post.disconnect();
+            }
+        },"Ts2026PlaylistToDocs").start();
+    }
+
     private void confirmCompactSummary(){
         if(token==null||token.isEmpty()){
             status.setText("Autorise Google Docs avant la correction.");return;
