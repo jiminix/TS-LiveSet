@@ -103,12 +103,12 @@ public class Ts2026DocsWriteTestActivity extends Activity {
             android.view.View child=layout.getChildAt(i);
             if(child instanceof Button){
                 Button b=(Button)child;
-                b.setTextSize(11);
+                b.setTextSize(13);
                 b.setAllCaps(false);
-                b.setMinHeight(0);b.setMinimumHeight(0);
-                b.setPadding(8,2,8,2);
-                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,40);
-                lp.bottomMargin=2;
+                b.setMinHeight(Ui.dp(this,48));b.setMinimumHeight(Ui.dp(this,48));
+                b.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),0);
+                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,Ui.dp(this,52));
+                lp.bottomMargin=Ui.dp(this,4);
                 b.setLayoutParams(lp);
             }
         }
