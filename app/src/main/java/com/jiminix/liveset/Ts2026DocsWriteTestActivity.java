@@ -48,6 +48,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         heading.setTextSize(16);heading.setTextColor(Color.WHITE);layout.addView(heading);
         TextView explanation=new TextView(this);
         explanation.setText("1. Crée une copie de ton Google Docs original dans Google Drive.\n2. Colle l'identifiant de cette COPIE ci-dessous.\n3. Autorise l'accès Google.\n4. Confirme l'ajout d'une ligne de test à la fin de la copie.\n\nAucune modification automatique de la playlist ni du document original.");
+        explanation.setTextSize(11);explanation.setLineSpacing(0f,1.0f);
         explanation.setTextColor(Color.LTGRAY);layout.addView(explanation);
         copyId=new EditText(this);copyId.setSingleLine(true);copyId.setTextColor(Color.WHITE);
         copyId.setHintTextColor(Color.GRAY);copyId.setHint("Identifiant ou lien Google Docs de la copie");
