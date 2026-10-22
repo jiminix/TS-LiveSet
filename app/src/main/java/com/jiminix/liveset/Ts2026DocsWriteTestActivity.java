@@ -228,8 +228,8 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                                 throw new java.io.IOException("Numérotation du sommaire invalide");
                             if(first<0)first=i;
                             last=i;count++;
-                        }else if(!value.isEmpty() && !value.matches("(?i)^(33[.]|34[.]).*"))
-                            throw new java.io.IOException("Texte inattendu dans le sommaire : "+value);
+                        }else if(!value.isEmpty() && first>=0)
+                            throw new java.io.IOException("Texte inattendu entre les titres : "+value);
                     }
                 }
                 if(header<0||lyrics<0||first<0||last<first||count<1)
