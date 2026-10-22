@@ -20,6 +20,8 @@ import java.nio.charset.StandardCharsets;
 public final class Ts2026GoogleDocsSource {
     public static final String DOCUMENT_ID =
         "1kfLp1alEdnLunA-es-s13V58WcS-uV4HYVP8hl45zhE";
+    public static final String PREPARED_DOCUMENT_ID =
+        "1FBFHGEfDCHzGSO8C8x5CZVQzB1CLWBgJjsgxiqhHAY8";
     private static final String PREFS = "ts2026_google_docs";
     private static final String CACHE_KEY = "last_successful_html";
     private static final int MAX_BYTES = 5 * 1024 * 1024;
