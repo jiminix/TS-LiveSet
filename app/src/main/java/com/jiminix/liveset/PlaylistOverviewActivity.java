@@ -124,6 +124,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             if(titleView!=null) titleView.setText(setlist.name+" · "+setlist.songIds.size()+" titres");
             if(adapter!=null) adapter.notifyDataSetChanged();
             maybeRestoreEmptyInProgress();
+            maybeStartAutomaticDocsSync();
         }
     }
 
@@ -1332,6 +1333,18 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
         startActivity(i);
     }
 
+    private void maybeStartAutomaticDocsSync(){
+        if(setlist==null||!Ts2026GoogleDocsSource.isTs2026(setlist.name))return;
+        android.content.SharedPreferences prefs=getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE);
+        if(!prefs.getBoolean("auto_enabled",false))return;
+        String signature=android.text.TextUtils.join("|",setlist.songIds);
+        if(signature.equals(prefs.getString("last_attempt_signature","")))return;
+        prefs.edit().putString("last_attempt_signature",signature).putBoolean("pending",true).apply();
+        Intent intent=new Intent(this,Ts2026DocsWriteTestActivity.class);
+        intent.putExtra("auto_playlist_sync",true);
+        startActivity(intent);
+    }
+
     private void confirmRemoveSong(int pos){
         if(pos<0 || pos>=setlist.songIds.size())return;
         String id=setlist.songIds.get(pos);
@@ -1349,6 +1362,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 if(Ts2026GoogleDocsSource.isTs2026(setlist.name)){
                     getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).edit()
                         .putBoolean("pending",true).apply();
+                    if(getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).getBoolean("auto_enabled",false))
+                        maybeStartAutomaticDocsSync();
                     Toast.makeText(this,
                         "Titre retiré. Google Docs à synchroniser via l'icône Docs.",
                         Toast.LENGTH_LONG).show();
