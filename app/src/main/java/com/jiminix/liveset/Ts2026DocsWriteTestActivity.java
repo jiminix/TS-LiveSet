@@ -55,7 +55,9 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         copyId.setText(getPreferences(MODE_PRIVATE).getString("test_copy_id",""));
         layout.addView(copyId,new LinearLayout.LayoutParams(-1,-2));
         status=new TextView(this);status.setTextColor(Color.WHITE);
-        status.setText("Non connecté · autorisation Google nécessaire.");
+        status.setText(getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).getBoolean("pending",false)
+            ? "Modification en attente : autorise Google puis synchronise le sommaire."
+            : "Non connecté · autorisation Google nécessaire.");
         status.setTextSize(12);status.setPadding(4,4,4,4);
         layout.addView(status);
         Button authorize=new Button(this);authorize.setText("Autoriser Google Docs");
@@ -260,6 +262,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                 }
                 int code=post.getResponseCode();
                 if(code<200||code>=300)throw new java.io.IOException("Écriture refusée HTTP "+code);
+                getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).edit().putBoolean("pending",false).apply();
                 runOnUiThread(()->status.setText("Sommaire synchronisé avec la playlist Manager. Paroles conservées."));
             }catch(Exception e){
                 runOnUiThread(()->status.setText("Synchronisation non confirmée : "+e.getMessage()));
