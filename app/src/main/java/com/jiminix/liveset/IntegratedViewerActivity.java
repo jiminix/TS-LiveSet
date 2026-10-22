@@ -351,6 +351,15 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         return t.startsWith("medley") || t.startsWith("meddley");
     }
 
+    private void openSongLyrics(Song song,int index){
+        if(song==null)return;
+        Intent intent=new Intent(this,LiveSongActivity.class);
+        intent.putExtra("song_id",song.id);
+        intent.putExtra("setlist_id",setlistId);
+        intent.putExtra("index",index);
+        startActivity(intent);
+    }
+
     private void toggleMedley(String songId){
         if(songId==null || songId.isEmpty())return;
         if(expandedMedleys.contains(songId))expandedMedleys.remove(songId);
@@ -480,8 +489,13 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
+        // Tapping a title opens its saved lyrics in the read-only stage view.
+        // Keep the medley row expansion on the surrounding row.
+        name.setOnClickListener(v->openSongLyrics(song,number-1));
         if(medley){
             row.setOnClickListener(v->toggleMedley(song.id));
+        }else{
+            row.setOnClickListener(v->openSongLyrics(song,number-1));
         }
 
         songsBox.addView(row,new LinearLayout.LayoutParams(
