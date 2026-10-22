@@ -180,6 +180,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         if(count<1||count>100){status.setText("Nombre de titres invalide.");return;}
         final String desired=snapshot.toString();
         final String auth=token;
+        if(autoSyncLaunch){autoSyncLaunch=false;syncOfficialPlaylist(auth,desired);return;}
         new AlertDialog.Builder(this)
             .setTitle("Synchroniser "+count+" titres vers Google Docs")
             .setMessage("Le sommaire du document officiel sera remplacé par l'ordre actuel de TS 2026.\n"+
@@ -777,7 +778,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
             token=result.getAccessToken();
             status.setText(token==null?"Jeton Google absent.":"Google Docs autorisé. Choisis une COPIE pour le test.");
             if(token!=null && pendingSongId!=null)confirmPendingSong();
-            if(token!=null && autoSyncLaunch){autoSyncLaunch=false;confirmPlaylistSync();}
+            if(token!=null && autoSyncLaunch)confirmPlaylistSync();
         }
     }
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
