@@ -432,8 +432,8 @@ public class Ts2026RecoveryActivity extends Activity {
         if(start<0 || end<=start || end-start>14000)return "";
         String section=text.substring(start,end);
         TreeMap<Integer,String> numbered=new TreeMap<>();
-        Pattern pattern=Pattern.compile("^\\\\s*(0?[1-9]|[12][0-9]|3[0-9])\\\\s*[.)-]\\\\s*(.{3,140})$");
-        for(String line:section.split("\\\\n")){
+        Pattern pattern=Pattern.compile("^\\s*(0?[1-9]|[12][0-9]|3[0-9])\\s*[.)-]\\s*(.{3,140})$");
+        for(String line:section.split("\\n")){
             Matcher m=pattern.matcher(line.trim());
             if(m.matches()){
                 int number=Integer.parseInt(m.group(1));
@@ -446,7 +446,7 @@ public class Ts2026RecoveryActivity extends Activity {
         for(int i=1;i<=32;i++){
             String item=numbered.get(i);
             if(item==null)return "";
-            result.append(item).append('\\\\n');
+            result.append(item).append('\n');
         }
         return result.toString();
     }
