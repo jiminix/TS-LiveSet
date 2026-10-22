@@ -390,13 +390,26 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             body.setTextSize(22);
             body.setPadding(dp(18),dp(12),dp(18),dp(24));
             scroller.addView(body);
+            TextView heading=new TextView(this);
+            heading.setText(song.title==null?"":song.title);
+            heading.setTextColor(Color.rgb(255,196,30));
+            heading.setTextSize(22);
+            heading.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            heading.setPadding(dp(18),dp(14),dp(18),dp(8));
+            LinearLayout panel=new LinearLayout(this);
+            panel.setOrientation(LinearLayout.VERTICAL);
+            panel.setBackgroundColor(Color.BLACK);
+            panel.addView(heading);
+            panel.addView(scroller,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,0,1));
             AlertDialog dialog=new AlertDialog.Builder(this)
-                .setTitle(song.title)
-                .setView(scroller)
-                .setPositiveButton("Fermer",null)
+                .setView(panel)
+                .setPositiveButton("FERMER",null)
                 .create();
             dialog.setOnShowListener(d->{
                 if(dialog.getWindow()!=null){
+                    dialog.getWindow().setBackgroundDrawable(
+                        new android.graphics.drawable.ColorDrawable(Color.BLACK));
                     dialog.getWindow().setLayout(
                         (int)(getResources().getDisplayMetrics().widthPixels*0.85f),
                         (int)(getResources().getDisplayMetrics().heightPixels*0.85f));
@@ -424,8 +437,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(zdp(6),zdp(1),zdp(6),zdp(1));
-        row.setMinimumHeight(zdp(36));
+        row.setPadding(zdp(6),tabletLayout?0:zdp(1),zdp(6),tabletLayout?0:zdp(1));
+        row.setMinimumHeight(tabletLayout?dp(25):zdp(36));
         row.setBackgroundColor(number%2==1?Color.rgb(28,28,28):Color.BLACK);
         row.setAlpha(disabled?0.5f:1f);
 
@@ -435,7 +448,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         TextView num=new TextView(this);
         num.setText(String.format("%02d",number));
         num.setTextColor(Color.LTGRAY);
-        num.setTextSize(zsp(14));
+        num.setTextSize(tabletLayout?11f:zsp(14));
         num.setGravity(Gravity.CENTER);
         num.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         row.addView(num,new LinearLayout.LayoutParams(zdp(34),ViewGroup.LayoutParams.MATCH_PARENT));
@@ -445,7 +458,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         String bpm=song==null?"":song.bpm;
         name.setText((medley?(medleyExpanded?"▾ ":"▸ "):"")+(title==null?"":title));
         name.setTextColor(Color.WHITE);
-        name.setTextSize(zsp(26.5f));
+        name.setTextSize(tabletLayout?18f:zsp(26.5f));
         name.setIncludeFontPadding(false);
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -528,7 +541,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         TextView bpmView=new TextView(this);
         bpmView.setText(bpm==null || bpm.trim().isEmpty() ? "" : bpm.trim());
         bpmView.setTextColor(Color.rgb(255,196,30));
-        bpmView.setTextSize(zsp(14));
+        bpmView.setTextSize(tabletLayout?11f:zsp(14));
         bpmView.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         bpmView.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         bpmView.setSingleLine(true);
