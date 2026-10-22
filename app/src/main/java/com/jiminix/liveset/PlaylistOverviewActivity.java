@@ -1346,6 +1346,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 setlist.songIds.remove(pos);
                 setlist.disabledSongIds.remove(id);
                 AppStore.upsertSetlist(this,setlist);
+                if(Ts2026GoogleDocsSource.isTs2026(setlist.name)){
+                    getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).edit()
+                        .putBoolean("pending",true).apply();
+                    Toast.makeText(this,
+                        "Titre retiré. Google Docs à synchroniser via l'icône Docs.",
+                        Toast.LENGTH_LONG).show();
+                }
                 if(id.equals(currentSongId))currentSongId=null;
                 adapter.notifyItemRemoved(pos);
                 if(pos<setlist.songIds.size())adapter.notifyItemRangeChanged(pos,setlist.songIds.size()-pos);
