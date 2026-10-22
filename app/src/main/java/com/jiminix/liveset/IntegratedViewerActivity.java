@@ -45,6 +45,9 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     private Button inProgressButton;
     private LinearLayout songsBox;
     private ScrollView scroll;
+    private TextView tabletLyrics;
+    private TextView tabletSongTitle;
+    private boolean tabletLayout;
     private String lastSignature="";
     private int textZoom=0;
     private boolean showInProgress=false;
@@ -94,6 +97,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     }
 
     private void buildUi(){
+        tabletLayout=getResources().getConfiguration().smallestScreenWidthDp>=600;
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
@@ -198,9 +202,38 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             ViewGroup.LayoutParams.WRAP_CONTENT
         ));
 
-        root.addView(scroll,new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,0,1
-        ));
+        if(tabletLayout){
+            LinearLayout content=new LinearLayout(this);
+            content.setOrientation(LinearLayout.HORIZONTAL);
+            content.addView(scroll,new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.MATCH_PARENT,0.46f));
+            LinearLayout detail=new LinearLayout(this);
+            detail.setOrientation(LinearLayout.VERTICAL);
+            detail.setBackgroundColor(Color.rgb(19,19,19));
+            detail.setPadding(dp(16),dp(12),dp(12),dp(8));
+            tabletSongTitle=new TextView(this);
+            tabletSongTitle.setText("Sélectionne un titre à gauche");
+            tabletSongTitle.setTextColor(Color.rgb(255,196,30));
+            tabletSongTitle.setTextSize(21);
+            tabletSongTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            detail.addView(tabletSongTitle);
+            ScrollView lyricScroll=new ScrollView(this);
+            tabletLyrics=new TextView(this);
+            tabletLyrics.setText("Les paroles du morceau sélectionné apparaîtront ici.");
+            tabletLyrics.setTextColor(Color.WHITE);
+            tabletLyrics.setTextSize(21);
+            tabletLyrics.setPadding(0,dp(12),dp(8),dp(20));
+            lyricScroll.addView(tabletLyrics);
+            detail.addView(lyricScroll,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,0,1));
+            content.addView(detail,new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.MATCH_PARENT,0.54f));
+            root.addView(content,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,0,1));
+        }else{
+            root.addView(scroll,new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,0,1));
+        }
 
         TextView footer=new TextView(this);
         footer.setText("Viewer intégré · synchronisation Internet active pour les autres téléphones");
@@ -353,6 +386,12 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
     private void openSongLyrics(Song song,int index){
         if(song==null)return;
+        if(tabletLayout && tabletLyrics!=null){
+            tabletSongTitle.setText(song.title==null?"":song.title);
+            String lyrics=song.lyrics==null?"":song.lyrics.trim();
+            tabletLyrics.setText(lyrics.isEmpty()?"Aucune parole enregistrée pour ce morceau.":lyrics);
+            return;
+        }
         Intent intent=new Intent(this,LiveSongActivity.class);
         intent.putExtra("song_id",song.id);
         intent.putExtra("setlist_id",setlistId);
