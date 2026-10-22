@@ -68,6 +68,11 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         updateSummary.setText("METTRE À JOUR SOMMAIRE · 34 TITRES");
         updateSummary.setOnClickListener(v->confirmOfficialSummary());
         layout.addView(updateSummary);
+        Button formatSummary=new Button(this);
+        formatSummary.setText("HARMONISER FORMAT · TITRES 33–34");
+        formatSummary.setOnClickListener(v->confirmFormatSummary());
+        layout.addView(formatSummary);
+
         TextView testHeading=new TextView(this);
         testHeading.setText("OUTILS DE TEST · COPIE UNIQUEMENT");
         testHeading.setTextSize(12);
@@ -124,6 +129,102 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         }
     }
 
+
+
+    private void confirmFormatSummary(){
+        if(token==null||token.isEmpty()){
+            status.setText("Autorise Google Docs avant de corriger le format.");return;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("Harmoniser les titres 33 et 34")
+            .setMessage("Mettre les deux nouvelles lignes en noir, sans gras, en petite police, "+
+                "avec un espacement réduit. Aucun texte, titre ou parole ne sera supprimé.")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Corriger le format",(d,w)->formatOfficialSummary(token))
+            .show();
+    }
+    private void formatOfficialSummary(String accessToken){
+        status.setText("Recherche des deux lignes dans le sommaire…");
+        new Thread(()->{
+            HttpURLConnection get=null,post=null;
+            try{
+                String dest=Ts2026GoogleDocsSource.PREPARED_DOCUMENT_ID;
+                get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    dest+"?includeTabsContent=true").openConnection();
+                get.setConnectTimeout(12000);get.setReadTimeout(20000);
+                get.setRequestProperty("Authorization","Bearer "+accessToken);
+                if(get.getResponseCode()!=200)throw new java.io.IOException("Lecture HTTP "+get.getResponseCode());
+                JSONObject doc=new JSONObject(readResponse(get));
+                JSONArray tabs=doc.optJSONArray("tabs");
+                JSONObject firstTab=tabs!=null&&tabs.length()>0?tabs.optJSONObject(0):null;
+                JSONObject dt=firstTab==null?null:firstTab.optJSONObject("documentTab");
+                JSONObject contentBody=dt==null?doc.optJSONObject("body"):dt.optJSONObject("body");
+                if(contentBody==null)throw new java.io.IOException("Structure du document inconnue");
+                String tabId=firstTab==null?"":firstTab.optJSONObject("tabProperties").optString("tabId","");
+                JSONArray blocks=contentBody.optJSONArray("content");
+                if(blocks==null)throw new java.io.IOException("Paragraphes indisponibles");
+                JSONArray requests=new JSONArray();
+                int found=0;
+                for(int i=0;i<blocks.length();i++){
+                    JSONObject block=blocks.optJSONObject(i);
+                    JSONObject paragraph=block==null?null:block.optJSONObject("paragraph");
+                    if(paragraph==null)continue;
+                    JSONArray elements=paragraph.optJSONArray("elements");
+                    if(elements==null)continue;
+                    StringBuilder line=new StringBuilder();
+                    for(int j=0;j<elements.length();j++){
+                        JSONObject el=elements.optJSONObject(j);
+                        if(el!=null&&el.optJSONObject("textRun")!=null)
+                            line.append(el.optJSONObject("textRun").optString("content",""));
+                    }
+                    String value=line.toString().trim();
+                    if(!value.matches("(?i)^(33[.]\\s*SMOOTH OPERATOR|34[.]\\s*IS IT A CRIME).*"))continue;
+                    int start=block.optInt("startIndex",-1),end=block.optInt("endIndex",-1);
+                    if(start<1||end<=start)throw new java.io.IOException("Position de ligne inconnue");
+                    JSONObject range=new JSONObject().put("startIndex",start).put("endIndex",end);
+                    if(!tabId.isEmpty())range.put("tabId",tabId);
+                    JSONObject style=new JSONObject()
+                        .put("bold",false)
+                        .put("foregroundColor",new JSONObject().put("color",
+                            new JSONObject().put("rgbColor",new JSONObject()
+                                .put("red",0).put("green",0).put("blue",0))))
+                        .put("fontSize",new JSONObject().put("magnitude",9).put("unit","PT"));
+                    requests.put(new JSONObject().put("updateTextStyle",new JSONObject()
+                        .put("range",range).put("textStyle",style)
+                        .put("fields","bold,foregroundColor,fontSize")));
+                    JSONObject paragraphStyle=new JSONObject()
+                        .put("spaceAbove",new JSONObject().put("magnitude",0).put("unit","PT"))
+                        .put("spaceBelow",new JSONObject().put("magnitude",0).put("unit","PT"));
+                    requests.put(new JSONObject().put("updateParagraphStyle",new JSONObject()
+                        .put("range",range).put("paragraphStyle",paragraphStyle)
+                        .put("fields","spaceAbove,spaceBelow")));
+                    found++;
+                }
+                if(found!=2)throw new java.io.IOException("Trouvé "+found+" ligne(s) sur 2 : aucun changement");
+                String revision=doc.optString("revisionId","");
+                if(revision.isEmpty())throw new java.io.IOException("Révision manquante");
+                JSONObject body=new JSONObject().put("requests",requests)
+                    .put("writeControl",new JSONObject().put("requiredRevisionId",revision));
+                post=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    dest+":batchUpdate").openConnection();
+                post.setRequestMethod("POST");post.setConnectTimeout(12000);post.setReadTimeout(20000);
+                post.setDoOutput(true);
+                post.setRequestProperty("Authorization","Bearer "+accessToken);
+                post.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                try(OutputStream out=post.getOutputStream()){
+                    out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                if(post.getResponseCode()<200||post.getResponseCode()>=300)
+                    throw new java.io.IOException("Correction HTTP "+post.getResponseCode());
+                runOnUiThread(()->status.setText("Format des titres 33–34 corrigé. Vérifie la mise en page dans Google Docs."));
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Format non modifié : "+e.getMessage()));
+            }finally{
+                if(get!=null)get.disconnect();
+                if(post!=null)post.disconnect();
+            }
+        },"Ts2026FormatSummary").start();
+    }
 
     private void confirmOfficialSummary(){
         if(token==null||token.isEmpty()){
