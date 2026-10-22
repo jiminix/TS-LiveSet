@@ -40,12 +40,12 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);
         LinearLayout layout=new LinearLayout(this);
-        layout.setPadding(24,24,24,24);
+        layout.setPadding(12,8,12,8);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setBackgroundColor(Color.rgb(15,15,15));
         TextView heading=new TextView(this);
-        heading.setText("Google Docs · connexion et test sur COPIE");
-        heading.setTextSize(20);heading.setTextColor(Color.WHITE);layout.addView(heading);
+        heading.setText("TS 2026 · Google Docs");
+        heading.setTextSize(16);heading.setTextColor(Color.WHITE);layout.addView(heading);
         TextView explanation=new TextView(this);
         explanation.setText("1. Crée une copie de ton Google Docs original dans Google Drive.\n2. Colle l'identifiant de cette COPIE ci-dessous.\n3. Autorise l'accès Google.\n4. Confirme l'ajout d'une ligne de test à la fin de la copie.\n\nAucune modification automatique de la playlist ni du document original.");
         explanation.setTextColor(Color.LTGRAY);layout.addView(explanation);
@@ -55,10 +55,19 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         layout.addView(copyId,new LinearLayout.LayoutParams(-1,-2));
         status=new TextView(this);status.setTextColor(Color.WHITE);
         status.setText("Non connecté · autorisation Google nécessaire.");
-        status.setTextSize(15);status.setPadding(8,12,8,12);
+        status.setTextSize(12);status.setPadding(4,4,4,4);
         layout.addView(status);
         Button authorize=new Button(this);authorize.setText("Autoriser Google Docs");
         authorize.setOnClickListener(v->authorize());layout.addView(authorize);
+        Button official=new Button(this);
+        official.setText("AJOUTER 2 TITRES · DOCS OFFICIEL");
+        official.setOnClickListener(v->confirmOfficialMissingTwo());
+        layout.addView(official);
+        TextView testHeading=new TextView(this);
+        testHeading.setText("OUTILS DE TEST · COPIE UNIQUEMENT");
+        testHeading.setTextSize(12);
+        testHeading.setTextColor(Color.LTGRAY);
+        layout.addView(testHeading);
         Button write=new Button(this);write.setText("Écrire une ligne TEST dans la copie");
         write.setOnClickListener(v->confirmWrite());layout.addView(write);
         Button index=new Button(this);
@@ -89,6 +98,19 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                 if(pending!=null)previewIndexInsertion(id(),token,pending);
             });
             layout.addView(retryIndex);
+        }
+        for(int i=0;i<layout.getChildCount();i++){
+            android.view.View child=layout.getChildAt(i);
+            if(child instanceof Button){
+                Button b=(Button)child;
+                b.setTextSize(11);
+                b.setAllCaps(false);
+                b.setMinHeight(0);b.setMinimumHeight(0);
+                b.setPadding(8,2,8,2);
+                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,40);
+                lp.bottomMargin=2;
+                b.setLayoutParams(lp);
+            }
         }
         scroll.addView(layout);
         setContentView(scroll);
