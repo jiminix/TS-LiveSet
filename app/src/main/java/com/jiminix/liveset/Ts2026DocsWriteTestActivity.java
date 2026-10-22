@@ -443,17 +443,25 @@ public class Ts2026DocsWriteTestActivity extends Activity {
     // Safe first milestone: append a new empty lyrics section to the copy.
     // The rich-text overview is intentionally untouched until its insertion
     // points and formatting can be validated independently.
+    private static String docsMetadata(Song song){
+        StringBuilder result=new StringBuilder(song.title.trim());
+        if(song.stageGuitar)result.append(" 🎸");
+        if(song.stageKeyboard)result.append(" 🎹");
+        if(song.bpm!=null && !song.bpm.trim().isEmpty())result.append(" ").append(song.bpm.trim()).append(" BPM");
+        return result.toString();
+    }
     private void confirmPendingSong(){
         if(!validCopy())return;
         Song song=AppStore.findSong(this,pendingSongId);
         if(song==null || song.title==null || song.title.trim().isEmpty())return;
         String destination=id();
+        String metadata=docsMetadata(song);
         new AlertDialog.Builder(this).setTitle("Synchroniser sur la COPIE ?")
-            .setMessage("Créer à la fin de la COPIE une section de paroles pour « "+song.title+" » ? Le sommaire ne sera pas encore modifié.")
+            .setMessage("Créer à la fin de la COPIE une section pour « "+metadata+" » ? Le sommaire ne sera pas encore modifié.")
             .setNegativeButton("Plus tard",null)
             .setPositiveButton("Créer",(d,w)->{
                 getPreferences(MODE_PRIVATE).edit().putString("test_copy_id",destination).apply();
-                appendLyricsSection(destination,token,song.title);
+                appendLyricsSection(destination,token,song);
             }).show();
     }
     private void chooseNewLyricsSection(){
@@ -485,11 +493,13 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                         "L'original est interdit.")
                     .setNegativeButton("Annuler",null)
                     .setPositiveButton("Créer dans la COPIE",(d,w)->
-                        appendLyricsSection(id(),token,selected.title))
+                        appendLyricsSection(id(),token,selected))
                     .show();
             }).show();
     }
-    private void appendLyricsSection(String destination,String accessToken,String title){
+    private void appendLyricsSection(String destination,String accessToken,Song song){
+        final String title=song.title;
+        final String metadata=docsMetadata(song);
         status.setText("Vérification de la copie et des doublons…");
         new Thread(()->{
             HttpURLConnection get=null,post=null;
@@ -508,7 +518,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                 String marker="TS2026-NEW-SONG:"+normalized(title);
                 if(doc.toString().contains(marker))
                     throw new java.io.IOException("Section de test déjà créée pour ce titre.");
-                String insertion="\n\n"+title+"\n[Paroles à compléter]\n"+
+                String insertion="\n\n"+metadata+"\n[Paroles à compléter]\n"+
                     "[Repère de synchronisation : "+marker+"]\n";
                 JSONObject insert=new JSONObject()
                     .put("endOfSegmentLocation",new JSONObject())
