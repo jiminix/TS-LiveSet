@@ -64,6 +64,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         official.setText("AJOUTER 2 TITRES · DOCS OFFICIEL");
         official.setOnClickListener(v->confirmOfficialMissingTwo());
         layout.addView(official);
+        Button updateSummary=new Button(this);
+        updateSummary.setText("METTRE À JOUR SOMMAIRE · 34 TITRES");
+        updateSummary.setOnClickListener(v->confirmOfficialSummary());
+        layout.addView(updateSummary);
         TextView testHeading=new TextView(this);
         testHeading.setText("OUTILS DE TEST · COPIE UNIQUEMENT");
         testHeading.setTextSize(12);
@@ -118,6 +122,106 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         if(pendingSongId!=null){
             status.setText("Morceau validé dans TS 2026. Autorise Google Docs puis confirme l’ajout de sa section dans la COPIE.");
         }
+    }
+
+
+    private void confirmOfficialSummary(){
+        if(token==null||token.isEmpty()){
+            status.setText("Autorise Google Docs avant de mettre à jour le sommaire.");return;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("Mettre le sommaire à 34 titres ?")
+            .setMessage("Insérer juste avant « PAROLES ET NOTES » :\n"+
+                "33. SMOOTH OPERATOR · 120 BPM\n"+
+                "34. IS IT A CRIME · 105 BPM\n\n"+
+                "Les 32 titres et toutes les paroles existantes seront conservés. "+
+                "L'opération sera refusée si la structure a changé ou si ces titres sont déjà dans le sommaire.")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Mettre à jour",(d,w)->updateOfficialSummary(token))
+            .show();
+    }
+    private static void collectDocText(Object node,StringBuilder out){
+        if(node instanceof JSONObject){
+            JSONObject object=(JSONObject)node;
+            JSONObject run=object.optJSONObject("textRun");
+            if(run!=null)out.append(run.optString("content",""));
+            java.util.Iterator<String> keys=object.keys();
+            while(keys.hasNext()){
+                String key=keys.next();
+                if(!key.equals("textRun"))collectDocText(object.opt(key),out);
+            }
+        }else if(node instanceof JSONArray){
+            JSONArray arr=(JSONArray)node;
+            for(int i=0;i<arr.length();i++)collectDocText(arr.opt(i),out);
+        }
+    }
+    private void updateOfficialSummary(String accessToken){
+        status.setText("Vérification du sommaire officiel…");
+        new Thread(()->{
+            HttpURLConnection get=null,post=null;
+            try{
+                String destination=Ts2026GoogleDocsSource.PREPARED_DOCUMENT_ID;
+                get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+"?includeTabsContent=true").openConnection();
+                get.setConnectTimeout(12000);get.setReadTimeout(20000);
+                get.setRequestProperty("Authorization","Bearer "+accessToken);
+                if(get.getResponseCode()!=200)throw new java.io.IOException("Lecture HTTP "+get.getResponseCode());
+                JSONObject doc=new JSONObject(readResponse(get));
+                StringBuilder all=new StringBuilder();
+                JSONArray tabs=doc.optJSONArray("tabs");
+                if(tabs!=null)collectDocText(tabs,all);
+                else collectDocText(doc.optJSONObject("body"),all);
+                String text=all.toString();
+                int start=text.indexOf("SOMMAIRE TS 2026");
+                int end=text.indexOf("PAROLES ET NOTES");
+                if(start<0||end<=start||end-start>14000)
+                    throw new java.io.IOException("Sommaire ou séparation des paroles introuvable");
+                if(text.indexOf("PAROLES ET NOTES",end+1)>=0)
+                    throw new java.io.IOException("Plusieurs séparateurs détectés : opération annulée");
+                String summary=text.substring(start,end);
+                java.util.regex.Matcher numbered=java.util.regex.Pattern.compile(
+                    "(?m)^\\s*(0?[1-9]|[12][0-9]|3[0-4])\\s*[.)-]\\s*(.{3,140})$").matcher(summary);
+                java.util.Set<Integer> entries=new java.util.HashSet<>();
+                while(numbered.find())entries.add(Integer.parseInt(numbered.group(1)));
+                for(int n=1;n<=32;n++)
+                    if(!entries.contains(n))throw new java.io.IOException("Entrée "+n+" absente : sommaire non conforme");
+                if(entries.contains(33)||entries.contains(34)||
+                    summary.toUpperCase(Locale.ROOT).contains("SMOOTH OPERATOR")||
+                    summary.toUpperCase(Locale.ROOT).contains("IS IT A CRIME"))
+                    throw new java.io.IOException("Un titre 33/34 existe déjà : aucun doublon ajouté");
+                String revision=doc.optString("revisionId","");
+                if(revision.isEmpty())throw new java.io.IOException("Révision Google Docs indisponible");
+                String addition="33. SMOOTH OPERATOR · 120 BPM\n34. IS IT A CRIME · 105 BPM\n\n";
+                JSONObject replace=new JSONObject()
+                    .put("containsText",new JSONObject().put("text","PAROLES ET NOTES").put("matchCase",true))
+                    .put("replaceText",addition+"PAROLES ET NOTES");
+                JSONObject body=new JSONObject()
+                    .put("requests",new JSONArray().put(new JSONObject().put("replaceAllText",replace)))
+                    .put("writeControl",new JSONObject().put("requiredRevisionId",revision));
+                post=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+":batchUpdate").openConnection();
+                post.setRequestMethod("POST");post.setConnectTimeout(12000);post.setReadTimeout(20000);
+                post.setDoOutput(true);
+                post.setRequestProperty("Authorization","Bearer "+accessToken);
+                post.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                try(OutputStream out=post.getOutputStream()){
+                    out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                if(post.getResponseCode()<200||post.getResponseCode()>=300)
+                    throw new java.io.IOException("Écriture refusée HTTP "+post.getResponseCode());
+                JSONObject response=new JSONObject(readResponse(post));
+                JSONArray replies=response.optJSONArray("replies");
+                int changed=replies==null||replies.length()==0?0:
+                    replies.optJSONObject(0).optJSONObject("replaceAllText").optInt("occurrencesChanged",0);
+                if(changed!=1)throw new java.io.IOException("Réponse inattendue : "+changed+" remplacement(s). Vérifier le document.");
+                runOnUiThread(()->status.setText("Sommaire mis à jour : 34 titres. Paroles conservées."));
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Mise à jour non confirmée : "+e.getMessage()));
+            }finally{
+                if(get!=null)get.disconnect();
+                if(post!=null)post.disconnect();
+            }
+        },"Ts2026OfficialSummary").start();
     }
 
     private void confirmOfficialMissingTwo(){
