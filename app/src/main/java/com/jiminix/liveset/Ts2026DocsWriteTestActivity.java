@@ -72,9 +72,11 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         autoToggle.setText("Activer la synchro automatique TS 2026");
         autoToggle.setTextColor(Color.WHITE);
         autoToggle.setChecked(getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).getBoolean("auto_enabled",false));
-        autoToggle.setOnCheckedChangeListener((button,checked)->
+        autoToggle.setOnCheckedChangeListener((button,checked)->{
             getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).edit()
-                .putBoolean("auto_enabled",checked).apply());
+                .putBoolean("auto_enabled",checked).apply();
+            Ts2026DocsSyncWorker.configure(this,checked);
+        });
         layout.addView(autoToggle);
         Button official=new Button(this);
         official.setText("AJOUTER 2 TITRES · DOCS OFFICIEL");
