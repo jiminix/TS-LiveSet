@@ -364,6 +364,36 @@ public class Ts2026RecoveryActivity extends Activity {
         }
         positions.setText(positionReport.toString());
         results.addView(positions);
+        Button syncMissing=new Button(this);
+        syncMissing.setText("Ajouter le titre coché à Google Docs · COPIE");
+        syncMissing.setOnClickListener(v->{
+            String selectedId=null;
+            for(int i=0;i<removeBoxes.size();i++){
+                if(!removeBoxes.get(i).isChecked())continue;
+                if(selectedId!=null){
+                    Toast.makeText(this,"Sélectionne un seul morceau à la fois.",Toast.LENGTH_LONG).show();
+                    return;
+                }
+                selectedId=managerOnlyIds.get(i);
+            }
+            if(selectedId==null){
+                Toast.makeText(this,"Coche un titre manquant, par exemple SMOOTH OPERATOR.",Toast.LENGTH_LONG).show();
+                return;
+            }
+            Song selected=AppStore.findSong(this,selectedId);
+            if(selected==null)return;
+            final String songId=selectedId;
+            new AlertDialog.Builder(this)
+                .setTitle("Ajouter à Google Docs · COPIE")
+                .setMessage("Préparer l'ajout de « "+selected.title+" » à la copie Google Docs ? Le morceau reste dans TS 2026. Le document ORIGINAL ne sera pas modifié.")
+                .setNegativeButton("Annuler",null)
+                .setPositiveButton("Continuer",(d,w)->{
+                    Intent intent=new Intent(this,Ts2026DocsWriteTestActivity.class);
+                    intent.putExtra("sync_song_id",songId);
+                    startActivity(intent);
+                }).show();
+        });
+        results.addView(syncMissing);
         Button reorder=new Button(this);
         reorder.setText("Aligner l'ordre de TS 2026 sur Google Docs");
         reorder.setOnClickListener(v->confirmReorder());
