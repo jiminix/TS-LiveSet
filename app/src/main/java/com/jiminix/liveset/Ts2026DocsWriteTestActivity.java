@@ -450,6 +450,127 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         if(song.bpm!=null && !song.bpm.trim().isEmpty())result.append(" ").append(song.bpm.trim()).append(" BPM");
         return result.toString();
     }
+    private static final class IndexLocation {
+        final int index;
+        final String nextTitle;
+        IndexLocation(int index,String nextTitle){this.index=index;this.nextTitle=nextTitle;}
+    }
+    private IndexLocation locateIndex(JSONObject doc,Song song) throws Exception{
+        SetListModel list=null;
+        for(SetListModel candidate:AppStore.loadSetlists(this))
+            if(Ts2026GoogleDocsSource.isTs2026(candidate.name)){list=candidate;break;}
+        if(list==null)return null;
+        int pos=list.songIds.indexOf(song.id);
+        if(pos<0)return null;
+        JSONArray tabs=doc.optJSONArray("tabs");
+        JSONObject body=null;
+        if(tabs!=null && tabs.length()>0){
+            JSONObject tab=tabs.optJSONObject(0);
+            JSONObject dt=tab==null?null:tab.optJSONObject("documentTab");
+            body=dt==null?null:dt.optJSONObject("body");
+        }else body=doc.optJSONObject("body");
+        if(body==null)return null;
+        JSONArray blocks=body.optJSONArray("content");
+        if(blocks==null)return null;
+        JSONArray cells=null;
+        for(int i=0;i<Math.min(8,blocks.length());i++){
+            JSONObject block=blocks.optJSONObject(i);
+            JSONObject table=block==null?null:block.optJSONObject("table");
+            JSONArray rows=table==null?null:table.optJSONArray("tableRows");
+            if(rows==null||rows.length()<2)continue;
+            JSONArray headerCells=rows.optJSONObject(0).optJSONArray("tableCells");
+            if(headerCells==null||headerCells.length()<1)continue;
+            StringBuilder header=new StringBuilder();
+            gatherText(headerCells.optJSONObject(0),header);
+            if(header.toString().contains("PLAYLIST 2026")){
+                cells=rows.optJSONObject(1).optJSONArray("tableCells");break;
+            }
+        }
+        if(cells==null||cells.length()<2)return null;
+        // Anchor only to the next existing title, not to approximate row counts.
+        for(int n=pos+1;n<list.songIds.size();n++){
+            Song neighbor=AppStore.findSong(this,list.songIds.get(n));
+            if(neighbor==null||neighbor.title==null)continue;
+            for(int col=0;col<2;col++){
+                JSONArray paragraphs=cells.optJSONObject(col).optJSONArray("content");
+                if(paragraphs==null)continue;
+                for(int j=0;j<paragraphs.length();j++){
+                    JSONObject paragraph=paragraphs.optJSONObject(j);
+                    JSONObject p=paragraph==null?null:paragraph.optJSONObject("paragraph");
+                    JSONArray elements=p==null?null:p.optJSONArray("elements");
+                    if(elements==null)continue;
+                    StringBuilder line=new StringBuilder();
+                    for(int k=0;k<elements.length();k++){
+                        JSONObject run=elements.optJSONObject(k).optJSONObject("textRun");
+                        if(run!=null)line.append(run.optString("content",""));
+                    }
+                    String value=line.toString().trim();
+                    if(value.length()>0 && alias(value).startsWith(alias(neighbor.title))){
+                        return new IndexLocation(paragraph.optInt("startIndex",-1),neighbor.title);
+                    }
+                }
+            }
+        }
+        return null; // Never guess where the index ends.
+    }
+    private void previewIndexInsertion(String destination,String accessToken,Song song){
+        status.setText("Recherche de la position exacte dans le sommaire de la COPIE…");
+        new Thread(()->{
+            HttpURLConnection get=null,post=null;
+            try{
+                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                    throw new java.io.IOException("Original interdit");
+                get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+"?includeTabsContent=true").openConnection();
+                get.setConnectTimeout(12000);get.setReadTimeout(20000);
+                get.setRequestProperty("Authorization","Bearer "+accessToken);
+                if(get.getResponseCode()!=200)throw new java.io.IOException("Lecture HTTP "+get.getResponseCode());
+                JSONObject doc=new JSONObject(readResponse(get));
+                String revision=doc.optString("revisionId","");
+                if(revision.isEmpty())throw new java.io.IOException("Révision indisponible");
+                IndexLocation location=locateIndex(doc,song);
+                if(location==null||location.index<1)
+                    throw new java.io.IOException("Position non vérifiable : aucune insertion dans le sommaire.");
+                String entry=docsMetadata(song)+"\\n";
+                runOnUiThread(()->new AlertDialog.Builder(this)
+                    .setTitle("Sommaire TS 2026 · COPIE")
+                    .setMessage("Insérer « "+docsMetadata(song)+" » avant « "+location.nextTitle+" » ?\\n\\nSeule la COPIE sera modifiée.")
+                    .setNegativeButton("Annuler",null)
+                    .setPositiveButton("Insérer",(d,w)->writeIndexEntry(destination,accessToken,revision,location.index,entry))
+                    .show());
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Sommaire inchangé : "+e.getMessage()));
+            }finally{if(get!=null)get.disconnect();}
+        },"DocsIndexPreview").start();
+    }
+    private void writeIndexEntry(String destination,String accessToken,String revision,int index,String entry){
+        status.setText("Insertion dans le sommaire de la COPIE…");
+        new Thread(()->{
+            HttpURLConnection post=null;
+            try{
+                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                    throw new java.io.IOException("Original interdit");
+                JSONObject insert=new JSONObject().put("location",new JSONObject().put("index",index))
+                    .put("text",entry);
+                JSONObject payload=new JSONObject().put("requests",new JSONArray().put(
+                    new JSONObject().put("insertText",insert)))
+                    .put("writeControl",new JSONObject().put("requiredRevisionId",revision));
+                post=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+":batchUpdate").openConnection();
+                post.setRequestMethod("POST");post.setDoOutput(true);
+                post.setConnectTimeout(12000);post.setReadTimeout(20000);
+                post.setRequestProperty("Authorization","Bearer "+accessToken);
+                post.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                try(OutputStream out=post.getOutputStream())
+                    {out.write(payload.toString().getBytes(StandardCharsets.UTF_8));}
+                if(post.getResponseCode()!=200)
+                    throw new java.io.IOException("Écriture HTTP "+post.getResponseCode());
+                runOnUiThread(()->status.setText("Titre, icônes et BPM insérés dans le sommaire de la COPIE."));
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Insertion non confirmée : "+e.getMessage()));
+            }finally{if(post!=null)post.disconnect();}
+        },"DocsIndexWrite").start();
+    }
     private void confirmPendingSong(){
         if(!validCopy())return;
         Song song=AppStore.findSong(this,pendingSongId);
@@ -462,6 +583,8 @@ public class Ts2026DocsWriteTestActivity extends Activity {
             .setPositiveButton("Créer",(d,w)->{
                 getPreferences(MODE_PRIVATE).edit().putString("test_copy_id",destination).apply();
                 appendLyricsSection(destination,token,song);
+                // The index is a separate, explicitly confirmed operation.
+                previewIndexInsertion(destination,token,song);
             }).show();
     }
     private void chooseNewLyricsSection(){
