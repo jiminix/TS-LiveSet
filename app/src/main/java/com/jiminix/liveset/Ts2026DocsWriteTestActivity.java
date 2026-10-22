@@ -72,6 +72,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         formatSummary.setText("HARMONISER FORMAT · TITRES 33–34");
         formatSummary.setOnClickListener(v->confirmFormatSummary());
         layout.addView(formatSummary);
+        Button compactSummary=new Button(this);
+        compactSummary.setText("SOMMAIRE · chiffres BPM et liste continue");
+        compactSummary.setOnClickListener(v->confirmCompactSummary());
+        layout.addView(compactSummary);
 
         TextView testHeading=new TextView(this);
         testHeading.setText("OUTILS DE TEST · COPIE UNIQUEMENT");
@@ -130,6 +134,124 @@ public class Ts2026DocsWriteTestActivity extends Activity {
     }
 
 
+
+
+    private void confirmCompactSummary(){
+        if(token==null||token.isEmpty()){
+            status.setText("Autorise Google Docs avant la correction.");return;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("Sommaire continu")
+            .setMessage("Retirer uniquement le mot BPM des lignes 33 et 34, conserver 120 et 105, "+
+                "et supprimer le saut de page avant ces lignes. Les autres titres et les paroles restent inchangés.")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Appliquer",(d,w)->compactOfficialSummary(token))
+            .show();
+    }
+    private void compactOfficialSummary(String accessToken){
+        status.setText("Analyse de la pagination du sommaire…");
+        new Thread(()->{
+            HttpURLConnection get=null,post=null;
+            try{
+                String dest=Ts2026GoogleDocsSource.PREPARED_DOCUMENT_ID;
+                get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    dest+"?includeTabsContent=true").openConnection();
+                get.setConnectTimeout(12000);get.setReadTimeout(20000);
+                get.setRequestProperty("Authorization","Bearer "+accessToken);
+                if(get.getResponseCode()!=200)throw new java.io.IOException("Lecture HTTP "+get.getResponseCode());
+                JSONObject doc=new JSONObject(readResponse(get));
+                JSONArray tabs=doc.optJSONArray("tabs");
+                JSONObject tab=tabs!=null&&tabs.length()>0?tabs.optJSONObject(0):null;
+                JSONObject dt=tab==null?null:tab.optJSONObject("documentTab");
+                JSONObject body=dt==null?doc.optJSONObject("body"):dt.optJSONObject("body");
+                if(body==null)throw new java.io.IOException("Structure du document inconnue");
+                JSONObject props=tab==null?null:tab.optJSONObject("tabProperties");
+                String tabId=props==null?"":props.optString("tabId","");
+                JSONArray blocks=body.optJSONArray("content");
+                if(blocks==null)throw new java.io.IOException("Paragraphes indisponibles");
+                int thirtyTwo=-1,thirtyThree=-1,thirtyFour=-1;
+                boolean explicitBreak=false;
+                JSONArray requests=new JSONArray();
+                for(int i=0;i<blocks.length();i++){
+                    JSONObject block=blocks.optJSONObject(i);
+                    JSONObject paragraph=block==null?null:block.optJSONObject("paragraph");
+                    if(paragraph==null)continue;
+                    JSONArray elements=paragraph.optJSONArray("elements");
+                    if(elements==null)continue;
+                    StringBuilder line=new StringBuilder();
+                    for(int j=0;j<elements.length();j++){
+                        JSONObject el=elements.optJSONObject(j);
+                        if(el==null)continue;
+                        if(el.optJSONObject("textRun")!=null)
+                            line.append(el.optJSONObject("textRun").optString("content",""));
+                        if(el.has("pageBreak"))explicitBreak=true;
+                    }
+                    String value=line.toString().trim();
+                    int number=value.matches("(?i)^32[.]\\s*UPTOWN FUNK.*")?32:
+                        value.matches("(?i)^33[.]\\s*SMOOTH OPERATOR.*")?33:
+                        value.matches("(?i)^34[.]\\s*IS IT A CRIME.*")?34:0;
+                    if(number==0)continue;
+                    int start=block.optInt("startIndex",-1),end=block.optInt("endIndex",-1);
+                    if(start<1||end<=start)throw new java.io.IOException("Position du titre "+number+" inconnue");
+                    if(number==32)thirtyTwo=start;
+                    if(number==33)thirtyThree=start;
+                    if(number==34)thirtyFour=start;
+                    JSONObject range=new JSONObject().put("startIndex",start).put("endIndex",end);
+                    if(!tabId.isEmpty())range.put("tabId",tabId);
+                    JSONObject style=new JSONObject()
+                        .put("pageBreakBefore",false)
+                        .put("keepWithNext",false)
+                        .put("spaceAbove",new JSONObject().put("magnitude",0).put("unit","PT"))
+                        .put("spaceBelow",new JSONObject().put("magnitude",0).put("unit","PT"));
+                    requests.put(new JSONObject().put("updateParagraphStyle",new JSONObject()
+                        .put("range",range).put("paragraphStyle",style)
+                        .put("fields","pageBreakBefore,keepWithNext,spaceAbove,spaceBelow")));
+                }
+                if(thirtyTwo<0||thirtyThree<0||thirtyFour<0||
+                    !(thirtyTwo<thirtyThree&&thirtyThree<thirtyFour))
+                    throw new java.io.IOException("Titres 32–34 non trouvés dans l'ordre attendu");
+                if(explicitBreak)
+                    throw new java.io.IOException("Saut de page explicite détecté : correction automatique annulée");
+                String revision=doc.optString("revisionId","");
+                if(revision.isEmpty())throw new java.io.IOException("Révision Google Docs indisponible");
+                String[] originals={"33. SMOOTH OPERATOR · 120 BPM","34. IS IT A CRIME · 105 BPM"};
+                String[] replacements={"33. SMOOTH OPERATOR · 120","34. IS IT A CRIME · 105"};
+                for(int i=0;i<2;i++){
+                    requests.put(new JSONObject().put("replaceAllText",new JSONObject()
+                        .put("containsText",new JSONObject().put("text",originals[i]).put("matchCase",true))
+                        .put("replaceText",replacements[i])));
+                }
+                JSONObject payload=new JSONObject().put("requests",requests)
+                    .put("writeControl",new JSONObject().put("requiredRevisionId",revision));
+                post=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    dest+":batchUpdate").openConnection();
+                post.setRequestMethod("POST");post.setConnectTimeout(12000);post.setReadTimeout(20000);
+                post.setDoOutput(true);
+                post.setRequestProperty("Authorization","Bearer "+accessToken);
+                post.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                try(OutputStream out=post.getOutputStream()){
+                    out.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                int code=post.getResponseCode();
+                if(code<200||code>=300)throw new java.io.IOException("Google Docs HTTP "+code);
+                JSONObject response=new JSONObject(readResponse(post));
+                JSONArray replies=response.optJSONArray("replies");
+                int n=requests.length();
+                for(int i=n-2;i<n;i++){
+                    JSONObject reply=replies==null?null:replies.optJSONObject(i);
+                    JSONObject replacement=reply==null?null:reply.optJSONObject("replaceAllText");
+                    if(replacement==null||replacement.optInt("occurrencesChanged",0)!=1)
+                        throw new java.io.IOException("Remplacement BPM non confirmé : vérifier le sommaire");
+                }
+                runOnUiThread(()->status.setText("Sommaire ajusté : 120 et 105 conservés, saut de page avant les titres désactivé."));
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Correction non confirmée : "+e.getMessage()));
+            }finally{
+                if(get!=null)get.disconnect();
+                if(post!=null)post.disconnect();
+            }
+        },"Ts2026CompactSummary").start();
+    }
 
     private void confirmFormatSummary(){
         if(token==null||token.isEmpty()){
