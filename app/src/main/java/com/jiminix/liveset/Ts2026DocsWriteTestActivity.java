@@ -510,7 +510,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                     String wanted=alias(neighbor.title);
                     int offset=0;
                     for(String raw:value.split("\\n",-1)){
-                        String cleaned=raw.trim().replaceFirst("^\\\\d{1,3}\\\\s*[.)-]\\\\s*","");
+                        String cleaned=raw.trim().replaceFirst("^\\d{1,3}\\s*[.)-]\\s*","");
                         if(!wanted.isEmpty() && alias(cleaned).startsWith(wanted)){
                             int start=paragraph.optInt("startIndex",-1);
                             if(start>0)return new IndexLocation(start+offset,neighbor.title);
