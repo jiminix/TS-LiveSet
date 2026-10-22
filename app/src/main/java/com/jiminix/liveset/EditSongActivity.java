@@ -336,6 +336,49 @@ public class EditSongActivity extends AppCompatActivity {
         finish();
     }
 
+    // Enrich missing metadata after a lyrics import without replacing user edits.
+    private void enrichMissingSongInfo(String searchedTitle,String searchedArtist){
+        final String query=(searchedArtist+" "+searchedTitle).trim();
+        if(query.isEmpty())return;
+        new Thread(()->{
+            try{
+                List<SongCatalogLookup.Result> matches=SongCatalogLookup.search(query,5);
+                if(matches==null||matches.isEmpty())return;
+                SongCatalogLookup.Result best=null;
+                String expected=normalizeSongIdentity(searchedTitle);
+                for(SongCatalogLookup.Result candidate:matches){
+                    if(normalizeSongIdentity(candidate.title).equals(expected) &&
+                        normalizeSongIdentity(candidate.artist).equals(normalizeSongIdentity(searchedArtist))){
+                        best=candidate;break;
+                    }
+                }
+                if(best==null)return; // Never guess a BPM from a different recording.
+                SongCatalogLookup.Result enriched=SongCatalogLookup.enrich(best);
+                if(enriched==null)return;
+                runOnUiThread(()->{
+                    if(!title.getText().toString().trim().equalsIgnoreCase(searchedTitle) ||
+                       !artist.getText().toString().trim().equalsIgnoreCase(searchedArtist))return;
+                    if(bpm.getText().toString().trim().isEmpty() && !enriched.bpm.trim().isEmpty())
+                        bpm.setText(enriched.bpm.trim());
+                    if(duration.getText().toString().trim().isEmpty() && !enriched.duration.trim().isEmpty())
+                        duration.setText(enriched.duration.trim());
+                });
+            }catch(Exception ignored){}
+        },"TS-Lyrics-Metadata").start();
+    }
+    private static String normalizeSongIdentity(String value){
+        if(value==null)return "";
+        return java.text.Normalizer.normalize(value,java.text.Normalizer.Form.NFD)
+            .replaceAll("\\p{M}+","").toLowerCase(java.util.Locale.ROOT)
+            .replaceAll("[^a-z0-9]","");
+    }
+    private void suggestYoutubeSearch(String searchedTitle,String searchedArtist){
+        if(!media.getText().toString().trim().isEmpty())return;
+        String q=Uri.encode(searchedArtist+" "+searchedTitle+" official audio");
+        // Search URL, not an invented direct video link.
+        media.setText("https://www.youtube.com/results?search_query="+q);
+    }
+
     private void searchLyricsWeb(){
         String t=title.getText().toString().trim();
         String a=artist.getText().toString().trim();
@@ -407,7 +450,9 @@ public class EditSongActivity extends AppCompatActivity {
             runOnUiThread(()->{
                 if(result!=null && !result.isEmpty()){
                     lyrics.setText(result);
-                    android.widget.Toast.makeText(this,"Paroles trouvées via "+resultSource,android.widget.Toast.LENGTH_LONG).show();
+                    suggestYoutubeSearch(t,a);
+                    enrichMissingSongInfo(t,a);
+                    android.widget.Toast.makeText(this,"Paroles trouvées via "+resultSource+" · recherche BPM et lien YouTube",android.widget.Toast.LENGTH_LONG).show();
                 }else{
                     new AlertDialog.Builder(this)
                         .setTitle("Paroles non trouvées automatiquement")
