@@ -94,9 +94,13 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         if(m.find())value=m.group(1);
         return value;
     }
+    private static boolean isProtectedDocument(String id){
+        return Ts2026GoogleDocsSource.DOCUMENT_ID.equals(id) ||
+            Ts2026GoogleDocsSource.PREPARED_DOCUMENT_ID.equals(id);
+    }
     private boolean validCopy(){
         String id=id();
-        if(id.equals(Ts2026GoogleDocsSource.DOCUMENT_ID)){
+        if(isProtectedDocument(id)){
             status.setText("REFUS : il s'agit du document ORIGINAL. Crée une copie.");return false;
         }
         if(!id.matches("[a-zA-Z0-9_-]{20,}")){
@@ -153,7 +157,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
             HttpURLConnection conn=null;
             try{
                 // Recheck destination in the worker, too.
-                if(target.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                if(isProtectedDocument(target))
                     throw new IllegalArgumentException("Document original interdit");
                 URL url=new URL("https://docs.googleapis.com/v1/documents/"+target+":batchUpdate");
                 conn=(HttpURLConnection)url.openConnection();
@@ -225,7 +229,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         new Thread(()->{
             HttpURLConnection get=null,post=null;
             try{
-                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                if(isProtectedDocument(destination))
                     throw new IllegalArgumentException("Document original interdit");
                 get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+destination).openConnection();
                 get.setConnectTimeout(12000);get.setReadTimeout(20000);
@@ -420,7 +424,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         new Thread(()->{
             HttpURLConnection post=null;
             try{
-                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                if(isProtectedDocument(destination))
                     throw new java.io.IOException("Original interdit");
                 JSONArray requests=new JSONArray();
                 // Reverse order: editing text never shifts the earlier indices.
@@ -540,7 +544,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         new Thread(()->{
             HttpURLConnection get=null,post=null;
             try{
-                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                if(isProtectedDocument(destination))
                     throw new java.io.IOException("Original interdit");
                 get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
                     destination+"?includeTabsContent=true").openConnection();
@@ -570,7 +574,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         new Thread(()->{
             HttpURLConnection post=null;
             try{
-                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                if(isProtectedDocument(destination))
                     throw new java.io.IOException("Original interdit");
                 JSONObject insert=new JSONObject().put("location",new JSONObject().put("index",index))
                     .put("text",entry);
@@ -647,7 +651,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         new Thread(()->{
             HttpURLConnection get=null,post=null;
             try{
-                if(destination.equals(Ts2026GoogleDocsSource.DOCUMENT_ID))
+                if(isProtectedDocument(destination))
                     throw new java.io.IOException("Document original interdit");
                 get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
                     destination+"?includeTabsContent=true").openConnection();
