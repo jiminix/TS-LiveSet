@@ -24,6 +24,7 @@ import java.util.regex.*;
 public class Ts2026RecoveryActivity extends Activity {
     private static final int AUTH_REQUEST=2907;
     private String playlistId;
+    private boolean preparedReadOnly = false;
     private LinearLayout results;
     private TextView status;
     private final List<String> missing = new ArrayList<>();
@@ -49,12 +50,17 @@ public class Ts2026RecoveryActivity extends Activity {
         status.setText("Comparaison avec l'index Google Docs…");
         root.addView(status);
         Button refresh=new Button(this);refresh.setText("Relire Google Docs");
-        refresh.setOnClickListener(v->authorizeAndRead());root.addView(refresh);
+        refresh.setOnClickListener(v->{preparedReadOnly=false;authorizeAndRead();});root.addView(refresh);
+        Button prepared=new Button(this);
+        prepared.setText("TESTER NOUVEAU GOOGLE DOCS · LECTURE SEULE");
+        prepared.setOnClickListener(v->{preparedReadOnly=true;authorizeAndRead();});
+        root.addView(prepared);
         ScrollView scroll=new ScrollView(this);
         results=new LinearLayout(this);results.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(results);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         Button add=new Button(this);add.setText("Ajouter les titres cochés à TS 2026");
         add.setOnClickListener(v->confirmAdd());root.addView(add);
+        add.setVisibility(android.view.View.GONE);
         setContentView(root);
         authorizeAndRead();
     }
@@ -352,7 +358,7 @@ public class Ts2026RecoveryActivity extends Activity {
         }
         TextView positions=new TextView(this);
         positions.setTextColor(Color.LTGRAY);
-        StringBuilder positionReport=new StringBuilder("Positions Google Docs détectées :\\n");
+        StringBuilder positionReport=new StringBuilder("Positions Google Docs détectées :\n");
         String[] targets={"cacestvraimenttoi","ladamedehautesavoie","sledgehammer"};
         for(String target:targets){
             int found=-1;
@@ -360,10 +366,17 @@ public class Ts2026RecoveryActivity extends Activity {
                 if(docsOrder.get(i).equals(target)){found=i+1;break;}
             }
             positionReport.append(target.equals("cacestvraimenttoi")?"ÇA C'EST VRAIMENT TOI":target.equals("ladamedehautesavoie")?"LA DAME DE HAUTE-SAVOIE":"SLEDGE HAMMER")
-                .append(" : ").append(found<0?"non reconnu":("#"+found)).append("\\n");
+                .append(" : ").append(found<0?"non reconnu":("#"+found)).append("\n");
         }
         positions.setText(positionReport.toString());
         results.addView(positions);
+        if(preparedReadOnly){
+            TextView notice=new TextView(this);
+            notice.setTextColor(Color.YELLOW);
+            notice.setText("TEST DU NOUVEAU DOCUMENT : lecture seule. Aucun ajout, retrait ou changement d’ordre possible depuis cet écran.");
+            results.addView(notice);
+            return;
+        }
         Button syncMissing=new Button(this);
         syncMissing.setText("Ajouter le titre coché à Google Docs · COPIE");
         syncMissing.setOnClickListener(v->{
@@ -411,13 +424,41 @@ public class Ts2026RecoveryActivity extends Activity {
         });
         results.addView(copy);
     }
+    /** Strictly read the 32-line opening index of the imported DOCX, never lyrics. */
+    private static String readPreparedOverview(String text){
+        if(text==null)return "";
+        int start=text.toUpperCase(Locale.ROOT).indexOf("SOMMAIRE TS 2026");
+        int end=text.toUpperCase(Locale.ROOT).indexOf("PAROLES ET NOTES");
+        if(start<0 || end<=start || end-start>14000)return "";
+        String section=text.substring(start,end);
+        TreeMap<Integer,String> numbered=new TreeMap<>();
+        Pattern pattern=Pattern.compile("^\\\\s*(0?[1-9]|[12][0-9]|3[0-9])\\\\s*[.)-]\\\\s*(.{3,140})$");
+        for(String line:section.split("\\\\n")){
+            Matcher m=pattern.matcher(line.trim());
+            if(m.matches()){
+                int number=Integer.parseInt(m.group(1));
+                if(number>=1 && number<=32 && !numbered.containsKey(number))
+                    numbered.put(number,m.group(2).trim());
+            }
+        }
+        if(numbered.size()!=32)return "";
+        StringBuilder result=new StringBuilder();
+        for(int i=1;i<=32;i++){
+            String item=numbered.get(i);
+            if(item==null)return "";
+            result.append(item).append('\\\\n');
+        }
+        return result.toString();
+    }
+
     private void readDocument(String accessToken){
         status.setText("Lecture authentifiée de Google Docs…");
         new Thread(()->{
             HttpURLConnection connection=null;
             try{
                 URL url=new URL("https://docs.googleapis.com/v1/documents/"+
-                    Ts2026GoogleDocsSource.DOCUMENT_ID+"?includeTabsContent=true");
+                    (preparedReadOnly ? Ts2026GoogleDocsSource.PREPARED_DOCUMENT_ID :
+                        Ts2026GoogleDocsSource.DOCUMENT_ID)+"?includeTabsContent=true");
                 connection=(HttpURLConnection)url.openConnection();
                 connection.setConnectTimeout(12000);connection.setReadTimeout(20000);
                 connection.setRequestProperty("Authorization","Bearer "+accessToken);
@@ -457,7 +498,7 @@ public class Ts2026RecoveryActivity extends Activity {
                     JSONObject documentTab=first==null?null:first.optJSONObject("documentTab");
                     firstBody=documentTab==null?null:documentTab.optJSONObject("body");
                 }else firstBody=doc.optJSONObject("body");
-                String overview=readTs2026Overview(firstBody);
+                String overview=preparedReadOnly ? readPreparedOverview(text.toString()) : readTs2026Overview(firstBody);
                 if(!overview.isEmpty()){
                     runOnUiThread(()->{if(!isFinishing())showOverview(overview);});
                 }else{
