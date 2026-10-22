@@ -67,6 +67,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         lyrics.setText("Tester une nouvelle section de paroles → COPIE");
         lyrics.setOnClickListener(v->chooseNewLyricsSection());
         layout.addView(lyrics);
+        Button missingTwo=new Button(this);
+        missingTwo.setText("Préparer SMOOTH OPERATOR + IS IT A CRIME → COPIE");
+        missingTwo.setOnClickListener(v->confirmMissingTwo());
+        layout.addView(missingTwo);
         if(pendingSongId!=null){
             Button retryIndex=new Button(this);
             retryIndex.setText("Réessayer le sommaire uniquement → COPIE");
@@ -88,6 +92,94 @@ public class Ts2026DocsWriteTestActivity extends Activity {
             status.setText("Morceau validé dans TS 2026. Autorise Google Docs puis confirme l’ajout de sa section dans la COPIE.");
         }
     }
+
+    private void confirmMissingTwo(){
+        if(!validCopy())return;
+        if(token==null||token.isEmpty()){
+            status.setText("Autorise Google Docs avant le test.");return;
+        }
+        Song smooth=null,crime=null;
+        for(Song song:AppStore.loadSongs(this)){
+            String k=normalized(song.title);
+            if(k.equals("smoothoperator"))smooth=song;
+            if(k.equals("isitacrime"))crime=song;
+        }
+        if(smooth==null||crime==null){
+            status.setText("Les deux morceaux doivent exister dans la bibliothèque Manager.");return;
+        }
+        final Song first=smooth,second=crime;
+        final String destination=id(),accessToken=token;
+        String preview=preparedSongSection(first)+"\n"+preparedSongSection(second);
+        new AlertDialog.Builder(this)
+            .setTitle("Préparer 2 morceaux dans une COPIE")
+            .setMessage("Ajout de deux sections de test à la FIN d'une copie, sans changer le sommaire ni les 32 titres existants.\n\n"+
+                "Les paroles sont reprises uniquement si elles sont déjà enregistrées dans le Manager.\n\n"+
+                preview.substring(0,Math.min(preview.length(),2200))+
+                "\n\nAucun changement dans le nouveau document officiel.")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Ajouter à la COPIE",(d,w)->appendMissingTwo(destination,accessToken,first,second))
+            .show();
+    }
+    private static String preparedSongSection(Song song){
+        StringBuilder text=new StringBuilder();
+        text.append("\n=== TS2026-SONG:").append(normalized(song.title)).append(" ===\n");
+        text.append(song.title.trim());
+        if(song.bpm!=null&&!song.bpm.trim().isEmpty())text.append(" · ").append(song.bpm.trim()).append(" BPM");
+        if(song.stageGuitar)text.append(" 🎸");
+        if(song.stageKeyboard)text.append(" 🎹");
+        text.append("\n");
+        if(song.lyrics!=null&&!song.lyrics.trim().isEmpty())text.append(song.lyrics.trim()).append("\n");
+        else text.append("[Paroles non renseignées dans le Manager]\n");
+        text.append("=== FIN TS2026-SONG ===\n");
+        return text.toString();
+    }
+    private void appendMissingTwo(String destination,String accessToken,Song first,Song second){
+        status.setText("Vérification de la COPIE avant écriture…");
+        new Thread(()->{
+            HttpURLConnection get=null,post=null;
+            try{
+                if(isProtectedDocument(destination))throw new IllegalArgumentException("Document protégé");
+                get=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+"?includeTabsContent=true").openConnection();
+                get.setConnectTimeout(12000);get.setReadTimeout(20000);
+                get.setRequestProperty("Authorization","Bearer "+accessToken);
+                if(get.getResponseCode()!=200)throw new java.io.IOException("Lecture HTTP "+get.getResponseCode());
+                JSONObject doc=new JSONObject(readResponse(get));
+                String content=doc.toString();
+                if(!content.toUpperCase(Locale.ROOT).contains("TS 2026"))
+                    throw new java.io.IOException("Copie non reconnue comme document TS 2026");
+                for(Song song:new Song[]{first,second}){
+                    if(content.contains("TS2026-SONG:"+normalized(song.title)))
+                        throw new java.io.IOException("Section déjà présente : "+song.title+" (doublon évité)");
+                }
+                String revision=doc.optString("revisionId","");
+                if(revision.isEmpty())throw new java.io.IOException("Révision Google Docs absente");
+                JSONObject insert=new JSONObject().put("endOfSegmentLocation",new JSONObject())
+                    .put("text",preparedSongSection(first)+preparedSongSection(second));
+                JSONObject body=new JSONObject()
+                    .put("requests",new JSONArray().put(new JSONObject().put("insertText",insert)))
+                    .put("writeControl",new JSONObject().put("requiredRevisionId",revision));
+                post=(HttpURLConnection)new URL("https://docs.googleapis.com/v1/documents/"+
+                    destination+":batchUpdate").openConnection();
+                post.setRequestMethod("POST");post.setConnectTimeout(12000);post.setReadTimeout(20000);
+                post.setDoOutput(true);
+                post.setRequestProperty("Authorization","Bearer "+accessToken);
+                post.setRequestProperty("Content-Type","application/json; charset=UTF-8");
+                try(OutputStream out=post.getOutputStream()){
+                    out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                if(post.getResponseCode()<200||post.getResponseCode()>=300)
+                    throw new java.io.IOException("Écriture refusée HTTP "+post.getResponseCode());
+                runOnUiThread(()->status.setText("Deux sections ajoutées à la COPIE. Sommaire original inchangé."));
+            }catch(Exception e){
+                runOnUiThread(()->status.setText("Aucune écriture confirmée : "+e.getMessage()));
+            }finally{
+                if(get!=null)get.disconnect();
+                if(post!=null)post.disconnect();
+            }
+        },"Ts2026MissingTwoCopy").start();
+    }
+
     private String id(){
         String value=copyId.getText().toString().trim();
         java.util.regex.Matcher m=java.util.regex.Pattern.compile("/document/d/([a-zA-Z0-9_-]+)").matcher(value);
