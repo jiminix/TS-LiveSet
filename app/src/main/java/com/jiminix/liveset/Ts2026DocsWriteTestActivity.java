@@ -34,9 +34,11 @@ public class Ts2026DocsWriteTestActivity extends Activity {
     private TextView status;
     private String token;
     private String pendingSongId;
+    private boolean autoSyncLaunch;
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
         pendingSongId=getIntent().getStringExtra("sync_song_id");
+        autoSyncLaunch=getIntent().getBooleanExtra("auto_playlist_sync",false);
         ScrollView scroll=new ScrollView(this);
         scroll.setFillViewport(true);
         LinearLayout layout=new LinearLayout(this);
@@ -66,6 +68,14 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         syncPlaylist.setText("SYNCHRONISER PLAYLIST → SOMMAIRE DOCS");
         syncPlaylist.setOnClickListener(v->confirmPlaylistSync());
         layout.addView(syncPlaylist);
+        CheckBox autoToggle=new CheckBox(this);
+        autoToggle.setText("Activer la synchro automatique TS 2026");
+        autoToggle.setTextColor(Color.WHITE);
+        autoToggle.setChecked(getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).getBoolean("auto_enabled",false));
+        autoToggle.setOnCheckedChangeListener((button,checked)->
+            getSharedPreferences("ts2026_docs_sync",MODE_PRIVATE).edit()
+                .putBoolean("auto_enabled",checked).apply());
+        layout.addView(autoToggle);
         Button official=new Button(this);
         official.setText("AJOUTER 2 TITRES · DOCS OFFICIEL");
         official.setOnClickListener(v->confirmOfficialMissingTwo());
@@ -134,6 +144,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         }
         scroll.addView(layout);
         setContentView(scroll);
+        if(autoSyncLaunch)authorize();
         if(pendingSongId!=null){
             status.setText("Morceau validé dans TS 2026. Autorise Google Docs puis confirme l’ajout de sa section dans la COPIE.");
         }
@@ -766,6 +777,7 @@ public class Ts2026DocsWriteTestActivity extends Activity {
             token=result.getAccessToken();
             status.setText(token==null?"Jeton Google absent.":"Google Docs autorisé. Choisis une COPIE pour le test.");
             if(token!=null && pendingSongId!=null)confirmPendingSong();
+            if(token!=null && autoSyncLaunch){autoSyncLaunch=false;confirmPlaylistSync();}
         }
     }
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
