@@ -382,37 +382,81 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     private void openSongLyrics(Song song,int index){
         if(song==null)return;
         if(tabletLayout){
-            ScrollView scroller=new ScrollView(this);
-            TextView body=new TextView(this);
-            String lyrics=song.lyrics==null?"":song.lyrics.trim();
-            body.setText(lyrics.isEmpty()?"Aucune parole enregistrée pour ce morceau.":lyrics);
-            body.setTextColor(Color.WHITE);
-            body.setTextSize(22);
-            body.setPadding(dp(18),dp(12),dp(18),dp(24));
-            scroller.addView(body);
-            TextView heading=new TextView(this);
-            heading.setText(song.title==null?"":song.title);
-            heading.setTextColor(Color.rgb(255,196,30));
-            heading.setTextSize(22);
-            heading.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-            heading.setPadding(dp(18),dp(14),dp(18),dp(8));
+            final String lyrics=song.lyrics==null?"":song.lyrics.trim();
+            final String[] lines=lyrics.isEmpty()
+                ?new String[]{"Aucune parole enregistrée pour ce morceau."}
+                :lyrics.split("\\n",-1);
+            final int[] size={getSharedPreferences("tablet_lyrics",MODE_PRIVATE)
+                .getInt("font_size",18)};
             LinearLayout panel=new LinearLayout(this);
             panel.setOrientation(LinearLayout.VERTICAL);
             panel.setBackgroundColor(Color.BLACK);
-            panel.addView(heading);
+            LinearLayout headingRow=new LinearLayout(this);
+            headingRow.setOrientation(LinearLayout.HORIZONTAL);
+            headingRow.setGravity(Gravity.CENTER_VERTICAL);
+            TextView heading=new TextView(this);
+            heading.setText(song.title==null?"":song.title);
+            heading.setTextColor(Color.rgb(255,196,30));
+            heading.setTextSize(21);
+            heading.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            heading.setPadding(dp(16),dp(10),dp(8),dp(8));
+            headingRow.addView(heading,new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,1));
+            Button minus=Ui.button(this,"A−");
+            Button plus=Ui.button(this,"A+");
+            headingRow.addView(minus,new LinearLayout.LayoutParams(dp(54),dp(42)));
+            headingRow.addView(plus,new LinearLayout.LayoutParams(dp(54),dp(42)));
+            panel.addView(headingRow);
+            ScrollView scroller=new ScrollView(this);
+            LinearLayout columns=new LinearLayout(this);
+            columns.setOrientation(LinearLayout.HORIZONTAL);
+            columns.setPadding(dp(12),dp(5),dp(12),dp(15));
+            TextView left=new TextView(this);
+            TextView right=new TextView(this);
+            left.setTextColor(Color.WHITE);
+            right.setTextColor(Color.WHITE);
+            left.setTextSize(size[0]);
+            right.setTextSize(size[0]);
+            left.setPadding(dp(4),0,dp(12),0);
+            right.setPadding(dp(12),0,dp(4),0);
+            // Preserve original line breaks and reading order across columns.
+            int split=(lines.length+1)/2;
+            StringBuilder first=new StringBuilder(),second=new StringBuilder();
+            for(int i=0;i<lines.length;i++){
+                StringBuilder dest=i<split?first:second;
+                if(dest.length()>0)dest.append("\\n");
+                dest.append(lines[i]);
+            }
+            left.setText(first.toString());
+            right.setText(second.toString());
+            columns.addView(left,new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,1));
+            columns.addView(right,new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,1));
+            scroller.addView(columns);
             panel.addView(scroller,new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,0,1));
+            minus.setOnClickListener(v->{
+                size[0]=Math.max(10,size[0]-2);
+                left.setTextSize(size[0]);right.setTextSize(size[0]);
+                getSharedPreferences("tablet_lyrics",MODE_PRIVATE).edit()
+                    .putInt("font_size",size[0]).apply();
+            });
+            plus.setOnClickListener(v->{
+                size[0]=Math.min(34,size[0]+2);
+                left.setTextSize(size[0]);right.setTextSize(size[0]);
+                getSharedPreferences("tablet_lyrics",MODE_PRIVATE).edit()
+                    .putInt("font_size",size[0]).apply();
+            });
             AlertDialog dialog=new AlertDialog.Builder(this)
-                .setView(panel)
-                .setPositiveButton("FERMER",null)
-                .create();
+                .setView(panel).setPositiveButton("FERMER",null).create();
             dialog.setOnShowListener(d->{
                 if(dialog.getWindow()!=null){
                     dialog.getWindow().setBackgroundDrawable(
                         new android.graphics.drawable.ColorDrawable(Color.BLACK));
                     dialog.getWindow().setLayout(
-                        (int)(getResources().getDisplayMetrics().widthPixels*0.85f),
-                        (int)(getResources().getDisplayMetrics().heightPixels*0.85f));
+                        (int)(getResources().getDisplayMetrics().widthPixels*0.94f),
+                        (int)(getResources().getDisplayMetrics().heightPixels*0.9f));
                 }
             });
             dialog.show();
