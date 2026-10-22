@@ -13,8 +13,16 @@
   },
   "syncPolicy": {
     "scope": "TS 2026 only",
-    "import": ["song-title", "song-metadata", "lyrics", "rich-text-formatting"],
-    "neverImport": ["song-order", "playlist-position"],
+    "import": [
+      "song-title",
+      "song-metadata",
+      "lyrics",
+      "rich-text-formatting"
+    ],
+    "neverImport": [
+      "song-order",
+      "playlist-position"
+    ],
     "preserveLocalSongOrder": true,
     "preserveOtherPlaylists": true,
     "preserveExistingLyricsUntilSuccessfulSync": true,
@@ -23,13 +31,34 @@
     "conflictPolicy": "do-not-overwrite-unmatched-songs"
   },
   "formatting": {
-    "preserve": ["font-size", "font-color", "font-weight", "font-style", "underline", "alignment", "line-spacing", "paragraph-spacing", "line-breaks", "tables", "columns"],
+    "preserve": [
+      "font-size",
+      "font-color",
+      "font-weight",
+      "font-style",
+      "underline",
+      "alignment",
+      "line-spacing",
+      "paragraph-spacing",
+      "line-breaks",
+      "tables",
+      "columns"
+    ],
     "androidDisplay": "WebView with viewport scaling"
   },
   "notes": [
     "This file prepares integration only; it does not enable Google Docs access or synchronization.",
     "The document summary numbering and lyric-section numbering are not reliable song identifiers.",
     "Google Docs access must be configured with an authorized read-only connection or a deliberately published export.",
-    "Never reorder the playlist when refreshing Google Docs."
-  ]
+    "Never reorder the playlist when refreshing Google Docs.",
+    "Prepared source is not active yet: test its HTML export and section matching before switching from legacy document.",
+    "Never write to either original document through the copy-only test workflow."
+  ],
+  "preparedSource": {
+    "provider": "google-docs",
+    "documentId": "1FBFHGEfDCHzGSO8C8x5CZVQzB1CLWBgJjsgxiqhHAY8",
+    "url": "https://docs.google.com/document/d/1FBFHGEfDCHzGSO8C8x5CZVQzB1CLWBgJjsgxiqhHAY8/edit",
+    "structure": "simplified-index-and-lyrics-sections",
+    "status": "awaiting-read-and-write-validation"
+  }
 }
