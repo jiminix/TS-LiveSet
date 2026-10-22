@@ -161,15 +161,21 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 publishedTitles.add(normalizedTitle(song.title));
         }
         java.util.List<String> obsolete=new java.util.ArrayList<>();
+        java.util.Set<String> seenStagingIds=new java.util.HashSet<>();
+        java.util.Set<String> seenStagingTitles=new java.util.HashSet<>();
         for(String id:setlist.songIds){
+            if(!seenStagingIds.add(id)){obsolete.add(id);continue;}
             if(publishedIds.contains(id)){obsolete.add(id);continue;}
             Song song=AppStore.findSong(this,id);
-            if(song!=null && song.title!=null && !song.title.trim().isEmpty()
-                && publishedTitles.contains(normalizedTitle(song.title)))obsolete.add(id);
+            if(song!=null && song.title!=null && !song.title.trim().isEmpty()){
+                String key=normalizedTitle(song.title);
+                if(publishedTitles.contains(key) || !seenStagingTitles.add(key))obsolete.add(id);
+            }
         }
         if(obsolete.isEmpty())return;
         AppStore.recordUndoSnapshot(this,"Nettoyage EN COURS déjà publiés");
-        setlist.songIds.removeAll(obsolete);
+        // Remove exact occurrences, including duplicate IDs, without deleting library songs.
+        for(String id:obsolete)setlist.songIds.remove(id);
         setlist.disabledSongIds.removeAll(obsolete);
         // Persist an intentionally empty staging list without triggering cloud recovery.
         if(setlist.songIds.isEmpty()){
@@ -762,7 +768,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
     private String normalizedTitle(String value){
         String s=value==null?"":Normalizer.normalize(value,Normalizer.Form.NFD).replaceAll("\\p{M}+","");
-        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+"," ").trim().replaceAll("\\s+"," ");
+        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+","");
     }
 
     private void openViewer(){
