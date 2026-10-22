@@ -583,8 +583,6 @@ public class Ts2026DocsWriteTestActivity extends Activity {
             .setPositiveButton("Créer",(d,w)->{
                 getPreferences(MODE_PRIVATE).edit().putString("test_copy_id",destination).apply();
                 appendLyricsSection(destination,token,song);
-                // The index is a separate, explicitly confirmed operation.
-                previewIndexInsertion(destination,token,song);
             }).show();
     }
     private void chooseNewLyricsSection(){
@@ -661,8 +659,11 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                 }
                 int http=post.getResponseCode();
                 if(http<200||http>=300)throw new java.io.IOException("Écriture HTTP "+http);
-                runOnUiThread(()->status.setText("Section de paroles créée à la fin de la COPIE pour : "+title+
-                    ". Sommaire inchangé. Vérifie la mise en page dans Google Docs."));
+                runOnUiThread(()->{
+                    status.setText("Section de paroles créée dans la COPIE. Vérification du sommaire…");
+                    if(pendingSongId!=null && pendingSongId.equals(song.id))
+                        previewIndexInsertion(destination,accessToken,song);
+                });
             }catch(Exception e){
                 runOnUiThread(()->status.setText("Aucune écriture confirmée : "+e.getMessage()));
             }finally{
