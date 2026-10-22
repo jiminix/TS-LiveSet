@@ -62,6 +62,10 @@ public class Ts2026DocsWriteTestActivity extends Activity {
         layout.addView(status);
         Button authorize=new Button(this);authorize.setText("Autoriser Google Docs");
         authorize.setOnClickListener(v->authorize());layout.addView(authorize);
+        Button syncPlaylist=new Button(this);
+        syncPlaylist.setText("SYNCHRONISER PLAYLIST → SOMMAIRE DOCS");
+        syncPlaylist.setOnClickListener(v->confirmPlaylistSync());
+        layout.addView(syncPlaylist);
         Button official=new Button(this);
         official.setText("AJOUTER 2 TITRES · DOCS OFFICIEL");
         official.setOnClickListener(v->confirmOfficialMissingTwo());
