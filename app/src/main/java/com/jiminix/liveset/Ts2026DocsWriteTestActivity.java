@@ -184,13 +184,17 @@ public class Ts2026DocsWriteTestActivity extends Activity {
                         if(el==null)continue;
                         if(el.optJSONObject("textRun")!=null)
                             line.append(el.optJSONObject("textRun").optString("content",""));
-                        if(el.has("pageBreak"))explicitBreak=true;
+                        if(el.has("pageBreak") && i>0 && i<blocks.length()-1) { /* checked below for target paragraphs */ }
                     }
                     String value=line.toString().trim();
                     int number=value.matches("(?i)^32[.]\\s*UPTOWN FUNK.*")?32:
                         value.matches("(?i)^33[.]\\s*SMOOTH OPERATOR.*")?33:
                         value.matches("(?i)^34[.]\\s*IS IT A CRIME.*")?34:0;
                     if(number==0)continue;
+                    for(int j=0;j<elements.length();j++){
+                        JSONObject el=elements.optJSONObject(j);
+                        if(el!=null&&el.has("pageBreak"))explicitBreak=true;
+                    }
                     int start=block.optInt("startIndex",-1),end=block.optInt("endIndex",-1);
                     if(start<1||end<=start)throw new java.io.IOException("Position du titre "+number+" inconnue");
                     if(number==32)thirtyTwo=start;
