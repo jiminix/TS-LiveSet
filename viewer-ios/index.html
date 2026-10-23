@@ -196,15 +196,14 @@ function render(payload,cached=false){
     const bpm=document.createElement("div"); bpm.className="bpm";
     // The Manager remains authoritative. Legacy cloud rows may have an empty
     // tempo when a song was originally created without filling its BPM.
-    const knownMissingTempo={
-      "LA DAME DE HAUTE SAVOIE":"134",
-      "LA DAME DE HAUTE-SAVOIE":"134",
-      "SLEDGEHAMMER":"96"
-    };
     const normalizedTitle=(s.title||"").normalize("NFD")
-      .replace(/[\\u0300-\\u036f]/g,"").toUpperCase().trim();
-    bpm.textContent=String(s.bpm??"").trim() ||
-      knownMissingTempo[normalizedTitle] || "—";
+      .replace(/[\u0300-\u036f]/g,"").toUpperCase()
+      .replace(/[^A-Z0-9]+/g," ").trim();
+    const knownMissingTempo=
+      normalizedTitle.includes("DAME DE HAUTE SAVOIE") ? "134" :
+      normalizedTitle.includes("SLEDGEHAMMER") ? "96" : "";
+    const suppliedTempo=String(s.bpm??"").trim();
+    bpm.textContent=suppliedTempo || knownMissingTempo || "—";
     if(bpm.textContent==="—")bpm.title="BPM à renseigner dans le Manager";
     row.append(num);
     const medley=Array.isArray(s.medleyItems)&&s.medleyItems.length>0 && /^med+d?ley\b/i.test(s.title||"");
