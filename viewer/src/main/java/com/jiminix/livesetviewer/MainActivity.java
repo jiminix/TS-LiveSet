@@ -98,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
     private String lastSignature="";
     private volatile boolean cloudBusy=false;
     private boolean showInProgress=false;
+    private boolean showFred=false;
     private final Set<String> expandedMedleys=new HashSet<>();
     private String pendingUpdateUrl="";
     private String pendingUpdateVersion="";
@@ -199,6 +200,13 @@ public class MainActivity extends AppCompatActivity {
         update.setMinimumWidth(0);
 
         viewerActions.addView(inProgressButton,new LinearLayout.LayoutParams(0,dp(36),1));
+        Button fm=new Button(this);
+        fm.setText("FM");
+        fm.setTextSize(11);
+        fm.setMinWidth(0);
+        fm.setMinimumWidth(0);
+        viewerActions.addView(fm,new LinearLayout.LayoutParams(dp(48),dp(36)));
+        fm.setOnClickListener(v->{showFred=!showFred;showInProgress=false;inProgressButton.setText("En cours");lastSignature="";scroll.scrollTo(0,0);refreshPlaylist();});
         viewerActions.addView(pageUp,new LinearLayout.LayoutParams(dp(42),dp(36)));
         viewerActions.addView(pageDown,new LinearLayout.LayoutParams(dp(42),dp(36)));
         viewerActions.addView(update,new LinearLayout.LayoutParams(0,dp(36),1));
@@ -444,6 +452,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void toggleInProgress(){
         showInProgress=!showInProgress;
+        showFred=false;
         inProgressButton.setText(showInProgress?"Principal":"En cours");
         lastSignature="";
         if(scroll!=null)scroll.scrollTo(0,0);
@@ -476,7 +485,7 @@ public class MainActivity extends AppCompatActivity {
         try{
             Bundle b=getContentResolver().call(
                 Uri.parse("content://com.jiminix.liveset.playlists"),
-                showInProgress?"get_in_progress_playlist":"get_selected_playlist",
+                showFred?"get_fm_playlist":(showInProgress?"get_in_progress_playlist":"get_selected_playlist"),
                 null,
                 null
             );
@@ -565,7 +574,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         JSONObject sourcePayload=payload;
-        if(showInProgress){
+        if(showFred){
+            sourcePayload=payload.optJSONObject("with_fred");
+            if(sourcePayload==null){
+                showEmpty("FM","Le Manager doit publier la playlist With Fred.");
+                return;
+            }
+        }else if(showInProgress){
             sourcePayload=payload.optJSONObject("in_progress");
             if(sourcePayload==null){
                 showEmpty("En cours","Cette version du Manager n’a pas encore publié la playlist En cours.");
@@ -574,14 +589,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if(!sourcePayload.optBoolean("available",false)){
-            showEmpty(showInProgress?"En cours":"Aucune playlist publiée",
-                showInProgress
+            showEmpty(showFred?"2. With Fred":(showInProgress?"En cours":"Aucune playlist publiée"),
+                showFred
+                    ? "La playlist With Fred est indisponible dans le Manager."
+                    : showInProgress
                     ? "La playlist En cours est vide ou indisponible."
                     : "Dans le Manager, ouvre la playlist voulue puis appuie sur « Viewer ».");
             return;
         }
 
-        String name=sourcePayload.optString("playlist_name",showInProgress?"En cours":"Playlist");
+        String name=sourcePayload.optString("playlist_name",showFred?"2. With Fred":(showInProgress?"En cours":"Playlist"));
         JSONArray songs=sourcePayload.optJSONArray("songs");
         if(songs==null)songs=new JSONArray();
 
