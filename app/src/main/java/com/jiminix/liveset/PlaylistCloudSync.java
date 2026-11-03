@@ -573,6 +573,19 @@ public final class PlaylistCloudSync {
         progressJson.put("songs",songsJson(c,progress));
         out.put("in_progress",progressJson);
 
+        SetListModel fred=null;
+        for(SetListModel candidate:AppStore.loadSetlists(c)){
+            if(candidate.name!=null && candidate.name.trim().matches("(?i)^(2[.\\s-]*)?with\\s+fred$")){
+                fred=candidate;
+                break;
+            }
+        }
+        JSONObject fm=new JSONObject();
+        fm.put("available",fred!=null);
+        fm.put("playlist_name",fred==null?"2. With Fred":fred.name);
+        fm.put("songs",songsJson(c,fred));
+        out.put("with_fred",fm);
+
         return out;
     }
 
