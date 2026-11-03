@@ -51,6 +51,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     private String lastSignature="";
     private int textZoom=0;
     private boolean showInProgress=false;
+    private boolean showFred=false;
     private final Set<String> expandedMedleys=new HashSet<>();
 
     private final Runnable refreshLoop=new Runnable(){
@@ -153,6 +154,11 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         top.addView(zoomPlus);
         top.addView(cloud);
         top.addView(inProgressButton);
+        Button fm=Ui.button(this,"FM");
+        fm.setTextSize(11);
+        Ui.compactHeaderButton(fm,this,36);
+        top.addView(fm);
+        fm.setOnClickListener(v->{showFred=!showFred;showInProgress=false;inProgressButton.setText("En cours");lastSignature="";scroll.scrollTo(0,0);refreshPlaylist();});
         root.addView(top);
 
         playlistTitle=new TextView(this);
@@ -239,6 +245,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
 
     private void toggleInProgress(){
         showInProgress=!showInProgress;
+        showFred=false;
         inProgressButton.setText(showInProgress?"Principal":"En cours");
         lastSignature="";
         if(scroll!=null)scroll.scrollTo(0,0);
@@ -272,6 +279,14 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         SetListModel list=showInProgress
             ? AppStore.getOrCreateInProgressSetlist(this)
             : AppStore.findSetlist(this,setlistId);
+        if(showFred){
+            list=null;
+            for(SetListModel candidate:AppStore.loadSetlists(this)){
+                if(candidate.name!=null && candidate.name.trim().matches("(?i)^(2[.\\s-]*)?with\\s+fred$")){
+                    list=candidate;break;
+                }
+            }
+        }
         if(list==null){
             showEmpty("Playlist introuvable","Retourne dans le Manager et sélectionne une playlist.");
             return;
