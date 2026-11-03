@@ -55,15 +55,15 @@ jobs:
           data=gradle.read_text()
           assert "applicationId 'com.jiminix.liveset'" in data
           data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.recoverytest'")
-          data=data.replace('versionCode 87','versionCode 89')
-          data=data.replace("versionName '0.87'","versionName '0.89-test'")
+          data=data.replace('versionCode 87','versionCode 90')
+          data=data.replace("versionName '0.87'","versionName '0.90-test'")
           gradle.write_text(data)
           manifest=Path('app/src/main/AndroidManifest.xml')
           data=manifest.read_text()
           assert 'com.jiminix.liveset.playlists' in data
           data=data.replace('com.jiminix.liveset.playlists','com.jiminix.liveset.recoverytest.playlists')
           data=data.replace('com.jiminix.liveset.permission.READ_VIEWER','com.jiminix.liveset.recoverytest.permission.READ_VIEWER')
-          data=data.replace('android:label="TS Playlist Manager"','android:label="Manager TEST 0.88"')
+          data=data.replace('android:label="TS Playlist Manager"','android:label="Manager TEST 0.90"')
           # Use the existing manager artwork as a standard launcher icon in the isolated APK.
           data=data.replace('android:icon="@drawable/ic_launcher_manager"', 'android:icon="@mipmap/ic_launcher"')
           manifest.write_text(data)
@@ -93,5 +93,5 @@ jobs:
       - name: Upload recovery test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Manager-TEST-transparent-icon
+          name: Manager-TEST-0.90-FM
           path: app/build/outputs/apk/debug/app-debug.apk
