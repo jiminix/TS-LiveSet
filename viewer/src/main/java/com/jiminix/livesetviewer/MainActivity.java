@@ -484,7 +484,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean tryLocalManager(){
         try{
             Bundle b=getContentResolver().call(
-                Uri.parse("content://com.jiminix.liveset.playlists"),
+                Uri.parse("content://com.jiminix.liveset.recoverytest.playlists"),
                 showFred?"get_fm_playlist":(showInProgress?"get_in_progress_playlist":"get_selected_playlist"),
                 null,
                 null
