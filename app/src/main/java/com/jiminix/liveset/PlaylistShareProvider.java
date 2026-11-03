@@ -18,6 +18,14 @@ public class PlaylistShareProvider extends ContentProvider {
         SetListModel list;
         if("get_in_progress_playlist".equals(method)){
             list=AppStore.getOrCreateInProgressSetlist(getContext());
+        }else if("get_fm_playlist".equals(method)){
+            list=null;
+            for(SetListModel candidate:AppStore.loadSetlists(getContext())){
+                if(candidate.name!=null && candidate.name.trim().matches("(?i)^(2[.\\s-]*)?with\\s+fred$")){
+                    list=candidate;
+                    break;
+                }
+            }
         }else if("get_selected_playlist".equals(method)){
             String id=AppStore.getViewerSetlistId(getContext());
             list=id==null || id.isEmpty()?null:AppStore.findSetlist(getContext(),id);
