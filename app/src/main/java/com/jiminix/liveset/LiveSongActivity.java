@@ -60,13 +60,6 @@ public class LiveSongActivity extends AppCompatActivity {
         String url=song.mediaUrl.trim();
         if(!url.startsWith("http://") && !url.startsWith("https://"))url="https://"+url;
 
-        if(isYoutubeUrl(url)){
-            try{
-                startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));
-                return;
-            }catch(Exception ignored){}
-        }
-
         Intent i=new Intent(this,PlayerActivity.class);
         i.putExtra("title",song.title);
         i.putExtra("url",url);
