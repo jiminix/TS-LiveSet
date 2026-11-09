@@ -67,8 +67,8 @@ jobs:
           data=gradle.read_text()
           assert "applicationId 'com.jiminix.liveset'" in data
           data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.migrationtest'")
-          data=data.replace('versionCode 87','versionCode 97')
-          data=data.replace("versionName '0.87'","versionName '0.97-brighter-neon'")
+          data=data.replace('versionCode 87','versionCode 98')
+          data=data.replace("versionName '0.87'","versionName '0.98-local-wifi-test'")
           gradle.write_text(data)
           # Publish only after a valid cloud backup is confirmed. Preserve that
           # backup verbatim; refuse all writes if the remote cannot be read.
@@ -142,5 +142,5 @@ jobs:
       - name: Upload recovery test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Manager-MIGRATION-AUTO-V0.97
+          name: Manager-MIGRATION-AUTO-V0.98
           path: app/build/outputs/apk/debug/app-debug.apk
