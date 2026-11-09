@@ -32,7 +32,7 @@ button,input{font:inherit}
 .song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:rgba(17,22,27,.70)}
 .num{width:27px;text-align:center;font-weight:900;font-size:14px;flex:0 0 27px}
 .title{font-weight:800;font-size:15px;line-height:1.08;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.song-info{display:flex;align-items:center;gap:3px;flex:1;min-width:0}.song-info .title{flex:0 1 auto;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.song-info .title[title]{cursor:default}.song-meta{display:inline-flex;align-items:center;gap:3px;flex:none;white-space:nowrap;font-size:10px;color:#d9dee2}.song-meta .tempo{font-weight:700}.song-meta .instr{font-size:12px}.song.disabled .song-meta{color:#939393}
+.song-info{display:flex;align-items:center;gap:4px;flex:1;min-width:0}.song-info .title{flex:0 1 auto;min-width:0}.song-meta{display:inline-flex;align-items:center;gap:3px;flex:none;white-space:nowrap;font-size:10px;color:#d9dee2}.song-meta .tempo{font-weight:700}.song-meta .instr{font-size:12px}.song.disabled .song-meta{color:#939393}
 .medley{flex:0 0 34px;width:34px;height:32px;padding:0;border:0;border-radius:5px;background:#fff;color:#111;font-size:18px;font-weight:900}
 .song.disabled{opacity:1;background:#303030;color:#939393}.song.disabled .title,.song.disabled .artist,.song.disabled .bpm{color:#939393!important}.song.disabled button{filter:grayscale(1);opacity:.6}
 .play-song{flex:0 0 35px;width:35px;height:32px;border:1px solid #59636b;border-radius:6px;background:#252f38;color:#fff;font-size:17px;font-weight:800;padding:0}
@@ -312,15 +312,12 @@ function render(payload,cached=false){
   $("banner").textContent="Un pour tous, tous pour la même playlist. · "+(cached?"Copie locale":"Playlist reçue")+" · "+linkedCount+"/"+songs.length+" liens YouTube disponibles";
   if(!linkedCount && songs.length) $("status").textContent="Aucun lien YouTube trouvé dans la playlist ou la sauvegarde Cloud";
   const frag=document.createDocumentFragment();
-  // TS 2026: one instrument marker per requested position, no duplicates.
-  const instrumentByPosition={3:"🎸",4:"🎸",6:"🎸",8:"🎹",9:"🎹",10:"🎸",11:"🎸",15:"🎸",16:"🎸",18:"🎸",21:"🎸",22:"🎸",25:"🎸",26:"🎸",27:"🎸",29:"🎸",30:"🎸",32:"🎸",33:"🎹"};
-  const acousticPositions=new Set([3,6,10,21,22,27]);
   songs.forEach((s,i)=>{
     const id=s.id||("song-"+i);
     const row=document.createElement("div");
     row.className="song"+(s.disabled?" disabled":"");
     const num=document.createElement("div"); num.className="num"; num.textContent=String(i+1).padStart(2,"0");
-    const title=document.createElement("div"); title.className="title"; title.textContent=(s.title||"").toUpperCase(); title.title=s.title||"";
+    const title=document.createElement("div"); title.className="title"; title.textContent=(s.title||"").toUpperCase();
     const bpm=document.createElement("span"); bpm.className="tempo";
     // The Manager remains authoritative. Legacy cloud rows may have an empty
     // tempo when a song was originally created without filling its BPM.
@@ -343,18 +340,6 @@ function render(payload,cached=false){
     const info=document.createElement("div");info.className="song-info";
     const meta=document.createElement("span");meta.className="song-meta";
     meta.append(bpm);
-    // Keep BPM and playback/medley icons; add only the requested instrument.
-    if(activePlaylist==="main" && /TS\s*2026/i.test(source.playlist_name||"")){
-      const position=i+1;
-      if(instrumentByPosition[position]){
-        const instr=document.createElement("span");
-        instr.className="instr";
-        instr.textContent=acousticPositions.has(position)?"🪕":instrumentByPosition[position];
-        instr.title=acousticPositions.has(position)?"Guitare acoustique":position===8||position===9||position===33?"Clavier":"Guitare électrique";
-        instr.setAttribute("aria-label",instr.title);
-        meta.append(instr);
-      }
-    }
     info.append(title,meta);
     row.append(info);
     const mediaUrl=effectiveMediaUrl(s);
