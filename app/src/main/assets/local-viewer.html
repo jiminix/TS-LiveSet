@@ -82,7 +82,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer><strong>TS PLAYLIST LIVE VIEWER</strong> · V1.02 · <span id="viewerPresence">Mode local · 2 s</span></footer>
+<footer><strong>TS PLAYLIST LIVE VIEWER</strong> · V1.02 · <span id="viewerPresence"><span id="connectedViewers">1 viewer connecté</span> · Mode local · 2 s</span></footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -412,6 +412,18 @@ $("saveCode").onclick=()=>{const c=cleanCode($("codeInput").value);if(!c){return
 // No service worker in the local HTTP viewer.
 sync();
 setInterval(sync,2000);
+const presenceId="v"+Math.random().toString(36).slice(2)+Date.now().toString(36);
+async function updatePresence(){
+  try{
+    const response=await fetch("/api/viewers?id="+presenceId,{cache:"no-store"});
+    if(!response.ok)return;
+    const data=await response.json();
+    const n=Number(data.connected)||1;
+    $("connectedViewers").textContent=n+" viewer"+(n>1?"s":"")+" connecté"+(n>1?"s":"");
+  }catch(_){$("connectedViewers").textContent="Connexion locale indisponible"}
+}
+updatePresence();
+setInterval(updatePresence,4000);
 </script>
 </body>
 </html>
