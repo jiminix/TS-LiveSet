@@ -1666,7 +1666,12 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.song.setMaxWidth(Integer.MAX_VALUE);
             h.song.setPadding(zdp(1),0,zdp(1),0);
             h.bpm.setTextSize(zsp(compact?12:15));
-            h.bpm.setPadding(0,0,0,0);
+            h.bpm.setPadding(zdp(4),0,zdp(4),0);
+            GradientDrawable tempoBorder=new GradientDrawable();
+            tempoBorder.setColor(Color.rgb(14,14,14));
+            tempoBorder.setCornerRadius(zdp(3));
+            tempoBorder.setStroke(Math.max(1,zdp(1)),Color.rgb(110,110,110));
+            h.bpm.setBackground(tempoBorder);
             h.song.setSingleLine(true);
 
             h.validate.setTextSize(zsp(20));
@@ -1762,6 +1767,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             if(s!=null){
                 int flags=PrivateStageIcons.flags(PlaylistOverviewActivity.this,setlist.id,s.id,0,
                     setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1);
+                // Avoid showing a second electric guitar when the song already has one.
+                if(s.stageGuitar)flags &= ~2;
                 PrivateStageIcons.show(PlaylistOverviewActivity.this,h.stageBox,flags,20,setlist.id,s.id,0);
                 if(flags!=0)h.stageBox.setVisibility(View.VISIBLE);
             }
