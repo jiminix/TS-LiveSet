@@ -4,6 +4,10 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.net.Uri;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
@@ -378,11 +382,55 @@ public class EditSongActivity extends AppCompatActivity {
     private void openYoutubeVideoSearch(){
         String t=title.getText().toString().trim();
         String a=artist.getText().toString().trim();
+        if(t.isEmpty()){title.setError("Titre obligatoire");return;}
         String q=Uri.encode((a+" "+t+" official audio").trim());
-        Intent i=new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.youtube.com/results?search_query="+q));
-        try{startActivity(i);}catch(Exception e){
-            android.widget.Toast.makeText(this,"Impossible d'ouvrir YouTube",android.widget.Toast.LENGTH_LONG).show();
-        }
+        WebView browser=new WebView(this);
+        WebSettings settings=browser.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setMediaPlaybackRequiresUserGesture(true);
+        final AlertDialog[] dialog=new AlertDialog[1];
+        browser.setWebViewClient(new WebViewClient(){
+            @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){
+                String url=request.getUrl().toString();
+                if(request.isForMainFrame() && isPlayableYoutubeVideo(url)){
+                    media.setText(url);
+                    if(dialog[0]!=null)dialog[0].dismiss();
+                    android.widget.Toast.makeText(EditSongActivity.this,
+                        "Vidéo sélectionnée · appuie sur ENREGISTRER",android.widget.Toast.LENGTH_LONG).show();
+                    return true;
+                }
+                return false;
+            }
+        });
+        dialog[0]=new AlertDialog.Builder(this)
+            .setTitle("Choisir une vidéo YouTube")
+            .setView(browser)
+            .setNegativeButton("Annuler",(d,w)->{})
+            .create();
+        dialog[0].setOnDismissListener(d->{browser.stopLoading();browser.destroy();});
+        dialog[0].show();
+        if(dialog[0].getWindow()!=null)
+            dialog[0].getWindow().setLayout(-1,(int)(getResources().getDisplayMetrics().heightPixels*0.78f));
+        browser.loadUrl("https://www.youtube.com/results?search_query="+q);
+    }
+
+    private static boolean isPlayableYoutubeVideo(String raw){
+        try{
+            Uri u=Uri.parse(raw);
+            String host=u.getHost();
+            if(host==null)return false;
+            host=host.toLowerCase(java.util.Locale.ROOT);
+            if(host.equals("youtu.be")||host.equals("www.youtu.be"))
+                return u.getPath()!=null&&u.getPath().matches("/[A-Za-z0-9_-]{11}");
+            if(host.equals("youtube.com")||host.equals("www.youtube.com")||host.equals("m.youtube.com")
+                ||host.equals("music.youtube.com")){
+                String id=u.getQueryParameter("v");
+                if(id!=null&&id.matches("[A-Za-z0-9_-]{11}"))return true;
+                return u.getPath()!=null&&u.getPath().matches("/(shorts|live)/[A-Za-z0-9_-]{11}");
+            }
+        }catch(Exception ignored){}
+        return false;
     }
 
     private void searchLyricsWeb(){
