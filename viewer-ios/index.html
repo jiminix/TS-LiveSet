@@ -102,6 +102,10 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(saf
   </div>
 </div>
 <script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="./firebase-config.js"></script>
 <script>
 const API="https://superjsonblob.com/api/jsonBlob";
 const CORS_PROXIES=[
@@ -408,28 +412,36 @@ $("saveCode").onclick=()=>{const c=cleanCode($("codeInput").value);if(!c){return
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 sync();
 setInterval(sync,10000);
-// The public Viewer requires a real shared presence endpoint; GitHub Pages
-// cannot count concurrent clients on its own. Never display an invented count.
-const PRESENCE_ENDPOINT="";
-const presenceId="v"+Math.random().toString(36).slice(2)+Date.now().toString(36);
-async function updatePresence(){
-  if(!PRESENCE_ENDPOINT)return;
+// Firebase presence is initialized only when the project's public web config
+// is supplied. No fictitious counts are displayed while unconfigured.
+(async function initOnlinePresence(){
+  const label=$("viewerPresence"),counter=$("topViewerCount");
+  const cfg=window.TS_FIREBASE_CONFIG;
+  if(!cfg?.apiKey||!cfg?.databaseURL||!cfg?.appId)return;
   try{
-    const url=PRESENCE_ENDPOINT+"?id="+encodeURIComponent(presenceId);
-    const response=await fetch(url,{cache:"no-store"});
-    if(!response.ok)throw new Error("Presence HTTP "+response.status);
-    const data=await response.json();
-    const n=Number(data.connected);
-    if(!Number.isInteger(n)||n<1)throw new Error("Invalid presence count");
-    $("topViewerCount").textContent="👥 "+n;
-    $("viewerPresence").textContent=n+" viewer"+(n>1?"s":"")+" connecté"+(n>1?"s":"");
-  }catch(_){
-    $("topViewerCount").textContent="👥 —";
-    $("viewerPresence").textContent="Présence Internet indisponible";
-  }
-}
-updatePresence();
-setInterval(updatePresence,4000);
+    if(!window.firebase)throw new Error("Firebase SDK unavailable");
+    if(!firebase.apps.length)firebase.initializeApp(cfg);
+    await firebase.auth().signInAnonymously();
+    const uid=firebase.auth().currentUser.uid;
+    const db=firebase.database();
+    const connected=db.ref(".info/connected");
+    const mine=db.ref("presence/"+uid);
+    const everyone=db.ref("presence");
+    connected.on("value",async snap=>{
+      if(snap.val()!==true)return;
+      try{
+        await mine.onDisconnect().remove();
+        await mine.set(firebase.database.ServerValue.TIMESTAMP);
+      }catch(e){label.textContent="Présence indisponible";}
+    });
+    everyone.on("value",snap=>{
+      const n=snap.numChildren();
+      counter.textContent="👥 "+n;
+      label.textContent=n+" viewer"+(n>1?"s":"")+" connecté"+(n>1?"s":"");
+    },()=>{counter.textContent="👥 —";label.textContent="Présence indisponible";});
+  }catch(e){counter.textContent="👥 —";label.textContent="Présence indisponible";}
+})();
+
 </script>
 </body>
 </html>
