@@ -93,9 +93,10 @@ jobs:
           finish=source.index('                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");',begin)+len('                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");')
           source=source[:begin]+new+source[finish:]
           assert 'Publication bloquee' in source
-          catch_line='}catch(Exception ignored){}'
-          assert catch_line in source
-          source=source.replace(catch_line,'}',1)
+          # Close precisely the cloud publish guard; do not modify other catches.
+          end_marker='                }catch(Exception ignored){}'
+          pos=source.index(end_marker,source.index('Publication bloquee'))
+          source=source[:pos]+'                }'+source[pos+len(end_marker):]
           fallback='backup=AppStore.getFullBackupLocal(app);'
           assert fallback in source
           source=source.replace(fallback,'backup=null; // Migration: cloud-only restore',1)
