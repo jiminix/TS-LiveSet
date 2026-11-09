@@ -22,7 +22,7 @@ public class PlayerActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle b){
         super.onCreate(b);
         String title=getIntent().getStringExtra("title"); String url=getIntent().getStringExtra("url");
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); Ui.applyTequilaBackground(root);)
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); Ui.applyTequilaBackground(root);
         LinearLayout top=Ui.row(this); Button close=Ui.button(this,"‹"); TextView t=Ui.title(this,title==null?"Lecteur":title); Ui.compactHeaderTitle(t,this); Button reload=Ui.button(this,"↻"); Ui.compactHeaderButton(close,this,46); Ui.compactHeaderButton(reload,this,52); top.addView(close);top.addView(t);top.addView(reload);root.addView(top);
         web=new WebView(this); WebSettings s=web.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setMediaPlaybackRequiresUserGesture(false); s.setLoadWithOverviewMode(true); s.setUseWideViewPort(true); web.setWebViewClient(new WebViewClient()); web.setWebChromeClient(new WebChromeClient()); web.setBackgroundColor(Color.BLACK);
         root.addView(web,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1));
