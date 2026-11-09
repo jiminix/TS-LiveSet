@@ -49,9 +49,9 @@ public final class PrivateStageIcons {
         }
         if((flags&2)!=0) addText(c,target,"🎸",size);
         if((flags&4)!=0) addText(c,target,"🎹",size);
-        if((flags&8)!=0) addText(c,target,"12",size);
+        if((flags&8)!=0) addText(c,target,prefs(c).getString("num1","12"),size);
         if((flags&16)!=0) {
-            TextView n=addText(c,target,"03",size);
+            TextView n=addText(c,target,prefs(c).getString("num2","03"),size);
             n.setTextColor(Color.RED);
         }
     }
@@ -68,11 +68,29 @@ public final class PrivateStageIcons {
         String[] labels={"Acoustique Martin 000","Guitare électrique","Clavier","Chiffre blanc","Chiffre rouge"};
         boolean[] checked=new boolean[5];
         for(int i=0;i<5;i++) checked[i]=(f&(1<<i))!=0;
+        LinearLayout numbers=new LinearLayout(c);
+        numbers.setOrientation(LinearLayout.VERTICAL);
+        numbers.setPadding(dp(c,16),0,dp(c,16),0);
+        EditText first=new EditText(c);
+        first.setHint("Chiffre blanc (00–99)");
+        first.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        first.setText(prefs(c).getString("num1","12"));
+        EditText second=new EditText(c);
+        second.setHint("Chiffre rouge (00–99)");
+        second.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        second.setText(prefs(c).getString("num2","03"));
+        numbers.addView(first); numbers.addView(second);
         new AlertDialog.Builder(c).setTitle("Icônes du titre")
+            .setView(numbers)
             .setMultiChoiceItems(labels,checked,(dialog,which,on)->checked[which]=on)
             .setPositiveButton("Enregistrer",(dialog,which)->{
                 int next=0; for(int i=0;i<5;i++) if(checked[i])next|=1<<i;
-                prefs(c).edit().putInt(key(listId,songId,part),next).apply();
+                String a=first.getText().toString().replaceAll("[^0-9]","");
+                String b=second.getText().toString().replaceAll("[^0-9]","");
+                if(a.length()>2)a=a.substring(0,2);
+                if(b.length()>2)b=b.substring(0,2);
+                prefs(c).edit().putInt(key(listId,songId,part),next)
+                    .putString("num1",a).putString("num2",b).apply();
                 refresh.run();
             }).setNegativeButton("Annuler",null).show();
     }
