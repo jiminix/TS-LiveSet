@@ -72,7 +72,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.32</footer>
+<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.33</footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -87,7 +87,6 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
   <div class="player-card">
     <div class="player-head"><strong id="playerTitle">Lecteur</strong><button id="closePlayer" class="btn dark" aria-label="Fermer le lecteur">✕</button></div>
     <div id="playerFrame" class="player-frame"></div>
-    <div class="player-actions"><button id="seekBack" class="btn dark">−10 s</button><button id="playPause" class="btn red">⏯</button><button id="seekForward" class="btn dark">+10 s</button></div>
     <div id="playerStatus" class="player-status">Lecture YouTube</div>
   </div>
 </div>
@@ -151,7 +150,7 @@ function openPlayer(song){
     if(generation!==playerGeneration)return;
     if(!window.YT||!YT.Player){$("playerStatus").textContent="Lecteur YouTube indisponible";return}
     ytPlayer=new YT.Player(holder,{width:"100%",height:"100%",videoId:id,playerVars:{playsinline:1,controls:1,rel:0},events:{
-      onReady:()=>{if(generation!==playerGeneration)return;playerReady=true;$("playerStatus").textContent="Utilise la barre vidéo ou les boutons ±10 s";},
+      onReady:()=>{if(generation!==playerGeneration)return;playerReady=true;$("playerStatus").textContent="Déplace le curseur sur la barre de lecture pour naviguer";},
       onError:()=>{$("playerStatus").textContent="Cette vidéo ne peut pas être lue ici. Vérifie son accès sur YouTube."}
     }});
   }
@@ -160,18 +159,6 @@ function openPlayer(song){
     const previous=window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady=()=>{if(typeof previous==="function")previous();init()};
   }
-}
-function seekPlayer(delta){
-  if(!playerReady||!ytPlayer)return;
-  try{
-    const duration=ytPlayer.getDuration()||0;
-    const target=Math.max(0,ytPlayer.getCurrentTime()+delta);
-    ytPlayer.seekTo(duration?Math.min(target,duration):target,true);
-  }catch(e){}
-}
-function togglePlayer(){
-  if(!playerReady||!ytPlayer)return;
-  try{if(ytPlayer.getPlayerState()===1)ytPlayer.pauseVideo();else ytPlayer.playVideo()}catch(e){}
 }
 
 const $=id=>document.getElementById(id);
@@ -364,9 +351,6 @@ function openCode(){
   $("modal").classList.add("show"); setTimeout(()=>$("codeInput").focus(),50);
 }
 $("closePlayer").onclick=closePlayer;
-$("seekBack").onclick=()=>seekPlayer(-10);
-$("seekForward").onclick=()=>seekPlayer(10);
-$("playPause").onclick=togglePlayer;
 $("playerModal").addEventListener("click",e=>{if(e.target===$("playerModal"))closePlayer()});
 $("progressBtn").onclick=switchPlaylist;
 $("syncBtn").onclick=sync;
