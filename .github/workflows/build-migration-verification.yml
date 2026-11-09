@@ -67,25 +67,47 @@ jobs:
           data=gradle.read_text()
           assert "applicationId 'com.jiminix.liveset'" in data
           data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.migrationtest'")
-          data=data.replace('versionCode 87','versionCode 91')
-          data=data.replace("versionName '0.87'","versionName '0.91-migration-test'")
+          data=data.replace('versionCode 87','versionCode 92')
+          data=data.replace("versionName '0.87'","versionName '0.92-migration-sync'")
           gradle.write_text(data)
-          # Verify cloud-only recovery without allowing cloud writes.
+          # Publish only after a valid cloud backup is confirmed. Preserve that
+          # backup verbatim; refuse all writes if the remote cannot be read.
           cloud=Path('app/src/main/java/com/jiminix/liveset/PlaylistCloudSync.java')
           source=cloud.read_text()
-          signature='private static JSONObject requestJson(String method,String url,JSONObject payload) throws Exception{'
-          assert signature in source
-          source=source.replace(signature,signature+chr(10)+'        if ("com.jiminix.liveset.migrationtest".endsWith(".migrationtest")) throw new UnsupportedOperationException("Migration test: cloud writes disabled");',1)
+          old='''                // Preserve the independent global backup and never overwrite a non-empty
+                // remote En cours with an accidental empty local one.
+                try{
+                    JSONObject remote=getJson(API+"/"+FIXED_BLOB_ID);
+
+                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");'''
+          new='''                // Migration sync: never publish unless a full online backup exists.
+                // A failed read must never erase the existing remote backup.
+                {
+                    JSONObject remote=getJson(API+"/"+FIXED_BLOB_ID);
+                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");
+                    if(remoteBackup==null || remoteBackup.optJSONArray("songs")==null
+                        || remoteBackup.optJSONArray("setlists")==null)
+                        throw new Exception("Publication bloquee : sauvegarde Cloud absente");'''
+          assert old in source
+          source=source.replace(old,new,1)
+          old_end='''                }catch(Exception ignored){}
+
+                // Stable direct pairing: Y6 always points to the same Internet blob.'''
+          new_end='''                }
+
+                // Stable direct pairing: Y6 always points to the same Internet blob.'''
+          assert old_end in source
+          source=source.replace(old_end,new_end,1)
           fallback='backup=AppStore.getFullBackupLocal(app);'
           assert fallback in source
-          source=source.replace(fallback,'backup=null; // Migration verification: cloud-only restore',1)
+          source=source.replace(fallback,'backup=null; // Migration: cloud-only restore',1)
           cloud.write_text(source)
           manifest=Path('app/src/main/AndroidManifest.xml')
           data=manifest.read_text()
           assert 'com.jiminix.liveset.playlists' in data
           data=data.replace('com.jiminix.liveset.playlists','com.jiminix.liveset.migrationtest.playlists')
           data=data.replace('com.jiminix.liveset.permission.READ_VIEWER','com.jiminix.liveset.migrationtest.permission.READ_VIEWER')
-          data=data.replace('android:label="TS Playlist Manager"','android:label="Manager MIGRATION TEST"')
+          data=data.replace('android:label="TS Playlist Manager"','android:label="Manager MIGRATION SYNC"')
           # Use the existing manager artwork as a standard launcher icon in the isolated APK.
           data=data.replace('android:icon="@drawable/ic_launcher_manager"', 'android:icon="@mipmap/ic_launcher"')
           manifest.write_text(data)
@@ -115,5 +137,5 @@ jobs:
       - name: Upload recovery test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Manager-MIGRATION-TEST-V0.91-isolated
+          name: Manager-MIGRATION-SYNC-V0.92
           path: app/build/outputs/apk/debug/app-debug.apk
