@@ -1548,6 +1548,14 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             row.addView(play);
             row.addView(song);
             row.addView(stageBox);
+            TextView addIcons=new TextView(PlaylistOverviewActivity.this);
+            addIcons.setText("+");
+            addIcons.setTextColor(Color.rgb(255,193,7));
+            addIcons.setTextSize(18);
+            addIcons.setGravity(Gravity.CENTER);
+            addIcons.setContentDescription("Ajouter des icônes privées");
+            addIcons.setLayoutParams(new LinearLayout.LayoutParams(zdp(22),zdp(32)));
+            row.addView(addIcons);
             row.addView(bpm);
             row.addView(validate);
             row.addView(disable);
@@ -1592,6 +1600,14 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 if(p!=RecyclerView.NO_POSITION)editStageInfo(p);
             });
 
+            addIcons.setOnClickListener(v->{
+                int p=h.getBindingAdapterPosition();
+                if(p==RecyclerView.NO_POSITION)return;
+                String songId=setlist.songIds.get(p);
+                PrivateStageIcons.edit(PlaylistOverviewActivity.this,setlist.id,songId,0,
+                    setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?p:-1,
+                    ()->adapter.notifyItemChanged(p));
+            });
             bpm.setOnClickListener(v->{
                 int p=h.getBindingAdapterPosition();
                 if(p!=RecyclerView.NO_POSITION)editBpm(p);
@@ -1703,7 +1719,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 stageBg.setColor(Color.BLACK);
                 stageBg.setCornerRadius(zdp(4));
                 stageBg.setStroke(Math.max(1,zdp(1)),Color.rgb(70,70,70));
-                h.stageBox.setBackground(stageBg);
+                h.stageBox.setBackground(null);
 
                 h.stage1.setVisibility(showNum1?View.VISIBLE:View.GONE);
                 h.stage2.setVisibility(showNum2?View.VISIBLE:View.GONE);
@@ -1728,6 +1744,15 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.stageBox.setVisibility(View.GONE);
             }
 
+            h.stageBox.setBackground(null);
+            h.stageBox.setPadding(0,0,0,0);
+            while(h.stageBox.getChildCount()>4)h.stageBox.removeViewAt(4);
+            if(s!=null){
+                int flags=PrivateStageIcons.flags(PlaylistOverviewActivity.this,setlist.id,s.id,0,
+                    setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1);
+                PrivateStageIcons.show(PlaylistOverviewActivity.this,h.stageBox,flags,20);
+                if(flags!=0)h.stageBox.setVisibility(View.VISIBLE);
+            }
             h.medleyBox.removeAllViews();
             if(medley && medleyExpanded){
                 h.medleyBox.setVisibility(View.VISIBLE);
@@ -1756,6 +1781,20 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     ));
+                    final int part=mi+1;
+                    LinearLayout extra=new LinearLayout(PlaylistOverviewActivity.this);
+                    extra.setGravity(Gravity.CENTER_VERTICAL);
+                    PrivateStageIcons.show(PlaylistOverviewActivity.this,extra,
+                        PrivateStageIcons.flags(PlaylistOverviewActivity.this,setlist.id,s.id,part,
+                            setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1),20);
+                    TextView plus=new TextView(PlaylistOverviewActivity.this);
+                    plus.setText("+"); plus.setTextColor(Color.rgb(255,193,7)); plus.setTextSize(18);
+                    plus.setPadding(zdp(6),0,zdp(6),0);
+                    extra.addView(plus);
+                    plus.setOnClickListener(v->PrivateStageIcons.edit(PlaylistOverviewActivity.this,setlist.id,s.id,part,
+                        setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1,
+                        ()->adapter.notifyItemChanged(h.getBindingAdapterPosition())));
+                    h.medleyBox.addView(extra);
                 }
             }else{
                 h.medleyBox.setVisibility(View.GONE);
