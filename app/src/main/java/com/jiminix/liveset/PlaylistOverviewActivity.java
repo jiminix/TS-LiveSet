@@ -1689,10 +1689,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             boolean medleyExpanded=medley && expandedMedleys.contains(id);
             String medleyPrefix=medley ? (medleyExpanded?"▾ ":"▸ ") : "";
 
+            boolean ts2026=setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026");
             boolean hasStageInfo=s!=null && (
                 (s.stageNum1!=null && !s.stageNum1.trim().isEmpty()) ||
                 (s.stageNum2!=null && !s.stageNum2.trim().isEmpty()) ||
-                s.stageGuitar || s.stageKeyboard
+                (!ts2026 && (s.stageGuitar || s.stageKeyboard))
             );
 
             boolean hasYoutube=s!=null && youtubeVideoId(s.mediaUrl)!=null;
@@ -1722,8 +1723,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             if(s!=null && hasStageInfo){
                 boolean showNum1=s.stageNum1!=null && !s.stageNum1.trim().isEmpty();
                 boolean showNum2=s.stageNum2!=null && !s.stageNum2.trim().isEmpty();
-                boolean showGuitar=s.stageGuitar;
-                boolean showKeyboard=s.stageKeyboard;
+                boolean showGuitar=!ts2026 && s.stageGuitar;
+                boolean showKeyboard=!ts2026 && s.stageKeyboard;
 
                 h.stageBox.setVisibility(View.VISIBLE);
                 h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(
@@ -1767,9 +1768,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             if(s!=null){
                 int flags=PrivateStageIcons.flags(PlaylistOverviewActivity.this,setlist.id,s.id,0,
                     setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1);
-                // Avoid showing a second electric guitar when the song already has one.
-                if(s.stageGuitar)flags &= ~2;
-                PrivateStageIcons.show(PlaylistOverviewActivity.this,h.stageBox,flags,20,setlist.id,s.id,0);
+                // TS 2026: same one-instrument mapping as the integrated Viewer.
+                flags=PrivateStageIcons.displayFlags(flags,ts2026,position+1);
+                if(!ts2026 && s.stageGuitar)flags &= ~2;
+                PrivateStageIcons.show(PlaylistOverviewActivity.this,h.stageBox,flags,14,setlist.id,s.id,0);
                 if(flags!=0)h.stageBox.setVisibility(View.VISIBLE);
             }
             h.medleyBox.removeAllViews();
