@@ -537,7 +537,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         row.addView(name,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1));
         LinearLayout privateIcons=new LinearLayout(this);
         privateIcons.setGravity(Gravity.CENTER_VERTICAL);
-        PrivateStageIcons.show(this,privateIcons,PrivateStageIcons.flags(this,privateListId,song.id,0,privateSeed?number-1:-1),zdp(20));
+        PrivateStageIcons.show(this,privateIcons,PrivateStageIcons.flags(this,privateListId,song.id,0,privateSeed?number-1:-1),zdp(20),privateListId,song.id,0);
         row.addView(privateIcons);
         TextView addIcons=new TextView(this);
         addIcons.setText("+"); addIcons.setTextColor(Color.rgb(255,193,7));
@@ -669,7 +669,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 item.setPadding(zdp(6),zdp(4),0,zdp(2));
                 LinearLayout medleyIcons=new LinearLayout(this);
                 medleyIcons.setGravity(Gravity.CENTER_VERTICAL);
-                PrivateStageIcons.show(this,medleyIcons,PrivateStageIcons.flags(this,privateListId,song.id,i+1,privateSeed?number-1:-1),zdp(18));
+                PrivateStageIcons.show(this,medleyIcons,PrivateStageIcons.flags(this,privateListId,song.id,i+1,privateSeed?number-1:-1),zdp(18),privateListId,song.id,i+1);
                 TextView medleyPlus=new TextView(this);
                 medleyPlus.setText("+"); medleyPlus.setTextColor(Color.rgb(255,193,7));
                 medleyPlus.setTextSize(zsp(16)); medleyPlus.setPadding(zdp(5),0,zdp(5),0);
