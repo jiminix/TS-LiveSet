@@ -34,6 +34,16 @@ button,input{font:inherit}
 .bpm{font-size:11px;color:#d9dee2;min-width:32px;text-align:right}
 .medley{flex:0 0 34px;width:34px;height:32px;padding:0;border:0;border-radius:5px;background:#fff;color:#111;font-size:18px;font-weight:900}
 .song.disabled{opacity:.5}
+.play-song{flex:0 0 35px;width:35px;height:32px;border:1px solid #59636b;border-radius:6px;background:#252f38;color:#fff;font-size:17px;font-weight:800;padding:0}
+.play-song:active{background:var(--red)}
+.player-card{width:min(580px,100%);background:var(--panel);border-radius:12px;padding:12px}
+.player-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.player-head strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-frame{width:100%;aspect-ratio:16/9;background:#000;border-radius:7px;overflow:hidden}
+.player-frame iframe{display:block;width:100%;height:100%;border:0}
+.player-actions{display:flex;gap:8px;margin-top:10px}
+.player-actions .btn{flex:1}
+.player-status{font-size:12px;color:var(--muted);margin-top:7px;text-align:center}
 .sub{margin-left:32px;background:#171d22;border-left:3px solid #454f58;padding:2px 7px 5px;margin-bottom:3px;border-radius:0 0 5px 5px}
 .subrow{display:flex;gap:6px;padding:4px 2px;font-size:13px;font-weight:700;border-bottom:1px solid #2b333a}
 .empty{padding:35px 20px;text-align:center;color:var(--muted)}
@@ -73,6 +83,15 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
   </div>
 </div>
 
+<div id="playerModal" class="modal" role="dialog" aria-modal="true" aria-label="Lecteur du morceau">
+  <div class="player-card">
+    <div class="player-head"><strong id="playerTitle">Lecteur</strong><button id="closePlayer" class="btn dark" aria-label="Fermer le lecteur">✕</button></div>
+    <div id="playerFrame" class="player-frame"></div>
+    <div class="player-actions"><button id="seekBack" class="btn dark">−10 s</button><button id="playPause" class="btn red">⏯</button><button id="seekForward" class="btn dark">+10 s</button></div>
+    <div id="playerStatus" class="player-status">Lecture YouTube</div>
+  </div>
+</div>
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
 const API="https://superjsonblob.com/api/jsonBlob";
 const CORS_PROXIES=[
@@ -90,6 +109,67 @@ let busy=false;
 let lastSignature="";
 let currentPayload=null;
 let currentCached=false;
+let ytPlayer=null;
+let playerReady=false;
+let playerGeneration=0;
+function youtubeId(url){
+  try{
+    const u=new URL(url);
+    const host=u.hostname.toLowerCase().replace(/^www\./,"");
+    if(host==="youtu.be")return /^[\w-]{11}$/.test(u.pathname.slice(1).split("/")[0])?u.pathname.slice(1).split("/")[0]:null;
+    if(host==="youtube.com"||host==="m.youtube.com"||host==="music.youtube.com"||host==="youtube-nocookie.com"){
+      const id=u.searchParams.get("v")||u.pathname.match(/^\/(?:embed|shorts|live)\/([\w-]{11})/)?.[1];
+      return id&&/^[\w-]{11}$/.test(id)?id:null;
+    }
+  }catch(e){}
+  return null;
+}
+function closePlayer(){
+  playerGeneration++;
+  playerReady=false;
+  try{if(ytPlayer&&ytPlayer.destroy)ytPlayer.destroy()}catch(e){}
+  ytPlayer=null;
+  $("playerFrame").replaceChildren();
+  $("playerModal").classList.remove("show");
+}
+function openPlayer(song){
+  const url=String(song.mediaUrl||song.media_url||"").trim();
+  const id=youtubeId(url);
+  if(!id)return;
+  closePlayer();
+  const generation=playerGeneration;
+  $("playerTitle").textContent=song.title||"Lecteur";
+  $("playerStatus").textContent="Chargement du lecteur YouTube…";
+  $("playerModal").classList.add("show");
+  const holder=document.createElement("div");
+  holder.id="youtubePlayerTarget";
+  $("playerFrame").append(holder);
+  function init(){
+    if(generation!==playerGeneration)return;
+    if(!window.YT||!YT.Player){$("playerStatus").textContent="Lecteur YouTube indisponible";return}
+    ytPlayer=new YT.Player(holder,{width:"100%",height:"100%",videoId:id,playerVars:{playsinline:1,controls:1,rel:0},events:{
+      onReady:()=>{if(generation!==playerGeneration)return;playerReady=true;$("playerStatus").textContent="Utilise la barre vidéo ou les boutons ±10 s";},
+      onError:()=>{$("playerStatus").textContent="Cette vidéo ne peut pas être lue ici. Vérifie son accès sur YouTube."}
+    }});
+  }
+  if(window.YT&&YT.Player)init();
+  else{
+    const previous=window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady=()=>{if(typeof previous==="function")previous();init()};
+  }
+}
+function seekPlayer(delta){
+  if(!playerReady||!ytPlayer)return;
+  try{
+    const duration=ytPlayer.getDuration()||0;
+    const target=Math.max(0,ytPlayer.getCurrentTime()+delta);
+    ytPlayer.seekTo(duration?Math.min(target,duration):target,true);
+  }catch(e){}
+}
+function togglePlayer(){
+  if(!playerReady||!ytPlayer)return;
+  try{if(ytPlayer.getPlayerState()===1)ytPlayer.pauseVideo();else ytPlayer.playVideo()}catch(e){}
+}
 
 const $=id=>document.getElementById(id);
 function cleanCode(raw){
@@ -213,6 +293,13 @@ function render(payload,cached=false){
       row.append(b);
     }
     row.append(title,bpm);
+    if(youtubeId(String(s.mediaUrl||s.media_url||""))){
+      const play=document.createElement("button");
+      play.className="play-song";play.textContent="▶";play.title="Écouter "+(s.title||"le morceau");
+      play.setAttribute("aria-label",play.title);
+      play.onclick=()=>openPlayer(s);
+      row.append(play);
+    }
     frag.append(row);
     if(medley&&expanded.has(id)){
       const sub=document.createElement("div"); sub.className="sub";
@@ -270,6 +357,11 @@ function openCode(){
   $("codeInput").value=localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE;
   $("modal").classList.add("show"); setTimeout(()=>$("codeInput").focus(),50);
 }
+$("closePlayer").onclick=closePlayer;
+$("seekBack").onclick=()=>seekPlayer(-10);
+$("seekForward").onclick=()=>seekPlayer(10);
+$("playPause").onclick=togglePlayer;
+$("playerModal").addEventListener("click",e=>{if(e.target===$("playerModal"))closePlayer()});
 $("progressBtn").onclick=switchPlaylist;
 $("syncBtn").onclick=sync;
 $("codeBtn").onclick=openCode;
