@@ -349,7 +349,7 @@ function render(payload,cached=false){
       if(instrumentByPosition[position]){
         const instr=document.createElement("span");
         instr.className="instr";
-        instr.textContent=instrumentByPosition[position];
+        instr.textContent=acousticPositions.has(position)?"🪕":instrumentByPosition[position];
         instr.title=acousticPositions.has(position)?"Guitare acoustique":position===8||position===9||position===33?"Clavier":"Guitare électrique";
         instr.setAttribute("aria-label",instr.title);
         meta.append(instr);
