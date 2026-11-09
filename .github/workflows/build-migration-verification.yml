@@ -93,14 +93,9 @@ jobs:
           finish=source.index('                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");',begin)+len('                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");')
           source=source[:begin]+new+source[finish:]
           assert 'Publication bloquee' in source
-          old_end='''                }catch(Exception ignored){}
-
-                // Stable direct pairing: Y6 always points to the same Internet blob.'''
-          new_end='''                }
-
-                // Stable direct pairing: Y6 always points to the same Internet blob.'''
-          assert old_end in source
-          source=source.replace(old_end,new_end,1)
+          catch_line='}catch(Exception ignored){}'
+          assert catch_line in source
+          source=source.replace(catch_line,'}',1)
           fallback='backup=AppStore.getFullBackupLocal(app);'
           assert fallback in source
           source=source.replace(fallback,'backup=null; // Migration: cloud-only restore',1)
