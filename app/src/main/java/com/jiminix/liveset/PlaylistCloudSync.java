@@ -601,6 +601,7 @@ public final class PlaylistCloudSync {
             o.put("title",s.title);
             o.put("artist",s.artist);
             o.put("bpm",s.bpm);
+            o.put("mediaUrl",s.mediaUrl==null?"":s.mediaUrl);
             o.put("stageNum1",s.stageNum1);
             o.put("stageNum2",s.stageNum2);
             o.put("stageGuitar",s.stageGuitar);
