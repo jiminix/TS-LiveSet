@@ -79,7 +79,7 @@ button,input{font:inherit}
     <button id="codeBtn" class="btn dark">CODE</button>
   </div>
 </header>
-<div id="banner" class="banner">Synchro au Manager : vérification…</div>
+<div id="banner" class="banner">Synchro au Manager : en cours</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
 <footer><div class="footer-playlist"><span id="playlistName" class="playname">TS 2026</span><span id="count" class="count">33 titres</span></div><div class="footer-details"><strong>TS PLAYLIST LIVE VIEWER</strong><div class="footer-version">V1.02 · <span id="viewerPresence">Viewers connectés : en attente</span></div></div><span id="topViewerCount" hidden aria-hidden="true"></span></footer>
@@ -309,7 +309,7 @@ function render(payload,cached=false){
   $("count").textContent=songs.length+" titre"+(songs.length>1?"s":"");
   $("status").textContent=cached?"Internet indisponible · dernière copie enregistrée":"Internet · à jour";
   const linkedCount=songs.filter(song=>youtubeId(effectiveMediaUrl(song))).length;
-  $("banner").textContent=cached?"Synchro au Manager : copie locale":"Synchro au Manager : à jour";
+  $("banner").textContent=cached?"Synchro au Manager : en cours":"Synchro au Manager : OK";
   if(!linkedCount && songs.length) $("status").textContent="Aucun lien YouTube trouvé dans la playlist ou la sauvegarde Cloud";
   const frag=document.createDocumentFragment();
   songs.forEach((s,i)=>{
@@ -367,6 +367,7 @@ function render(payload,cached=false){
 async function sync(){
   if(busy)return;
   busy=true;
+  $("banner").textContent="Synchro au Manager : en cours";
   $("status").textContent="Synchronisation…";
   try{
     const r=await getPayload();
