@@ -57,6 +57,14 @@ public final class LocalWifiServer {
             song.put("bpm",s.bpm);
             song.put("mediaUrl",s.mediaUrl==null?"":s.mediaUrl);
             song.put("disabled",sl.disabledSongIds.contains(id));
+            song.put("stageNum1",s.stageNum1);
+            song.put("stageNum2",s.stageNum2);
+            song.put("stageGuitar",s.stageGuitar);
+            song.put("stageKeyboard",s.stageKeyboard);
+            JSONArray items=new JSONArray();for(String x:s.medleyItems)items.put(x);
+            song.put("medleyItems",items);
+            JSONArray artists=new JSONArray();for(String x:s.medleyArtists)artists.put(x);
+            song.put("medleyArtists",artists);
             songs.put(song);
         }
         o.put("songs",songs);
@@ -90,8 +98,11 @@ public final class LocalWifiServer {
                 body=snapshot(c).toString();
                 type="application/json; charset=utf-8";
             }else if(path.equals("/")||path.startsWith("/index")){
-                body=HTML;
+                body=asset(c,"local-viewer.html");
                 type="text/html; charset=utf-8";
+            }else if(path.startsWith("/tequila-viewer.svg")){
+                body=asset(c,"tequila-viewer.svg");
+                type="image/svg+xml";
             }else{
                 body="Not found";
                 type="text/plain; charset=utf-8";
@@ -106,8 +117,12 @@ public final class LocalWifiServer {
             out.flush();
         }catch(Exception e){android.util.Log.e("LiveSetLocal","HTTP request failed",e);}
     }
-    private static final String HTML="<!doctype html><html lang='fr'><meta name='viewport' content='width=device-width,initial-scale=1'><meta charset='utf-8'><title>TS Playlist LOCAL</title>"+
-        "<style>body{background:#10151a;color:white;font:16px Arial;margin:0}header{position:sticky;top:0;background:#202830;padding:8px;text-align:center}button{padding:8px;margin:3px;border:0;border-radius:5px;font-weight:bold}.yellow{background:#f7d129}.red{background:#c62828;color:white}#list{padding:8px}.song{padding:12px 4px;border-bottom:1px solid #35414a}footer{position:fixed;bottom:0;background:#202830;width:100%;text-align:center;font-size:12px;padding:8px}</style>"+
-        "<header><b id='name'>TS PLAYLIST LOCAL</b><div><button onclick=\"selectList('main')\">PRINCIPAL</button><button class='red' onclick=\"selectList('in_progress')\">EN COURS</button><button class='yellow' onclick=\"selectList('with_fred')\">WITH FRED</button></div></header><main id='list'>Chargement...</main><footer>TS PLAYLIST · MODE LOCAL · <span id='status'>Connexion...</span></footer>"+
-        "<script>let selected='main',signature='';function selectList(x){selected=x;signature='';refresh()}async function refresh(){try{const r=await fetch('/api/playlist',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const data=await r.json();const list=selected==='main'?data:data[selected];const s=JSON.stringify(list);if(s!==signature){signature=s;document.getElementById('name').textContent=(list.playlist_name||selected).toUpperCase();const root=document.getElementById('list');root.replaceChildren();(list.songs||[]).forEach((song,i)=>{const row=document.createElement('div');row.className='song';row.textContent=String(i+1).padStart(2,'0')+'  '+song.title+(song.bpm?' · '+song.bpm+' BPM':'');if(song.disabled)row.style.opacity='.45';root.appendChild(row)});if(!list.available)root.textContent='Playlist indisponible';}document.getElementById('status').textContent='Connecté · actualisation 2 s'}catch(e){document.getElementById('status').textContent='Erreur : '+e.message;document.getElementById('list').textContent='Erreur de connexion locale : '+e.message}}refresh();setInterval(refresh,2000)</script></html>";
+    private static String asset(Context c,String name)throws Exception{
+        try(InputStream stream=c.getAssets().open(name)){
+            java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+            byte[] bytes=new byte[8192];int n;
+            while((n=stream.read(bytes))!=-1)buffer.write(bytes,0,n);
+            return buffer.toString("UTF-8");
+        }
+    }
 }
