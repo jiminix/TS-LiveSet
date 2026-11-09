@@ -144,6 +144,8 @@ public final class PlaylistCloudSync {
     }
 
     public static void maybePublish(Context c){
+        // Side-by-side migration safety: never automatically publish empty V1.05 data.
+        if ("com.jiminix.liveset.v105".equals(c.getPackageName())) return;
         if(!isConfigured(c))return;
         Context app=c.getApplicationContext();
         synchronized(PlaylistCloudSync.class){
