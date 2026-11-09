@@ -28,7 +28,7 @@ button,input{font:inherit}
 .btn:active{transform:scale(.98)}
 .banner{margin:7px 8px;padding:8px;border-radius:7px;background:#171d22;color:#fff;text-align:center;font-size:11px;font-weight:700;line-height:1.2}
 .status{margin:0 8px 6px;color:var(--muted);font-size:10px;text-align:center}
-.list{padding:0 6px 70px}
+.list{padding:0 6px 88px}
 .song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:rgba(17,22,27,.70)}
 .num{width:27px;text-align:center;font-weight:900;font-size:14px;flex:0 0 27px}
 .title{font-weight:800;font-size:clamp(21px,5.2vw,29px);line-height:1.08;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -64,14 +64,14 @@ button,input{font:inherit}
 .small{color:var(--muted);font-size:12px;line-height:1.35;margin:9px 0 14px}
 .modal-actions{display:flex;gap:8px}
 .modal-actions .btn{flex:1}
-footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid #3a444d;text-align:center;font-size:10px;color:#b9c0c5;z-index:9}
+.footer-playlist{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0}.footer-playlist .playname{font-size:12px;max-width:55vw}.footer-playlist .count{font-size:11px}.footer-details{font-size:9px;margin-top:2px}footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid #3a444d;text-align:center;font-size:10px;color:#b9c0c5;z-index:9}
 @media (max-width:380px){.playname{font-size:18px}.title{font-size:21px}.btn{padding:4px 9px}}
 </style>
 </head>
 <body>
 <header class="top">
   
-  <div class="headrow"><div id="playlistName" class="playname">Connexion Viewer</div><div id="count" class="count">0 titres</div><div id="topViewerCount" class="count" style="font-size:11px;color:#cbd3d9;white-space:nowrap" title="Viewers actuellement connectés">👥 —</div></div>
+  
   <div class="actions">
     <button id="progressBtn" class="btn red">EN COURS</button>
     <button id="fredBtn" class="btn yellow">WITH FRED</button>
@@ -82,7 +82,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer><strong>TS PLAYLIST LIVE VIEWER</strong> · V1.02 · <span id="viewerPresence">Présence Internet · connexion en attente</span></footer>
+<footer><div class="footer-playlist"><span id="playlistName" class="playname">TS 2026</span><span id="count" class="count">33 titres</span></div><div class="footer-details"><strong>TS PLAYLIST LIVE VIEWER</strong> · V1.02 · <span id="viewerPresence">Présence Internet · connexion en attente</span></div><span id="topViewerCount" hidden aria-hidden="true"></span></footer>
 
 <div id="modal" class="modal">
   <div class="card">
