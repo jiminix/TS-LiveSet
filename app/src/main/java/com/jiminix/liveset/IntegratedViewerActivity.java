@@ -534,7 +534,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         name.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        row.addView(name,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1));
+        row.addView(name,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.MATCH_PARENT));
         LinearLayout privateIcons=new LinearLayout(this);
         privateIcons.setGravity(Gravity.CENTER_VERTICAL);
         int savedFlags=PrivateStageIcons.flags(this,privateListId,song.id,0,privateSeed?number-1:-1);
@@ -547,7 +547,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         addIcons.setTextSize(zsp(17)); addIcons.setGravity(Gravity.CENTER);
         addIcons.setContentDescription("Modifier mes icônes");
         row.addView(addIcons,new LinearLayout.LayoutParams(zdp(20),zdp(30)));
-        addIcons.setOnClickListener(v->PrivateStageIcons.edit(this,privateListId,song.id,0,privateSeed?number-1:-1,
+        // Keep instruments and + immediately after the title; truncate long titles to fit.\n        row.addOnLayoutChangeListener((v,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->{\n            int reserved=0;\n            for(int i=0;i<row.getChildCount();i++){\n                View child=row.getChildAt(i);\n                if(child!=name)reserved+=child.getMeasuredWidth();\n            }\n            int room=Math.max(zdp(48),right-left-row.getPaddingLeft()-row.getPaddingRight()-reserved-zdp(3));\n            if(name.getMaxWidth()!=room)name.setMaxWidth(room);\n        });\n        addIcons.setOnClickListener(v->PrivateStageIcons.edit(this,privateListId,song.id,0,privateSeed?number-1:-1,
             ()->{lastSignature="";refreshPlaylist();}));
 
         boolean hasStageInfo=song!=null && (
