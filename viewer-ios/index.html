@@ -36,6 +36,7 @@ button,input{font:inherit}
 .song.disabled{opacity:.5}
 .play-song{flex:0 0 35px;width:35px;height:32px;border:1px solid #59636b;border-radius:6px;background:#252f38;color:#fff;font-size:17px;font-weight:800;padding:0}
 .play-song:active{background:var(--red)}
+.link-song{flex:0 0 31px;width:31px;height:32px;border:1px solid #46515b;border-radius:6px;background:#1b232a;color:#cbd2d7;font-size:16px;padding:0}
 .player-card{width:min(580px,100%);background:var(--panel);border-radius:12px;padding:12px}
 .player-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .player-head strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -83,6 +84,15 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
   </div>
 </div>
 
+<div id="linkModal" class="modal" role="dialog" aria-modal="true" aria-label="Lien YouTube du morceau">
+  <div class="card">
+    <h2 id="linkSongTitle">Lien YouTube</h2>
+    <div class="small">Colle le lien YouTube de ce morceau. Il sera conservé dans ce navigateur, sans modifier la playlist du Manager.</div>
+    <input id="songLinkInput" class="code" style="font-size:14px;text-align:left;letter-spacing:0;text-transform:none;padding:0 10px" type="url" placeholder="https://youtu.be/…">
+    <div id="linkError" class="small" role="status"></div>
+    <div class="modal-actions"><button id="cancelLink" class="btn dark">ANNULER</button><button id="saveLink" class="btn red">ENREGISTRER</button></div>
+  </div>
+</div>
 <div id="playerModal" class="modal" role="dialog" aria-modal="true" aria-label="Lecteur du morceau">
   <div class="player-card">
     <div class="player-head"><strong id="playerTitle">Lecteur</strong><button id="closePlayer" class="btn dark" aria-label="Fermer le lecteur">✕</button></div>
@@ -112,6 +122,38 @@ let currentCached=false;
 let ytPlayer=null;
 let playerReady=false;
 let playerGeneration=0;
+let editingSong=null;
+const KEY_MEDIA="ts_viewer_media_links_v1";
+function savedLinks(){
+  try{return JSON.parse(localStorage.getItem(KEY_MEDIA)||"{}")||{}}catch(e){return {}}
+}
+function songMediaKey(song){
+  return String(song.id||((song.title||"")+"|"+(song.artist||""))).trim();
+}
+function effectiveMediaUrl(song){
+  const cloud=String(song.mediaUrl||song.media_url||"").trim();
+  return cloud||String(savedLinks()[songMediaKey(song)]||"").trim();
+}
+function openLinkEditor(song){
+  editingSong=song;
+  $("linkSongTitle").textContent=song.title||"Lien YouTube";
+  $("songLinkInput").value=effectiveMediaUrl(song);
+  $("linkError").textContent="";
+  $("linkModal").classList.add("show");
+}
+function saveSongLink(){
+  if(!editingSong)return;
+  const url=$("songLinkInput").value.trim();
+  if(url&&!youtubeId(url)){$("linkError").textContent="Entre un lien YouTube valide.";return}
+  const links=savedLinks(),key=songMediaKey(editingSong);
+  if(url)links[key]=url;else delete links[key];
+  try{localStorage.setItem(KEY_MEDIA,JSON.stringify(links))}
+  catch(e){$("linkError").textContent="Impossible d'enregistrer le lien sur cet appareil.";return}
+  $("linkModal").classList.remove("show");
+  editingSong=null;
+  lastSignature="";
+  if(currentPayload)render(currentPayload,currentCached);
+}
 function youtubeId(url){
   try{
     const u=new URL(url);
@@ -133,7 +175,7 @@ function closePlayer(){
   $("playerModal").classList.remove("show");
 }
 function openPlayer(song){
-  const url=String(song.mediaUrl||song.media_url||"").trim();
+  const url=effectiveMediaUrl(song);
   const id=youtubeId(url);
   if(!id)return;
   closePlayer();
@@ -293,13 +335,20 @@ function render(payload,cached=false){
       row.append(b);
     }
     row.append(title,bpm);
-    if(youtubeId(String(s.mediaUrl||s.media_url||""))){
+    const mediaUrl=effectiveMediaUrl(s);
+    if(youtubeId(mediaUrl)){
       const play=document.createElement("button");
       play.className="play-song";play.textContent="▶";play.title="Écouter "+(s.title||"le morceau");
       play.setAttribute("aria-label",play.title);
       play.onclick=()=>openPlayer(s);
       row.append(play);
     }
+    const link=document.createElement("button");
+    link.className="link-song";link.textContent="🔗";
+    link.title="Enregistrer le lien YouTube de "+(s.title||"ce morceau");
+    link.setAttribute("aria-label",link.title);
+    link.onclick=()=>openLinkEditor(s);
+    row.append(link);
     frag.append(row);
     if(medley&&expanded.has(id)){
       const sub=document.createElement("div"); sub.className="sub";
@@ -357,6 +406,9 @@ function openCode(){
   $("codeInput").value=localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE;
   $("modal").classList.add("show"); setTimeout(()=>$("codeInput").focus(),50);
 }
+$("cancelLink").onclick=()=>{$("linkModal").classList.remove("show");editingSong=null};
+$("saveLink").onclick=saveSongLink;
+$("linkModal").addEventListener("click",e=>{if(e.target===$("linkModal"))$("cancelLink").click()});
 $("closePlayer").onclick=closePlayer;
 $("seekBack").onclick=()=>seekPlayer(-10);
 $("seekForward").onclick=()=>seekPlayer(10);
