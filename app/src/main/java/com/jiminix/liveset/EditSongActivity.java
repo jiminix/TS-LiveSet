@@ -103,6 +103,9 @@ public class EditSongActivity extends AppCompatActivity {
         root.addView(r1);
         notes=field(root,"Note");
         media=field(root,"Lien YouTube ou autre média");
+        Button findVideo=Ui.button(this,"▶ Chercher une vidéo sur YouTube");
+        findVideo.setOnClickListener(v->openYoutubeVideoSearch());
+        root.addView(findVideo);
 
         refreshOutButton();
 
@@ -372,11 +375,14 @@ public class EditSongActivity extends AppCompatActivity {
             .replaceAll("\\p{M}+","").toLowerCase(java.util.Locale.ROOT)
             .replaceAll("[^a-z0-9]","");
     }
-    private void suggestYoutubeSearch(String searchedTitle,String searchedArtist){
-        if(!media.getText().toString().trim().isEmpty())return;
-        String q=Uri.encode(searchedArtist+" "+searchedTitle+" official audio");
-        // Search URL, not an invented direct video link.
-        media.setText("https://www.youtube.com/results?search_query="+q);
+    private void openYoutubeVideoSearch(){
+        String t=title.getText().toString().trim();
+        String a=artist.getText().toString().trim();
+        String q=Uri.encode((a+" "+t+" official audio").trim());
+        Intent i=new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.youtube.com/results?search_query="+q));
+        try{startActivity(i);}catch(Exception e){
+            android.widget.Toast.makeText(this,"Impossible d'ouvrir YouTube",android.widget.Toast.LENGTH_LONG).show();
+        }
     }
 
     private void searchLyricsWeb(){
@@ -450,7 +456,6 @@ public class EditSongActivity extends AppCompatActivity {
             runOnUiThread(()->{
                 if(result!=null && !result.isEmpty()){
                     lyrics.setText(result);
-                    suggestYoutubeSearch(t,a);
                     enrichMissingSongInfo(t,a);
                     android.widget.Toast.makeText(this,"Paroles trouvées via "+resultSource+" · recherche BPM et lien YouTube",android.widget.Toast.LENGTH_LONG).show();
                 }else{
