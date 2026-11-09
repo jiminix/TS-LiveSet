@@ -40,11 +40,25 @@ public final class PrivateStageIcons {
         }
         return p.getInt(k,0);
     }
+    /** Instrument assignment for TS 2026, by displayed row number (1-based). */
+    public static int ts2026Instrument(int n) {
+        switch(n) {
+            case 3: case 6: case 10: case 21: case 22: case 27: return 1;
+            case 4: case 11: case 15: case 16: case 18: case 25: case 26:
+            case 29: case 30: case 32: return 2;
+            case 8: case 9: case 33: return 4;
+            default: return 0;
+        }
+    }
+    public static int displayFlags(int saved, boolean ts2026, int rowNumber) {
+        return ts2026 ? ((saved & ~7) | ts2026Instrument(rowNumber)) : saved;
+    }
     public static void show(Context c, LinearLayout target, int flags, int size, String listId, String songId, int part) {
         if((flags&1)!=0) {
             ImageView acoustic=new ImageView(c);
             acoustic.setImageResource(R.drawable.ic_acoustic_000);
-            acoustic.setAdjustViewBounds(true);
+            acoustic.setAdjustViewBounds(false);
+            acoustic.setScaleType(ImageView.ScaleType.FIT_CENTER);
             target.addView(acoustic,new LinearLayout.LayoutParams(dp(c,size),dp(c,size)));
         }
         if((flags&2)!=0) addText(c,target,"🎸",size);
