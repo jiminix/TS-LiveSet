@@ -63,7 +63,9 @@ public final class LocalWifiServer {
         return o;
     }
     private static JSONObject snapshot(Context c)throws Exception{
-        JSONObject result=playlist(c,AppStore.findSetlist(c,AppStore.getViewerSetlistId(c)));
+        String selectedId=AppStore.getViewerSetlistId(c);
+        SetListModel selected=selectedId==null?null:AppStore.findSetlist(c,selectedId);
+        JSONObject result=playlist(c,selected);
         result.put("in_progress",playlist(c,AppStore.getOrCreateInProgressSetlist(c)));
         SetListModel fred=null;
         for(SetListModel sl:AppStore.loadSetlists(c)){
@@ -81,7 +83,8 @@ public final class LocalWifiServer {
             int n=in.read(bytes);
             if(n<=0)return;
             String request=new String(bytes,0,n,StandardCharsets.UTF_8);
-            String path=request.split("\\s+")[1];
+            String[] parts=request.split("\\s+");
+            String path=parts.length>1?parts[1]:"/";
             String body;String type;
             if(path.startsWith("/api/playlist")){
                 body=snapshot(c).toString();
@@ -101,10 +104,10 @@ public final class LocalWifiServer {
             out.write(header.getBytes(StandardCharsets.UTF_8));
             out.write(payload);
             out.flush();
-        }catch(Exception ignored){}
+        }catch(Exception e){android.util.Log.e("LiveSetLocal","HTTP request failed",e);}
     }
     private static final String HTML="<!doctype html><html lang='fr'><meta name='viewport' content='width=device-width,initial-scale=1'><meta charset='utf-8'><title>TS Playlist LOCAL</title>"+
         "<style>body{background:#10151a;color:white;font:16px Arial;margin:0}header{position:sticky;top:0;background:#202830;padding:8px;text-align:center}button{padding:8px;margin:3px;border:0;border-radius:5px;font-weight:bold}.yellow{background:#f7d129}.red{background:#c62828;color:white}#list{padding:8px}.song{padding:12px 4px;border-bottom:1px solid #35414a}footer{position:fixed;bottom:0;background:#202830;width:100%;text-align:center;font-size:12px;padding:8px}</style>"+
         "<header><b id='name'>TS PLAYLIST LOCAL</b><div><button onclick=\"selectList('main')\">PRINCIPAL</button><button class='red' onclick=\"selectList('in_progress')\">EN COURS</button><button class='yellow' onclick=\"selectList('with_fred')\">WITH FRED</button></div></header><main id='list'>Chargement...</main><footer>TS PLAYLIST · MODE LOCAL · <span id='status'>Connexion...</span></footer>"+
-        "<script>let selected='main',signature='';function selectList(x){selected=x;signature='';refresh()}async function refresh(){try{const r=await fetch('/api/playlist',{cache:'no-store'});const data=await r.json();const list=selected==='main'?data:data[selected];const s=JSON.stringify(list);if(s!==signature){signature=s;document.getElementById('name').textContent=(list.playlist_name||selected).toUpperCase();const root=document.getElementById('list');root.replaceChildren();(list.songs||[]).forEach((song,i)=>{const row=document.createElement('div');row.className='song';row.textContent=String(i+1).padStart(2,'0')+'  '+song.title+(song.bpm?' · '+song.bpm+' BPM':'');if(song.disabled)row.style.opacity='.45';root.appendChild(row)});if(!list.available)root.textContent='Playlist indisponible';}document.getElementById('status').textContent='Connecté · actualisation 2 s'}catch(e){document.getElementById('status').textContent='Connexion perdue'}}refresh();setInterval(refresh,2000)</script></html>";
+        "<script>let selected='main',signature='';function selectList(x){selected=x;signature='';refresh()}async function refresh(){try{const r=await fetch('/api/playlist',{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const data=await r.json();const list=selected==='main'?data:data[selected];const s=JSON.stringify(list);if(s!==signature){signature=s;document.getElementById('name').textContent=(list.playlist_name||selected).toUpperCase();const root=document.getElementById('list');root.replaceChildren();(list.songs||[]).forEach((song,i)=>{const row=document.createElement('div');row.className='song';row.textContent=String(i+1).padStart(2,'0')+'  '+song.title+(song.bpm?' · '+song.bpm+' BPM':'');if(song.disabled)row.style.opacity='.45';root.appendChild(row)});if(!list.available)root.textContent='Playlist indisponible';}document.getElementById('status').textContent='Connecté · actualisation 2 s'}catch(e){document.getElementById('status').textContent='Erreur : '+e.message;document.getElementById('list').textContent='Erreur de connexion locale : '+e.message}}refresh();setInterval(refresh,2000)</script></html>";
 }
