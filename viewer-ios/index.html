@@ -36,7 +36,15 @@ button,input{font:inherit}
 .song.disabled{opacity:.5}
 .play-song{flex:0 0 35px;width:35px;height:32px;border:1px solid #59636b;border-radius:6px;background:#252f38;color:#fff;font-size:17px;font-weight:800;padding:0}
 .play-song:active{background:var(--red)}
-.player-card{width:min(580px,100%);background:var(--panel);border-radius:12px;padding:12px}
+.player-card{width:min(580px,100%);background:var(--panel);border-radius:12px;padding:9px}
+#playerModal{align-items:flex-end;padding:0 8px calc(9px + env(safe-area-inset-bottom));background:rgba(0,0,0,.18);pointer-events:none}
+#playerModal .player-card{pointer-events:auto;box-shadow:0 -5px 28px #000a}
+#playerModal .player-head{margin-bottom:5px}
+#playerModal .player-frame{width:200px;height:113px;aspect-ratio:auto;margin:0 auto 7px}
+.player-transport{display:flex;align-items:center;gap:9px}
+.player-transport button{width:35px;height:32px;flex:none}
+.player-transport input{flex:1;min-width:0;accent-color:var(--red);touch-action:pan-y}
+.player-clock{font-size:10px;color:var(--muted);white-space:nowrap}
 .player-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .player-head strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .player-frame{width:100%;aspect-ratio:16/9;background:#000;border-radius:7px;overflow:hidden}
@@ -72,7 +80,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.33</footer>
+<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.34</footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -87,6 +95,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
   <div class="player-card">
     <div class="player-head"><strong id="playerTitle">Lecteur</strong><button id="closePlayer" class="btn dark" aria-label="Fermer le lecteur">✕</button></div>
     <div id="playerFrame" class="player-frame"></div>
+    <div class="player-transport"><button id="playerToggle" class="btn dark" aria-label="Lecture ou pause">Ⅱ</button><span id="playerElapsed" class="player-clock">0:00</span><input id="playerSeek" type="range" min="0" max="1000" value="0" aria-label="Position de lecture"><span id="playerDuration" class="player-clock">0:00</span></div>
     <div id="playerStatus" class="player-status">Lecture YouTube</div>
   </div>
 </div>
@@ -111,6 +120,18 @@ let currentCached=false;
 let ytPlayer=null;
 let playerReady=false;
 let playerGeneration=0;
+let playerTicker=null;
+let playerSeeking=false;
+function clock(t){const n=Math.max(0,Math.floor(Number(t)||0));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")}
+function updatePlayerProgress(){
+  if(!playerReady||!ytPlayer)return;
+  try{
+    const d=ytPlayer.getDuration()||0,t=ytPlayer.getCurrentTime()||0;
+    if(!playerSeeking)$("playerSeek").value=d?Math.round(t/d*1000):0;
+    $("playerElapsed").textContent=clock(t);$("playerDuration").textContent=clock(d);
+    $("playerToggle").textContent=ytPlayer.getPlayerState()===1?"Ⅱ":"▶";
+  }catch(e){}
+}
 function effectiveMediaUrl(song){
   return String(song.mediaUrl||song.media_url||"").trim();
 }
@@ -127,12 +148,14 @@ function youtubeId(url){
   return null;
 }
 function closePlayer(){
+  if(playerTicker){clearInterval(playerTicker);playerTicker=null}
   playerGeneration++;
   playerReady=false;
   try{if(ytPlayer&&ytPlayer.destroy)ytPlayer.destroy()}catch(e){}
   ytPlayer=null;
   $("playerFrame").replaceChildren();
   $("playerModal").classList.remove("show");
+  $("playerSeek").value=0;
 }
 function openPlayer(song){
   const url=effectiveMediaUrl(song);
@@ -150,7 +173,7 @@ function openPlayer(song){
     if(generation!==playerGeneration)return;
     if(!window.YT||!YT.Player){$("playerStatus").textContent="Lecteur YouTube indisponible";return}
     ytPlayer=new YT.Player(holder,{width:"100%",height:"100%",videoId:id,playerVars:{playsinline:1,controls:1,rel:0},events:{
-      onReady:()=>{if(generation!==playerGeneration)return;playerReady=true;$("playerStatus").textContent="Déplace le curseur sur la barre de lecture pour naviguer";},
+      onReady:()=>{if(generation!==playerGeneration)return;playerReady=true;$("playerStatus").textContent="Lecture · curseur déplaçable";playerTicker=setInterval(updatePlayerProgress,350);updatePlayerProgress();},
       onError:()=>{$("playerStatus").textContent="Cette vidéo ne peut pas être lue ici. Vérifie son accès sur YouTube."}
     }});
   }
@@ -162,6 +185,9 @@ function openPlayer(song){
 }
 
 const $=id=>document.getElementById(id);
+$("playerToggle").onclick=()=>{if(!playerReady)return;try{ytPlayer.getPlayerState()===1?ytPlayer.pauseVideo():ytPlayer.playVideo();updatePlayerProgress()}catch(e){}};
+$("playerSeek").addEventListener("input",()=>{playerSeeking=true;try{$("playerElapsed").textContent=clock((ytPlayer?.getDuration()||0)*Number($("playerSeek").value)/1000)}catch(e){}});
+$("playerSeek").addEventListener("change",()=>{try{if(playerReady)ytPlayer.seekTo((ytPlayer.getDuration()||0)*Number($("playerSeek").value)/1000,true)}catch(e){}playerSeeking=false;});
 function cleanCode(raw){
   let code=(raw||"").trim();
   const uuid=code.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
