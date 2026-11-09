@@ -102,12 +102,8 @@ jobs:
           source=source.replace(fallback,'backup=null; // Migration: cloud-only restore',1)
           # A restored isolated Manager has no previous cloud connection preference.
           # Enable automatic publishing only after its full backup was restored.
-          config_old='''    public static boolean isConfigured(Context c){
-        return !getCode(c).isEmpty();
-    }'''
-          config_new='''    public static boolean isConfigured(Context c){
-        return !getCode(c).isEmpty() || AppStore.getFullBackupLocal(c)!=null;
-    }'''
+          config_old='    public static boolean isConfigured(Context c){'+chr(10)+'        return !getCode(c).isEmpty();'+chr(10)+'    }'
+          config_new='    public static boolean isConfigured(Context c){'+chr(10)+'        return !getCode(c).isEmpty() || AppStore.getFullBackupLocal(c)!=null;'+chr(10)+'    }'
           assert config_old in source
           source=source.replace(config_old,config_new,1)
           cloud.write_text(source)
