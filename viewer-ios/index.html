@@ -101,10 +101,7 @@ button,input{font:inherit}
     <div id="playerStatus" class="player-status">Lecture YouTube</div>
   </div>
 </div>
-<script src="https://www.youtube.com/iframe_api"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.youtube.com/iframe_api" async></script>
 <script src="./firebase-config.js"></script>
 <script>
 const API="https://superjsonblob.com/api/jsonBlob";
@@ -410,6 +407,15 @@ try{
 }catch(_){currentPayload=null;}
 sync();
 setInterval(sync,8000);
+// Load nonessential presence SDKs only after the playlist UI is interactive.
+function loadOptionalScript(src){
+  return new Promise((resolve,reject)=>{
+    const script=document.createElement("script");
+    script.src=src;script.async=true;
+    script.onload=resolve;script.onerror=()=>reject(new Error("SDK unavailable"));
+    document.head.appendChild(script);
+  });
+}
 // Firebase presence is initialized only when the project's public web config
 // is supplied. No fictitious counts are displayed while unconfigured.
 (async function initOnlinePresence(){
@@ -417,7 +423,11 @@ setInterval(sync,8000);
   const cfg=window.TS_FIREBASE_CONFIG;
   if(!cfg?.apiKey||!cfg?.databaseURL||!cfg?.appId)return;
   try{
-    if(!window.firebase)throw new Error("Firebase SDK unavailable");
+    if(!window.firebase){
+      await loadOptionalScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
+      await loadOptionalScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js");
+      await loadOptionalScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js");
+    }
     if(!firebase.apps.length)firebase.initializeApp(cfg);
     await firebase.auth().signInAnonymously();
     const uid=firebase.auth().currentUser.uid;
