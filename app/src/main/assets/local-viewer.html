@@ -71,7 +71,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(saf
 <body>
 <header class="top">
   
-  <div class="headrow"><div id="playlistName" class="playname">Connexion Viewer</div><div id="count" class="count">0 titres</div></div>
+  <div class="headrow"><div id="playlistName" class="playname">Connexion Viewer</div><div id="count" class="count">0 titres</div><div id="topViewerCount" class="count" style="font-size:11px;color:#cbd3d9;white-space:nowrap">👥 1</div></div>
   <div class="actions">
     <button id="progressBtn" class="btn red">EN COURS</button>
     <button id="fredBtn" class="btn yellow">WITH FRED</button>
@@ -420,6 +420,7 @@ async function updatePresence(){
     const data=await response.json();
     const n=Number(data.connected)||1;
     $("connectedViewers").textContent=n+" viewer"+(n>1?"s":"")+" connecté"+(n>1?"s":"");
+    $("topViewerCount").textContent="👥 "+n;
   }catch(_){$("connectedViewers").textContent="Connexion locale indisponible"}
 }
 updatePresence();
