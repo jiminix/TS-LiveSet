@@ -39,6 +39,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
     // Build V0.47 proportional zoom for stage info and row spacing
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String setlistId;
+    private String privateListId="";
+    private boolean privateSeed=false;
     private TextView playlistTitle;
     private TextView appTitle;
     private TextView info;
@@ -292,12 +294,19 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             return;
         }
 
+        privateListId=list.id;
+        privateSeed=list.name!=null && list.name.toLowerCase(Locale.ROOT).contains("ts 2026");
         List<Song> songs=new ArrayList<>();
         StringBuilder sig=new StringBuilder(list.name).append('|');
+        int privateIndex=0;
         for(String id:list.songIds){
             Song s=AppStore.findSong(this,id);
             if(s==null)continue;
             songs.add(s);
+            sig.append("private:").append(PrivateStageIcons.flags(this,list.id,s.id,0,privateSeed?privateIndex:-1));
+            for(int part=1;part<=s.medleyItems.size();part++)
+                sig.append('/').append(PrivateStageIcons.flags(this,list.id,s.id,part,privateSeed?privateIndex:-1));
+            privateIndex++;
             sig.append(s.id).append(':').append(s.title).append(':').append(s.bpm)
                 .append(':').append(s.stageNum1).append(':').append(s.stageNum2)
                 .append(':').append(s.stageGuitar).append(':').append(s.stageKeyboard)
@@ -526,6 +535,17 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         row.addView(name,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1));
+        LinearLayout privateIcons=new LinearLayout(this);
+        privateIcons.setGravity(Gravity.CENTER_VERTICAL);
+        PrivateStageIcons.show(this,privateIcons,PrivateStageIcons.flags(this,privateListId,song.id,0,privateSeed?number-1:-1),zdp(20));
+        row.addView(privateIcons);
+        TextView addIcons=new TextView(this);
+        addIcons.setText("+"); addIcons.setTextColor(Color.rgb(255,193,7));
+        addIcons.setTextSize(zsp(17)); addIcons.setGravity(Gravity.CENTER);
+        addIcons.setContentDescription("Modifier mes icônes");
+        row.addView(addIcons,new LinearLayout.LayoutParams(zdp(20),zdp(30)));
+        addIcons.setOnClickListener(v->PrivateStageIcons.edit(this,privateListId,song.id,0,privateSeed?number-1:-1,
+            ()->{lastSignature="";refreshPlaylist();}));
 
         boolean hasStageInfo=song!=null && (
             (song.stageNum1!=null && !song.stageNum1.trim().isEmpty()) ||
@@ -543,7 +563,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             stageBg.setColor(Color.BLACK);
             stageBg.setCornerRadius(zdp(4));
             stageBg.setStroke(Math.max(1,zdp(1)),Color.rgb(70,70,70));
-            stageBox.setBackground(stageBg);
+            stageBox.setBackground(null);
 
             if(song.stageNum1!=null && !song.stageNum1.trim().isEmpty()){
                 TextView n1=new TextView(this);
@@ -647,6 +667,17 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 item.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
                 item.setTextSize(zsp(13));
                 item.setPadding(zdp(6),zdp(4),0,zdp(2));
+                LinearLayout medleyIcons=new LinearLayout(this);
+                medleyIcons.setGravity(Gravity.CENTER_VERTICAL);
+                PrivateStageIcons.show(this,medleyIcons,PrivateStageIcons.flags(this,privateListId,song.id,i+1,privateSeed?number-1:-1),zdp(18));
+                TextView medleyPlus=new TextView(this);
+                medleyPlus.setText("+"); medleyPlus.setTextColor(Color.rgb(255,193,7));
+                medleyPlus.setTextSize(zsp(16)); medleyPlus.setPadding(zdp(5),0,zdp(5),0);
+                medleyIcons.addView(medleyPlus);
+                final int part=i+1;
+                medleyPlus.setOnClickListener(v->PrivateStageIcons.edit(this,privateListId,song.id,part,privateSeed?number-1:-1,
+                    ()->{lastSignature="";refreshPlaylist();}));
+                medleyBox.addView(medleyIcons);
                 medleyBox.addView(item,new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
