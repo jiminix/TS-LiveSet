@@ -26,8 +26,8 @@ button,input{font:inherit}
 .btn.yellow{background:#f7d129;color:#161616}
 .btn.dark{background:#080b0e;color:#fff}
 .btn:active{transform:scale(.98)}
-.banner{margin:7px 8px;padding:8px;border-radius:7px;background:#171d22;color:#fff;text-align:center;font-size:11px;font-weight:700;line-height:1.2}
-.status{margin:0 8px 6px;color:var(--muted);font-size:10px;text-align:center}
+.banner{margin:2px 6px 1px;padding:3px 6px;border-radius:4px;background:#171d22;color:#fff;text-align:center;font-size:11px;font-weight:700;line-height:1.2}
+.status{margin:0 6px 2px;color:var(--muted);font-size:10px;text-align:center}
 .list{padding:0 6px 88px}
 .song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:rgba(17,22,27,.70)}
 .num{width:27px;text-align:center;font-weight:900;font-size:14px;flex:0 0 27px}
@@ -79,7 +79,7 @@ button,input{font:inherit}
     <button id="codeBtn" class="btn dark">CODE</button>
   </div>
 </header>
-<div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
+<div id="banner" class="banner">Synchro au Manager : vérification…</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
 <footer><div class="footer-playlist"><span id="playlistName" class="playname">TS 2026</span><span id="count" class="count">33 titres</span></div><div class="footer-details"><strong>TS PLAYLIST LIVE VIEWER</strong> · V1.02 · <span id="viewerPresence">Présence Internet · connexion en attente</span></div><span id="topViewerCount" hidden aria-hidden="true"></span></footer>
@@ -309,7 +309,7 @@ function render(payload,cached=false){
   $("count").textContent=songs.length+" titre"+(songs.length>1?"s":"");
   $("status").textContent=cached?"Internet indisponible · dernière copie enregistrée":"Internet · à jour";
   const linkedCount=songs.filter(song=>youtubeId(effectiveMediaUrl(song))).length;
-  $("banner").textContent="Un pour tous, tous pour la même playlist. · "+(cached?"Copie locale":"Playlist reçue")+" · "+linkedCount+"/"+songs.length+" liens YouTube disponibles";
+  $("banner").textContent=cached?"Synchro au Manager : copie locale":"Synchro au Manager : à jour";
   if(!linkedCount && songs.length) $("status").textContent="Aucun lien YouTube trouvé dans la playlist ou la sauvegarde Cloud";
   const frag=document.createDocumentFragment();
   songs.forEach((s,i)=>{
