@@ -13,7 +13,7 @@
 :root{--bg:#10151a;--panel:#202830;--panel2:#181e23;--text:#fff;--muted:#aeb6bd;--red:#c62828;--line:#303941;--disabled:.5}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;min-height:100%;overscroll-behavior:none}
-body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);background-image:linear-gradient(rgba(10,13,19,.88),rgba(10,13,19,.88)),url("./tequila-viewer.svg");background-position:center;background-size:cover;background-attachment:fixed}
 button,input{font:inherit}
 .top{position:sticky;top:0;z-index:10;background:var(--panel);padding:7px 8px 6px;border-bottom:1px solid #3a444d}
 .app{font-size:18px;font-weight:800;text-align:center;line-height:1.05}
@@ -23,12 +23,13 @@ button,input{font:inherit}
 .actions{display:flex;gap:7px;margin-top:6px}
 .btn{border:0;border-radius:6px;background:#fff;color:#111;min-height:36px;padding:4px 12px;font-weight:800}
 .btn.red{background:var(--red);color:#fff}
+.btn.yellow{background:#f7d129;color:#161616}
 .btn.dark{background:#080b0e;color:#fff}
 .btn:active{transform:scale(.98)}
 .banner{margin:7px 8px;padding:8px;border-radius:7px;background:#171d22;color:#fff;text-align:center;font-size:11px;font-weight:700;line-height:1.2}
 .status{margin:0 8px 6px;color:var(--muted);font-size:10px;text-align:center}
 .list{padding:0 6px 70px}
-.song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:#11161b}
+.song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:rgba(17,22,27,.82)}
 .num{width:27px;text-align:center;font-weight:900;font-size:14px;flex:0 0 27px}
 .title{font-weight:800;font-size:15px;line-height:1.08;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bpm{font-size:11px;color:#d9dee2;min-width:32px;text-align:right}
@@ -73,6 +74,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
   <div class="headrow"><div id="playlistName" class="playname">Connexion Viewer</div><div id="count" class="count">0 titres</div></div>
   <div class="actions">
     <button id="progressBtn" class="btn red">EN COURS</button>
+    <button id="fredBtn" class="btn yellow">WITH FRED</button>
     <button id="syncBtn" class="btn dark">↻</button>
     <button id="codeBtn" class="btn dark">CODE</button>
   </div>
@@ -80,7 +82,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.36</footer>
+<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.96</footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -111,7 +113,7 @@ const BOOTSTRAP_CODE="Y6";
 const BOOTSTRAP_BLOB="d7e6c82a-82e0-4336-8e66-d49b9d013312";
 const KEY_CODE="ts_viewer_code";
 const KEY_CACHE="ts_viewer_cache";
-let showInProgress=false;
+let activePlaylist="main";
 let expanded=new Set();
 let busy=false;
 let lastSignature="";
@@ -282,17 +284,19 @@ function mergeBackupMedia(payload,songs){
 }
 function render(payload,cached=false){
   let source=payload;
-  if(showInProgress){
+  if(activePlaylist==="progress"){
     source=payload?.in_progress || payload?.en_cours || payload?.enCours || payload?.progress;
+  }else if(activePlaylist==="fred"){
+    source=payload?.with_fred;
   }
   if(!source?.available){
-    $("list").innerHTML='<div class="empty">'+(showInProgress?"La playlist EN COURS est vide ou indisponible.":"Aucune playlist publiée.")+'</div>';
-    $("playlistName").textContent=showInProgress?"EN COURS":"Aucune playlist";
+    $("list").innerHTML='<div class="empty">'+(activePlaylist==="progress"?"La playlist EN COURS est vide ou indisponible.":activePlaylist==="fred"?"La playlist WITH FRED est indisponible.":"Aucune playlist publiée.")+'</div>';
+    $("playlistName").textContent=activePlaylist==="progress"?"EN COURS":activePlaylist==="fred"?"WITH FRED":"Aucune playlist";
     $("count").textContent="0 titres";
     return;
   }
   const songs=mergeBackupMedia(payload,Array.isArray(source.songs)?source.songs:[]);
-  const sig=(showInProgress?"1":"0")+"|"+JSON.stringify(songs)+"|"+source.playlist_name;
+  const sig=activePlaylist+"|"+JSON.stringify(songs)+"|"+source.playlist_name;
   if(sig===lastSignature)return;
   lastSignature=sig;
   $("playlistName").textContent=(source.playlist_name||"Playlist").toUpperCase();
@@ -376,17 +380,13 @@ async function sync(){
   }finally{busy=false}
 }
 
-function switchPlaylist(){
-  showInProgress=!showInProgress;
-  $("progressBtn").textContent=showInProgress?"PRINCIPAL":"EN COURS";
+function switchPlaylist(target){
+  activePlaylist=activePlaylist===target?"main":target;
+  $("progressBtn").textContent=activePlaylist==="progress"?"PRINCIPAL":"EN COURS";
+  $("fredBtn").textContent=activePlaylist==="fred"?"PRINCIPAL":"WITH FRED";
   lastSignature="";
-  if(currentPayload){
-    render(currentPayload,currentCached);
-  }else{
-    $("status").textContent="Synchronisation…";
-  }
-  // A refresh is still launched, but the button works immediately even if
-  // another sync is already in progress.
+  if(currentPayload)render(currentPayload,currentCached);
+  else $("status").textContent="Synchronisation…";
   sync();
 }
 function openCode(){
@@ -395,7 +395,8 @@ function openCode(){
 }
 $("closePlayer").onclick=closePlayer;
 $("playerModal").addEventListener("click",e=>{if(e.target===$("playerModal"))closePlayer()});
-$("progressBtn").onclick=switchPlaylist;
+$("progressBtn").onclick=()=>switchPlaylist("progress");
+$("fredBtn").onclick=()=>switchPlaylist("fred");
 $("syncBtn").onclick=sync;
 $("codeBtn").onclick=openCode;
 $("cancelCode").onclick=()=>$("modal").classList.remove("show");
