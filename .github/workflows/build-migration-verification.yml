@@ -67,8 +67,8 @@ jobs:
           data=gradle.read_text()
           assert "applicationId 'com.jiminix.liveset'" in data
           data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.migrationtest'")
-          data=data.replace('versionCode 87','versionCode 101')
-          data=data.replace("versionName '0.87'","versionName '1.01-full-offline-viewer'")
+          data=data.replace('versionCode 87','versionCode 102')
+          data=data.replace("versionName '0.87'","versionName '1.02-live-manager-viewer'")
           gradle.write_text(data)
           # Publish only after a valid cloud backup is confirmed. Preserve that
           # backup verbatim; refuse all writes if the remote cannot be read.
@@ -112,7 +112,7 @@ jobs:
           assert 'com.jiminix.liveset.playlists' in data
           data=data.replace('com.jiminix.liveset.playlists','com.jiminix.liveset.migrationtest.playlists')
           data=data.replace('com.jiminix.liveset.permission.READ_VIEWER','com.jiminix.liveset.migrationtest.permission.READ_VIEWER')
-          data=data.replace('android:label="TS Playlist Manager"','android:label="Manager MIGRATION AUTO"')
+          data=data.replace('android:label="TS Playlist Live Manager"','android:label="TS Playlist Live Manager"')
           # Use the existing manager artwork as a standard launcher icon in the isolated APK.
           data=data.replace('android:icon="@drawable/ic_launcher_manager"', 'android:icon="@mipmap/ic_launcher"')
           manifest.write_text(data)
@@ -142,5 +142,5 @@ jobs:
       - name: Upload recovery test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Manager-MIGRATION-AUTO-V1.01
+          name: TS-Playlist-Live-Manager-V1.02
           path: app/build/outputs/apk/debug/app-debug.apk
