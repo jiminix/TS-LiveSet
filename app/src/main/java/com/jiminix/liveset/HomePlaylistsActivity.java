@@ -95,10 +95,12 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         localMode.setTextSize(12);
         localMode.setOnClickListener(v->{
             if(LocalWifiServer.isRunning()){
+                stopService(new Intent(this,LocalWifiService.class));
                 LocalWifiServer.stop();
                 localMode.setText("📶 MODE LOCAL · DÉMARRER");
                 Toast.makeText(this,"Serveur local arrêté",Toast.LENGTH_SHORT).show();
             }else if(LocalWifiServer.start(this)){
+                androidx.core.content.ContextCompat.startForegroundService(this,new Intent(this,LocalWifiService.class));
                 localMode.setText("📶 MODE LOCAL · ACTIF");
                 new AlertDialog.Builder(this)
                     .setTitle("Viewer Wi-Fi local actif")
