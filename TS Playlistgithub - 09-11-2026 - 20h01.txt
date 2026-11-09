@@ -1,0 +1,103 @@
+TS PLAYLISTGITHUB — DOSSIER DE REPRISE DU PROJET
+Mis à jour le 09/11/2026 à 20h01 (heure de Paris)
+Dépôt : https://github.com/jiminix/TS-LiveSet
+
+OBJECTIF DE CE FICHIER
+À joindre/coller au début d'une nouvelle conversation ChatGPT pour reprendre immédiatement le développement, sans reconstruire le contexte. Travailler DIRECTEMENT dans le dépôt GitHub connecté, faire des commits, vérifier les Actions, puis indiquer le SHA et les instructions de test. Ne pas recréer une nouvelle application Android à chaque modification.
+
+1. ARCHITECTURE / BRANCHES
+- Dépôt : jiminix/TS-LiveSet
+- Branche ANDROID MANAGER V1.05 : manager-v105-safe-migration
+- SHA Android à cette date : 189de1b052aeb8134e3ac4f32913a6c7018560b6
+- Branche VIEWER WEB : main
+- SHA web à cette date : cfa2a32b78ee83f6b543304676f56342c6cb6568
+- IMPORTANT : une demande concernant le Viewer web se fait sur main, dans viewer-ios/. Une demande concernant le Manager ou son Viewer intégré se fait sur manager-v105-safe-migration, dans app/. Ne pas confondre les deux Viewers.
+- Site web : https://jiminix.github.io/TS-LiveSet/ (vérifier l'URL exacte du déploiement Pages si nécessaire)
+- Workflow web : https://github.com/jiminix/TS-LiveSet/actions/workflows/deploy-ios-viewer.yml
+- Workflow Android V1.05 : https://github.com/jiminix/TS-LiveSet/actions/workflows/build-manager-v105.yml
+
+2. MISE À JOUR DE L'APPLICATION ANDROID DÉJÀ INSTALLÉE — CRITIQUE
+- Application ID / package : com.jiminix.liveset.v105
+- versionCode : 105 ; versionName : 1.05
+- Source : app/build.gradle sur la branche manager-v105-safe-migration
+- Build : Gradle 8.10.2 ; Java 17 ; gradle :app:assembleDebug
+- Workflow : Build Manager V1.05 (stable signature), déclenché manuellement (workflow_dispatch) sur manager-v105-safe-migration.
+- Artifact : TS-Playlist-Manager-V1.05-stable ; APK à l'intérieur : app-debug.apk.
+- SIGNATURE STABLE INDISPENSABLE : le workflow restaure la même clé depuis le secret GitHub Actions MANAGER_V105_KEYSTORE_BASE64, vérifie son empreinte avec la variable GitHub Actions MANAGER_V105_CERT_SHA256, et utilise le keystore .signing/liveset-debug.keystore, alias androiddebugkey, mot de passe du keystore et de l'alias : android.
+- NE JAMAIS régénérer le keystore, changer applicationId, changer de branche pour le build, supprimer l'application installée, ni effacer ses données pour résoudre un souci de mise à jour. Une APK avec une signature différente ne pourra pas s'installer par-dessus.
+- Le secret MANAGER_V105_KEYSTORE_BASE64 contient la vraie clé de signature. Il n'est PAS inclus dans ce fichier, par sécurité. Il doit rester dans les Secrets GitHub ; la variable d'empreinte doit rester dans GitHub Actions Variables. NE PAS copier de clé privée ou de secret Firebase dans un fichier versionné.
+- Dernière compilation V1.05 VÉRIFIÉE : SUCCESS, run GitHub Actions 42673492181, commit 189de1b (09/11/2026). Des échecs précédents provenaient de retours de ligne Java incorrects ; ils ont été corrigés. Pour la prochaine modification, vérifier les logs avant de déclarer le build réussi.
+- Pour mettre à jour sur le téléphone : commit sur la bonne branche ; lancer le workflow V1.05 en sélectionnant manager-v105-safe-migration ; attendre le succès ; télécharger l'artifact ; extraire l'APK ; installer l'APK par-dessus V1.05. L'ancienne V1.04 est distincte. Ne pas désinstaller V1.05.
+- Le workflow Android générique "Build LiveSet APK" sur main peut échouer et n'est PAS celui à utiliser pour V1.05.
+
+3. FICHIERS ANDROID CLÉS
+- app/src/main/java/com/jiminix/liveset/PlaylistOverviewActivity.java : interface liste du Manager.
+- app/src/main/java/com/jiminix/liveset/IntegratedViewerActivity.java : Viewer intégré au Manager.
+- app/src/main/java/com/jiminix/liveset/PrivateStageIcons.java : icônes privées et correspondances instrumentales.
+- app/src/main/java/com/jiminix/liveset/AppStore.java : stockage/données de l'application.
+- app/build.gradle : identité, version et signature de l'APK.
+- Ne pas casser la synchronisation Cloud, la sauvegarde/restauration ou les données déjà enregistrées.
+
+4. ÉTAT DU MANAGER ET DU VIEWER INTÉGRÉ
+- Manager V1.05 et Viewer intégré affichent des icônes d'instruments privées par titre, taille 19dp. La liste TS2026 est identifiée par position de morceau.
+- Correspondance TS2026, numéros 1 à 33 :
+  guitare acoustique : 3, 6, 10, 21, 22, 27
+  guitare électrique : 1, 2, 4, 5, 7, 11, 12, 14, 15, 16, 18, 25, 26, 28, 29, 30, 32
+  clavier : 8, 9, 33
+  autres : pas d'instrument prédéfini
+- Les marqueurs numériques de scène doivent être conservés. La méthode PrivateStageIcons.displayFlags remplace les seuls bits d'instruments TS2026 et conserve les autres annotations.
+- Les icônes héritées du Manager doivent être masquées pour TS2026 afin d'éviter les doublons.
+- Présentation souhaitée : titre → instrument(s) → bouton +, alignés immédiatement à gauche près du titre ; titres longs tronqués sans chevauchement ; ne pas couper les icônes verticalement.
+- Dernier commit Android 189de1b : correction des littéraux de nouvelle ligne dans IntegratedViewerActivity.java ; build réussi.
+- ATTENTION : ne jamais remplacer aveuglément tous les caractères "\\n" dans un fichier Java : les chaînes "\\n" peuvent être des échappements Java valides. Toujours inspecter les lignes modifiées et compiler.
+
+5. VIEWER WEB / PWA — ÉTAT ACTUEL
+- Code principal : viewer-ios/index.html sur main.
+- Service Worker : viewer-ios/sw.js ; manifest : viewer-ios/manifest.webmanifest.
+- Configuration publique Firebase : viewer-ios/firebase-config.js.
+- Déploiement GitHub Pages via workflow "Deploy iPhone Viewer" sur main ; push sur viewer-ios/** déclenche normalement le déploiement automatiquement.
+- Titres des morceaux agrandis : clamp(21px,5.2vw,29px) ; BPM agrandis : clamp(17px,4.3vw,23px).
+- Barre supérieure : EN COURS, WITH FRED, bouton ↻ qui recharge TOUTE la page, bouton CODE.
+- Bandeau supérieur compact, sur UNE ligne : "Synchro au Manager : en cours" pendant la récupération ; "Synchro au Manager : OK" une fois récupéré. La deuxième ligne de statut est masquée.
+- Pied de page en deux colonnes : à gauche nom de playlist et nombre de titres, l'un sous l'autre ; à droite TS PLAYLIST LIVE VIEWER puis version V1.02 et nombre de viewers connectés.
+- Compteur de viewers via Firebase Realtime Database Presence si disponible ; ne pas inventer le nombre.
+- Dernière optimisation web (commit cfa2a32) : affichage immédiat de la dernière playlist depuis localStorage, puis rafraîchissement cloud en arrière-plan. Le cache est lié au code ; le cache est mis à jour après récupération du Cloud. Intervalle de sync : 2000 ms. Premier chargement nécessite toujours Internet ; les ouvertures suivantes peuvent afficher les données mises en cache.
+- Clés localStorage web : ts_viewer_code, ts_viewer_cache, ts_viewer_cache_code ; codes de résolution ts_resolved_code et ts_resolved_blob.
+- Ne pas casser EN COURS, WITH FRED, titres désactivés, medleys, liens YouTube, lecteur, ni la synchro.
+
+6. CLOUD / FIREBASE — CONFIGURATION PUBLIQUE, PAS DE SECRETS PRIVÉS
+- Cloud playlist : SuperJSONBlob API https://superjsonblob.com/api/jsonBlob
+- Code court utilisé : Y6
+- ID du blob de playlist Y6 : d7e6c82a-82e0-4336-8e66-d49b9d013312
+- ID du registre des codes : 95af90a8-317b-4588-b7ab-5153db677527
+- Les IDs sont des références techniques, PAS des mots de passe. Vérifier les valeurs courantes dans viewer-ios/index.html et les sources Android avant de les changer.
+- Firebase public projectId : ts-playlist-live
+- Firebase authDomain : ts-playlist-live.firebaseapp.com
+- Firebase databaseURL : https://ts-playlist-live-default-rtdb.europe-west1.firebasedatabase.app
+- Firebase messagingSenderId : 255608920071
+- Firebase appId public : 1:255608920071:web:525b48d4ae7e2fdb41f2a2
+- Firebase Web API key : lire la valeur PUBLIQUE directement dans viewer-ios/firebase-config.js ; ne pas confondre avec une clé de service privée. Aucune clé de compte de service, aucun jeton d'authentification ni keystore privé dans ce fichier.
+- Les règles de base Firebase sont dans viewer-ios/firebase-database.rules.json ; préserver le contrôle d'accès.
+- Le Viewer web utilise un endpoint SuperJSONBlob et des proxys CORS de secours. Ne pas modifier les IDs/URLs sans besoin explicite.
+
+7. GITHUB — MÉTHODE DE TRAVAIL POUR UNE NOUVELLE CONVERSATION
+1) Ouvrir ce TXT et identifier si la demande vise WEB ou ANDROID.
+2) Utiliser le connecteur GitHub du compte ; lire les fichiers concernés sur la BONNE branche.
+3) Vérifier la tête de branche actuelle et les derniers commits : les SHA ci-dessus sont des points de repère datés, pas des valeurs éternelles.
+4) Modifier directement le(s) fichier(s) dans GitHub avec le SHA du blob actuel ; committer avec un message clair.
+5) Inspecter le diff et vérifier les erreurs de syntaxe ; pour Android, vérifier le résultat du workflow V1.05 et les logs. Ne pas annoncer un succès non vérifié.
+6) Indiquer à l'utilisateur le commit SHA, la branche, ce qui a changé, et le lien de workflow.
+7) Pour Android : conserver STRICTEMENT package et signature afin d'installer sur l'application déjà présente avec les données.
+8) Pour WEB : ne pas toucher au Manager. Le déploiement GitHub Pages peut être automatique ; vérifier son état.
+9) Après des modifications importantes, actualiser ce fichier de reprise et sa date, à la fois sur GitHub et en téléchargement.
+10) Ne pas publier les secrets GitHub Actions dans ce fichier, ni demander à l'utilisateur de les recopier. Ils restent dans GitHub.
+
+8. LIENS UTILES
+Dépôt : https://github.com/jiminix/TS-LiveSet
+Branche Android : https://github.com/jiminix/TS-LiveSet/tree/manager-v105-safe-migration
+Build Android stable : https://github.com/jiminix/TS-LiveSet/actions/workflows/build-manager-v105.yml
+Branche web : https://github.com/jiminix/TS-LiveSet/tree/main
+Déploiement web : https://github.com/jiminix/TS-LiveSet/actions/workflows/deploy-ios-viewer.yml
+Dernier build Android réussi : https://github.com/jiminix/TS-LiveSet/actions/runs/42673492181
+
+IMPORTANT : Ce document sert de CONTEXTE DE REPRISE. Il ne remplace pas la consultation du code GitHub en temps réel. Il contient les identifiants publics nécessaires, mais PAS les secrets de signature ou d'authentification.
