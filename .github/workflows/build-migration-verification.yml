@@ -88,8 +88,9 @@ jobs:
                     if(remoteBackup==null || remoteBackup.optJSONArray("songs")==null
                         || remoteBackup.optJSONArray("setlists")==null)
                         throw new Exception("Publication bloquee : sauvegarde Cloud absente");'''
-          assert old in source
+          assert 'JSONObject remoteBackup=remote.optJSONObject("manager_backup");' in source
           source=source.replace(old,new,1)
+          assert 'Publication bloquee' in source
           old_end='''                }catch(Exception ignored){}
 
                 // Stable direct pairing: Y6 always points to the same Internet blob.'''
