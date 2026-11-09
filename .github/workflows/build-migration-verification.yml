@@ -22,8 +22,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      # Only use the original installed app signing certificate. Never create a replacement.
-      # Reuse one signing certificate for all future CLOUD RESTORE TEST builds.
+      # Only use the original installed app signing certificate. Never create a replacement.\n      # Reuse one signing certificate for all future CLOUD RESTORE TEST builds.
       # For durable storage, set the GitHub Actions secret
       # CLOUD_RESTORE_TEST_KEYSTORE_BASE64 to the base64 of this keystore.
       # The fixed-key cache is a fallback only (GitHub may evict caches).
@@ -70,13 +69,12 @@ jobs:
           data=data.replace('versionCode 87','versionCode 91')
           data=data.replace("versionName '0.87'","versionName '0.91-migration-test'")
           gradle.write_text(data)
-          # This isolated verification app may READ a cloud backup but never
-          # publish playlists, overwrite backups or update the shared registry.
+          # Verify cloud-only recovery without allowing cloud writes.
           cloud=Path('app/src/main/java/com/jiminix/liveset/PlaylistCloudSync.java')
           source=cloud.read_text()
           signature='private static JSONObject requestJson(String method,String url,JSONObject payload) throws Exception{'
           assert signature in source
-          source=source.replace(signature,signature+'\n        if (BuildConfig.APPLICATION_ID.endsWith(".migrationtest")) throw new UnsupportedOperationException("Migration test: cloud writes disabled");',1)
+          source=source.replace(signature,signature+'\\n        if (BuildConfig.APPLICATION_ID.endsWith(".migrationtest")) throw new UnsupportedOperationException("Migration test: cloud writes disabled");',1)
           fallback='backup=AppStore.getFullBackupLocal(app);'
           assert fallback in source
           source=source.replace(fallback,'backup=null; // Migration verification: cloud-only restore',1)
@@ -117,78 +115,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Manager-MIGRATION-TEST-V0.91-isolated
-          path: app/build/outputs/apk/debug/app-debug.apk      - name: Verify stable isolated signing certificate
-        env:
-          TEST_KEYSTORE_BASE64: ${{ secrets.CLOUD_RESTORE_TEST_KEYSTORE_BASE64 }}
-        run: |
-          mkdir -p .signing
-          if [ -n "$TEST_KEYSTORE_BASE64" ]; then
-            printf '%s' "$TEST_KEYSTORE_BASE64" | base64 --decode > .signing/liveset-debug.keystore
-          fi
-          if [ ! -s .signing/liveset-debug.keystore ]; then
-            echo "::error::Stable migration test signing key unavailable. Never generate a replacement."
-            exit 1
-          fi
-          ACTUAL="$(keytool -list -v -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android | sed -n 's/.*SHA256: //p' | head -1 | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          EXPECTED="C3442E5EEF079FE39ECE2DA2EB158799151638AAE35093E97BBA2F270A9A9321"
-          if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "::error::Migration test signing certificate mismatch."
-            exit 1
-          fi
-      - name: Show OAuth Android certificate fingerprint
-        run: |
-          keytool -list -v -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android | grep -E 'SHA1:|SHA256:'
-      - name: Install image tools
-        run: python3 -m pip install --quiet Pillow
-      - name: Prepare isolated test application
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          # Android resource filenames must be lowercase; normalize both uploaded logos.
-          for folder in (Path('app/src/main/res/drawable'),Path('viewer/src/main/res/drawable')):
-              for source in folder.glob('Meryl_*.png'):
-                  source.rename(source.with_name(source.name.lower()))
-          gradle=Path('app/build.gradle')
-          data=gradle.read_text()
-          assert "applicationId 'com.jiminix.liveset'" in data
-          data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.migrationtest'")
-          data=data.replace('versionCode 87','versionCode 90')
-          data=data.replace("versionName '0.87'","versionName '0.90-restore-test'")
-          gradle.write_text(data)
-          manifest=Path('app/src/main/AndroidManifest.xml')
-          data=manifest.read_text()
-          assert 'com.jiminix.liveset.playlists' in data
-          data=data.replace('com.jiminix.liveset.playlists','com.jiminix.liveset.migrationtest.playlists')
-          data=data.replace('com.jiminix.liveset.permission.READ_VIEWER','com.jiminix.liveset.migrationtest.permission.READ_VIEWER')
-          data=data.replace('android:label="TS Playlist Manager"','android:label="Manager RESTORE TEST"')
-          # Use the existing manager artwork as a standard launcher icon in the isolated APK.
-          data=data.replace('android:icon="@drawable/ic_launcher_manager"', 'android:icon="@mipmap/ic_launcher"')
-          manifest.write_text(data)
-          icon=Path('app/src/main/res/drawable/file_000000009be48210a05eb858507ea6eb.png')
-          assert icon.is_file(), 'Manager custom icon not found'
-          from PIL import Image
-          artwork=Image.open(icon).convert('RGBA')
-          artwork.thumbnail((340,340),Image.Resampling.LANCZOS)
-          # The legacy icon is opaque, so the Samsung launcher cannot show a blank tile.
-          legacy=Image.new('RGBA',(432,432),(0,0,0,0))
-          legacy.alpha_composite(artwork,((432-artwork.width)//2,(432-artwork.height)//2))
-          target=Path('app/src/main/res/mipmap-nodpi/ic_launcher.png')
-          target.parent.mkdir(parents=True,exist_ok=True)
-          legacy.save(target)
-          # Adaptive icon: direct foreground drawable, never a self-referencing mipmap.
-          foreground=Image.new('RGBA',(432,432),(0,0,0,0))
-          foreground.alpha_composite(artwork,((432-artwork.width)//2,(432-artwork.height)//2))
-          fg_path=Path('app/src/main/res/drawable/tequila_manager_foreground.png')
-          foreground.save(fg_path)
-          adaptive=Path('app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml')
-          adaptive.parent.mkdir(parents=True,exist_ok=True)
-          adaptive.write_text('''<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@android:color/transparent"/>\n    <foreground android:drawable="@drawable/tequila_manager_foreground"/>\n</adaptive-icon>\n''')
-          PY
-          test -f .signing/liveset-debug.keystore
-      - name: Build recovery test APK
-        run: gradle :app:assembleDebug
-      - name: Upload recovery test APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Manager-CLOUD-RESTORE-TEST-isolated
           path: app/build/outputs/apk/debug/app-debug.apk
