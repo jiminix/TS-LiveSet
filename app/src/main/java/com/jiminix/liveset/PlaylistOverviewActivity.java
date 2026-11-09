@@ -285,7 +285,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
     private void buildUi(){
         root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(10,10,10));
+        Ui.applyTequilaBackground(root);
 
         LinearLayout head=Ui.row(this);
         head.setPadding(Ui.dp(this,2),Ui.dp(this,2),Ui.dp(this,2),Ui.dp(this,2));
@@ -360,7 +360,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
         recycler=new RecyclerView(this);
         recycler.setLayoutManager(new LinearLayoutManager(this));
-        recycler.setBackgroundColor(Color.rgb(10,10,10));
+        recycler.setBackgroundColor(Color.TRANSPARENT);
         recycler.setPadding(Ui.dp(this,3),0,Ui.dp(this,3),Ui.dp(this,8));
         recycler.setClipToPadding(false);
 
