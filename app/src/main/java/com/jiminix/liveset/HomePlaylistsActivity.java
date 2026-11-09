@@ -62,7 +62,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         FrameLayout shell=new FrameLayout(this);
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(18,18,18));
+        Ui.applyTequilaBackground(root);
 
         PlaylistBannerView banner=new PlaylistBannerView(this);
         root.addView(banner,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -116,7 +116,7 @@ public class HomePlaylistsActivity extends AppCompatActivity {
 
         recycler=new RecyclerView(this);
         recycler.setLayoutManager(new LinearLayoutManager(this));
-        recycler.setBackgroundColor(Color.rgb(18,18,18));
+        recycler.setBackgroundColor(Color.TRANSPARENT);
         recycler.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,70));
         recycler.setClipToPadding(false);
         adapter=new PlaylistHomeAdapter();
