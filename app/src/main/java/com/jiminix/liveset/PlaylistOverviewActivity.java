@@ -1505,10 +1505,10 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             keyboardIcon.setMinWidth(0);
             keyboardIcon.setPadding(Ui.dp(PlaylistOverviewActivity.this,1),0,Ui.dp(PlaylistOverviewActivity.this,1),0);
 
-            stageBox.addView(stage1);
-            stageBox.addView(stage2);
             stageBox.addView(guitarIcon);
             stageBox.addView(keyboardIcon);
+            stageBox.addView(stage1);
+            stageBox.addView(stage2);
 
             TextView validate=new TextView(PlaylistOverviewActivity.this);
             validate.setText("✓");
@@ -1547,15 +1547,15 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             row.addView(num);
             row.addView(play);
             row.addView(song);
-            row.addView(stageBox);
             TextView addIcons=new TextView(PlaylistOverviewActivity.this);
             addIcons.setText("+");
             addIcons.setTextColor(Color.rgb(255,193,7));
             addIcons.setTextSize(18);
             addIcons.setGravity(Gravity.CENTER);
             addIcons.setContentDescription("Ajouter des icônes privées");
-            addIcons.setLayoutParams(new LinearLayout.LayoutParams(zdp(22),zdp(32)));
+            addIcons.setLayoutParams(new LinearLayout.LayoutParams(zdp(18),zdp(32)));
             row.addView(addIcons);
+            row.addView(stageBox);
             row.addView(bpm);
             row.addView(validate);
             row.addView(disable);
@@ -1643,18 +1643,18 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             Song s=AppStore.findSong(PlaylistOverviewActivity.this,id);
 
             h.itemView.setMinimumHeight(zdp(compact?32:42));
-            h.num.setMinWidth(zdp(28));
+            h.num.setMinWidth(zdp(23));
             h.num.setText(String.format("%02d",position+1));
             h.num.setTextSize(zsp(compact?12:16));
             h.play.setTextSize(zsp(15));
-            h.play.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
-            h.song.setTextSize(zsp(compact?17.2f:22.5f));
+            h.play.setLayoutParams(new LinearLayout.LayoutParams(zdp(22),zdp(compact?32:40)));
+            h.song.setTextSize(zsp(compact?16.5f:21f));
             h.song.setIncludeFontPadding(false);
             h.song.setSingleLine(true);
             h.song.setEllipsize(android.text.TextUtils.TruncateAt.END);
             h.song.setPadding(zdp(2),0,zdp(2),0);
             h.bpm.setTextSize(zsp(compact?12:15));
-            h.bpm.setPadding(zdp(2),0,0,0);
+            h.bpm.setPadding(0,0,0,0);
             h.song.setSingleLine(compact);
 
             h.validate.setTextSize(zsp(20));
@@ -1662,11 +1662,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.validate.setVisibility(AppStore.isInProgressSetlist(setlist.id)?View.VISIBLE:View.GONE);
 
             h.disable.setTextSize(zsp(17));
-            h.disable.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
+            h.disable.setLayoutParams(new LinearLayout.LayoutParams(zdp(22),zdp(compact?32:40)));
             h.delete.setTextSize(zsp(16));
-            h.delete.setLayoutParams(new LinearLayout.LayoutParams(zdp(34),zdp(compact?32:40)));
+            h.delete.setLayoutParams(new LinearLayout.LayoutParams(zdp(25),zdp(compact?32:40)));
             h.handle.setTextSize(zsp(20));
-            h.handle.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
+            h.handle.setLayoutParams(new LinearLayout.LayoutParams(zdp(23),zdp(compact?32:40)));
 
             boolean medley=s!=null && isMedleySong(s) && !s.medleyItems.isEmpty();
             boolean medleyExpanded=medley && expandedMedleys.contains(id);
@@ -1713,7 +1713,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     zdp(28)
                 ));
-                h.stageBox.setPadding(zdp(2),0,zdp(2),0);
+                h.stageBox.setPadding(0,0,0,0);
 
                 GradientDrawable stageBg=new GradientDrawable();
                 stageBg.setColor(Color.BLACK);
@@ -1729,8 +1729,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.stage1.setTextColor(Color.WHITE);
                 h.stage1.setTextSize(zsp(12));
                 h.stage1.setGravity(Gravity.CENTER);
-                h.stage1.setPadding(zdp(2),0,zdp(2),0);
-                h.stage2.setPadding(zdp(2),0,zdp(2),0);
+                h.stage1.setPadding(zdp(1),0,zdp(1),0);
+                h.stage2.setPadding(zdp(1),0,zdp(1),0);
                 h.guitarIcon.setPadding(zdp(1),0,zdp(1),0);
                 h.keyboardIcon.setPadding(zdp(1),0,zdp(1),0);
                 if(showNum1) h.stage1.setText(twoDigits(s.stageNum1));
