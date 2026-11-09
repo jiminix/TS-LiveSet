@@ -75,7 +75,7 @@ jobs:
           source=cloud.read_text()
           signature='private static JSONObject requestJson(String method,String url,JSONObject payload) throws Exception{'
           assert signature in source
-          source=source.replace(signature,signature+chr(10)+'        if (BuildConfig.APPLICATION_ID.endsWith(".migrationtest")) throw new UnsupportedOperationException("Migration test: cloud writes disabled");',1)
+          source=source.replace(signature,signature+chr(10)+'        if ("com.jiminix.liveset.migrationtest".endsWith(".migrationtest")) throw new UnsupportedOperationException("Migration test: cloud writes disabled");',1)
           fallback='backup=AppStore.getFullBackupLocal(app);'
           assert fallback in source
           source=source.replace(fallback,'backup=null; // Migration verification: cloud-only restore',1)
