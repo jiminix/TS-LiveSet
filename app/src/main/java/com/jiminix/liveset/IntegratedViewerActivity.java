@@ -501,6 +501,16 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         refreshPlaylist();
     }
 
+    private int requestedInstrumentFlag(int position){
+        switch(position){
+            case 3: case 6: case 10: case 21: case 22: case 27: return 1; // acoustic
+            case 4: case 11: case 15: case 16: case 18: case 25: case 26:
+            case 29: case 30: case 32: return 2; // electric
+            case 8: case 9: case 33: return 4; // keyboard
+            default: return 0;
+        }
+    }
+
     private void addSongRow(int number,Song song,boolean disabled,LinearLayout target){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -526,7 +536,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         String bpm=song==null?"":song.bpm;
         name.setText((medley?(medleyExpanded?"▾ ":"▸ "):"")+(title==null?"":title));
         name.setTextColor(Color.WHITE);
-        name.setTextSize(tabletLayout?18f:zsp(26.5f));
+        name.setTextSize(tabletLayout?16f:zsp(21f));
         name.setIncludeFontPadding(false);
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -537,7 +547,10 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         row.addView(name,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,1));
         LinearLayout privateIcons=new LinearLayout(this);
         privateIcons.setGravity(Gravity.CENTER_VERTICAL);
-        PrivateStageIcons.show(this,privateIcons,PrivateStageIcons.flags(this,privateListId,song.id,0,privateSeed?number-1:-1),zdp(20),privateListId,song.id,0);
+        int savedFlags=PrivateStageIcons.flags(this,privateListId,song.id,0,privateSeed?number-1:-1);
+        // TS 2026: only the requested instrument per position; preserve other private markers.
+        int displayFlags=privateSeed ? ((savedFlags & ~7) | requestedInstrumentFlag(number)) : savedFlags;
+        PrivateStageIcons.show(this,privateIcons,displayFlags,zdp(20),privateListId,song.id,0);
         row.addView(privateIcons);
         TextView addIcons=new TextView(this);
         addIcons.setText("+"); addIcons.setTextColor(Color.rgb(255,193,7));
@@ -550,7 +563,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         boolean hasStageInfo=song!=null && (
             (song.stageNum1!=null && !song.stageNum1.trim().isEmpty()) ||
             (song.stageNum2!=null && !song.stageNum2.trim().isEmpty()) ||
-            song.stageGuitar || song.stageKeyboard
+            (!privateSeed && (song.stageGuitar || song.stageKeyboard))
         );
 
         if(hasStageInfo){
@@ -589,7 +602,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 ));
             }
 
-            if(song.stageGuitar){
+            if(song.stageGuitar && !privateSeed){
                 TextView guitar=new TextView(this);
                 guitar.setText("🎸");
                 guitar.setTextSize(zsp(14));
@@ -600,7 +613,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
                 ));
             }
 
-            if(song.stageKeyboard){
+            if(song.stageKeyboard && !privateSeed){
                 TextView keyboard=new TextView(this);
                 keyboard.setText("🎹");
                 keyboard.setTextSize(zsp(14));
