@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.jiminix.liveset'
+        applicationId 'com.jiminix.liveset.v105'
         minSdk 26
         targetSdk 35
-        versionCode 87
-        versionName '0.87'
+        versionCode 105
+        versionName '1.05'
     }
 
     signingConfigs {
