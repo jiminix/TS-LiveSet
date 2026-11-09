@@ -16,6 +16,14 @@ public final class LocalWifiServer {
     private static ServerSocket server;
     private static volatile boolean running;
     private static final int PORT=8765;
+    private static final java.util.concurrent.ConcurrentHashMap<String,Long> viewers=new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long VIEWER_TTL_MS=12000;
+    private static int activeViewers(String clientId){
+        long now=System.currentTimeMillis();
+        viewers.entrySet().removeIf(e->now-e.getValue()>VIEWER_TTL_MS);
+        if(clientId!=null && clientId.matches("[A-Za-z0-9_-]{8,100}"))viewers.put(clientId,now);
+        return viewers.size();
+    }
     private LocalWifiServer(){}
     public static synchronized boolean start(Context context){
         if(running)return true;
@@ -40,6 +48,7 @@ public final class LocalWifiServer {
         running=false;
         try{if(server!=null)server.close();}catch(Exception ignored){}
         server=null;
+        viewers.clear();
     }
     public static boolean isRunning(){return running;}
     private static JSONObject playlist(Context c,SetListModel sl)throws Exception{
@@ -94,7 +103,20 @@ public final class LocalWifiServer {
             String[] parts=request.split("\\s+");
             String path=parts.length>1?parts[1]:"/";
             String body;String type;
-            if(path.startsWith("/api/playlist")){
+            if(path.startsWith("/api/viewers")){
+                String clientId=null;
+                int q=path.indexOf('?');
+                if(q>=0){
+                    for(String part:path.substring(q+1).split("&")){
+                        if(part.startsWith("id=")){clientId=part.substring(3);break;}
+                    }
+                }
+                JSONObject response=new JSONObject();
+                response.put("connected",activeViewers(clientId));
+                response.put("windowSeconds",12);
+                body=response.toString();
+                type="application/json; charset=utf-8";
+            }else if(path.startsWith("/api/playlist")){
                 body=snapshot(c).toString();
                 type="application/json; charset=utf-8";
             }else if(path.equals("/")||path.startsWith("/index")){
