@@ -91,6 +91,30 @@ public class HomePlaylistsActivity extends AppCompatActivity {
         backupRow.addView(undo);
         backupRow.addView(restoreAll);
         root.addView(backupRow);
+        Button localMode=Ui.button(this,"📶 MODE LOCAL · DÉMARRER");
+        localMode.setTextSize(12);
+        localMode.setOnClickListener(v->{
+            if(LocalWifiServer.isRunning()){
+                LocalWifiServer.stop();
+                localMode.setText("📶 MODE LOCAL · DÉMARRER");
+                Toast.makeText(this,"Serveur local arrêté",Toast.LENGTH_SHORT).show();
+            }else if(LocalWifiServer.start(this)){
+                localMode.setText("📶 MODE LOCAL · ACTIF");
+                new AlertDialog.Builder(this)
+                    .setTitle("Viewer Wi-Fi local actif")
+                    .setMessage("Sur ce téléphone, ouvre Chrome et saisis :\n\nhttp://127.0.0.1:8765\n\nSans Internet. Les playlists sont actualisées toutes les 2 secondes. Garde le Manager ouvert pendant le test.")
+                    .setPositiveButton("OUVRIR LE VIEWER",(d,w)->{
+                        Intent i=new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("http://127.0.0.1:8765"));
+                        startActivity(i);
+                    })
+                    .setNegativeButton("FERMER",null)
+                    .show();
+            }else{
+                Toast.makeText(this,"Impossible de démarrer le serveur local (port 8765)",Toast.LENGTH_LONG).show();
+            }
+        });
+        root.addView(localMode,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,Ui.dp(this,44)));
+
 
         backupInfo=new TextView(this);
         backupInfo.setText("Dernière sauvegarde : vérification…");
