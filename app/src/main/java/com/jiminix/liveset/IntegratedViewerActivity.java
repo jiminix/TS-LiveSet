@@ -409,7 +409,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             final String lyrics=song.lyrics==null?"":song.lyrics.trim();
             final String[] lines=lyrics.isEmpty()
                 ?new String[]{"Aucune parole enregistrée pour ce morceau."}
-                :lyrics.split("\\n",-1);
+                :lyrics.split("\
+",-1);
             final int[] size={getSharedPreferences("tablet_lyrics",MODE_PRIVATE)
                 .getInt("font_size",18)};
             LinearLayout panel=new LinearLayout(this);
@@ -448,7 +449,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             StringBuilder first=new StringBuilder(),second=new StringBuilder();
             for(int i=0;i<lines.length;i++){
                 StringBuilder dest=i<split?first:second;
-                if(dest.length()>0)dest.append("\\n");
+                if(dest.length()>0)dest.append("\
+");
                 dest.append(lines[i]);
             }
             left.setText(first.toString());
@@ -547,7 +549,17 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         addIcons.setTextSize(zsp(17)); addIcons.setGravity(Gravity.CENTER);
         addIcons.setContentDescription("Modifier mes icônes");
         row.addView(addIcons,new LinearLayout.LayoutParams(zdp(20),zdp(30)));
-        // Keep instruments and + immediately after the title; truncate long titles to fit.\n        row.addOnLayoutChangeListener((v,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->{\n            int reserved=0;\n            for(int i=0;i<row.getChildCount();i++){\n                View child=row.getChildAt(i);\n                if(child!=name)reserved+=child.getMeasuredWidth();\n            }\n            int room=Math.max(zdp(48),right-left-row.getPaddingLeft()-row.getPaddingRight()-reserved-zdp(3));\n            if(name.getMaxWidth()!=room)name.setMaxWidth(room);\n        });\n        addIcons.setOnClickListener(v->PrivateStageIcons.edit(this,privateListId,song.id,0,privateSeed?number-1:-1,
+        // Keep instruments and + immediately after the title; truncate long titles to fit.
+        row.addOnLayoutChangeListener((v,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->{
+            int reserved=0;
+            for(int i=0;i<row.getChildCount();i++){
+                View child=row.getChildAt(i);
+                if(child!=name)reserved+=child.getMeasuredWidth();
+            }
+            int room=Math.max(zdp(48),right-left-row.getPaddingLeft()-row.getPaddingRight()-reserved-zdp(3));
+            if(name.getMaxWidth()!=room)name.setMaxWidth(room);
+        });
+        addIcons.setOnClickListener(v->PrivateStageIcons.edit(this,privateListId,song.id,0,privateSeed?number-1:-1,
             ()->{lastSignature="";refreshPlaylist();}));
 
         boolean hasStageInfo=song!=null && (
