@@ -1750,7 +1750,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             if(s!=null){
                 int flags=PrivateStageIcons.flags(PlaylistOverviewActivity.this,setlist.id,s.id,0,
                     setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1);
-                PrivateStageIcons.show(PlaylistOverviewActivity.this,h.stageBox,flags,20);
+                PrivateStageIcons.show(PlaylistOverviewActivity.this,h.stageBox,flags,20,setlist.id,s.id,0);
                 if(flags!=0)h.stageBox.setVisibility(View.VISIBLE);
             }
             h.medleyBox.removeAllViews();
@@ -1786,7 +1786,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                     extra.setGravity(Gravity.CENTER_VERTICAL);
                     PrivateStageIcons.show(PlaylistOverviewActivity.this,extra,
                         PrivateStageIcons.flags(PlaylistOverviewActivity.this,setlist.id,s.id,part,
-                            setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1),20);
+                            setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1),20,setlist.id,s.id,part);
                     TextView plus=new TextView(PlaylistOverviewActivity.this);
                     plus.setText("+"); plus.setTextColor(Color.rgb(255,193,7)); plus.setTextSize(18);
                     plus.setPadding(zdp(6),0,zdp(6),0);
