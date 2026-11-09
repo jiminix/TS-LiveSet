@@ -72,7 +72,7 @@ public class ImportActivity extends AppCompatActivity {
     private void buildUi() {
         LinearLayout outer = new LinearLayout(this);
         outer.setOrientation(LinearLayout.VERTICAL);
-        outer.setBackgroundColor(Color.rgb(18,18,18));
+        Ui.applyTequilaBackground(outer.setBackgroundColor(Color.rgb(18,18,18));)
 
         LinearLayout head = Ui.row(this);
         Button back = Ui.button(this, "‹");
