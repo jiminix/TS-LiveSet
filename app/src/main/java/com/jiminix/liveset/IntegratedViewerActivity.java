@@ -501,16 +501,6 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         refreshPlaylist();
     }
 
-    private int requestedInstrumentFlag(int position){
-        switch(position){
-            case 3: case 6: case 10: case 21: case 22: case 27: return 1; // acoustic
-            case 4: case 11: case 15: case 16: case 18: case 25: case 26:
-            case 29: case 30: case 32: return 2; // electric
-            case 8: case 9: case 33: return 4; // keyboard
-            default: return 0;
-        }
-    }
-
     private void addSongRow(int number,Song song,boolean disabled,LinearLayout target){
         LinearLayout row=new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -549,8 +539,8 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         privateIcons.setGravity(Gravity.CENTER_VERTICAL);
         int savedFlags=PrivateStageIcons.flags(this,privateListId,song.id,0,privateSeed?number-1:-1);
         // TS 2026: only the requested instrument per position; preserve other private markers.
-        int displayFlags=privateSeed ? ((savedFlags & ~7) | requestedInstrumentFlag(number)) : savedFlags;
-        PrivateStageIcons.show(this,privateIcons,displayFlags,zdp(20),privateListId,song.id,0);
+        int displayFlags=PrivateStageIcons.displayFlags(savedFlags,privateSeed,number);
+        PrivateStageIcons.show(this,privateIcons,displayFlags,14,privateListId,song.id,0);
         row.addView(privateIcons);
         TextView addIcons=new TextView(this);
         addIcons.setText("+"); addIcons.setTextColor(Color.rgb(255,193,7));
