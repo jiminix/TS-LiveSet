@@ -75,7 +75,7 @@ button,input{font:inherit}
   <div class="actions">
     <button id="progressBtn" class="btn red">EN COURS</button>
     <button id="fredBtn" class="btn yellow">WITH FRED</button>
-    <button id="syncBtn" class="btn dark">↻</button>
+    <button id="syncBtn" class="btn dark" title="Actualiser toute la page" aria-label="Actualiser toute la page">↻</button>
     <button id="codeBtn" class="btn dark">CODE</button>
   </div>
 </header>
@@ -406,7 +406,7 @@ $("closePlayer").onclick=closePlayer;
 $("playerModal").addEventListener("click",e=>{if(e.target===$("playerModal"))closePlayer()});
 $("progressBtn").onclick=()=>switchPlaylist("progress");
 $("fredBtn").onclick=()=>switchPlaylist("fred");
-$("syncBtn").onclick=sync;
+$("syncBtn").onclick=()=>window.location.reload();
 $("codeBtn").onclick=openCode;
 $("cancelCode").onclick=()=>$("modal").classList.remove("show");
 $("saveCode").onclick=()=>{const c=cleanCode($("codeInput").value);if(!c){return}localStorage.setItem(KEY_CODE,c);localStorage.removeItem(KEY_CACHE);$("modal").classList.remove("show");lastSignature="";sync()};
