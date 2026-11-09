@@ -145,7 +145,8 @@ public final class PlaylistCloudSync {
 
     public static void maybePublish(Context c){
         // Side-by-side migration safety: never automatically publish empty V1.05 data.
-        if ("com.jiminix.liveset.v105".equals(c.getPackageName())) return;
+        if ("com.jiminix.liveset.v105".equals(c.getPackageName()) &&
+            (AppStore.loadSongs(c).isEmpty() || AppStore.loadSetlists(c).isEmpty())) return;
         if(!isConfigured(c))return;
         Context app=c.getApplicationContext();
         synchronized(PlaylistCloudSync.class){
@@ -380,6 +381,11 @@ public final class PlaylistCloudSync {
     }
 
     public static void publishSelected(Context c, Listener listener){
+        if ("com.jiminix.liveset.v105".equals(c.getPackageName()) &&
+            (AppStore.loadSongs(c).isEmpty() || AppStore.loadSetlists(c).isEmpty())) {
+            if(listener!=null) MAIN.post(()->listener.onError("Restaure les playlists avant la synchronisation."));
+            return;
+        }
         Context app=c.getApplicationContext();
         new Thread(()->{
             try{
