@@ -89,7 +89,9 @@ jobs:
                         || remoteBackup.optJSONArray("setlists")==null)
                         throw new Exception("Publication bloquee : sauvegarde Cloud absente");'''
           assert 'JSONObject remoteBackup=remote.optJSONObject("manager_backup");' in source
-          source=source.replace(old,new,1)
+          begin=source.index('                // Preserve the independent global backup')
+          finish=source.index('                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");',begin)+len('                    JSONObject remoteBackup=remote.optJSONObject("manager_backup");')
+          source=source[:begin]+new+source[finish:]
           assert 'Publication bloquee' in source
           old_end='''                }catch(Exception ignored){}
 
