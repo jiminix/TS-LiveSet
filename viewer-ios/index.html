@@ -13,15 +13,15 @@
 :root{--bg:#10151a;--panel:#202830;--panel2:#181e23;--text:#fff;--muted:#aeb6bd;--red:#c62828;--line:#303941;--disabled:.5}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;min-height:100%;overscroll-behavior:none}
-body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);background-image:linear-gradient(rgba(10,13,19,.88),rgba(10,13,19,.88)),url("./tequila-viewer.svg");background-position:center;background-size:cover;background-attachment:fixed}
+body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);background-image:linear-gradient(rgba(10,13,19,.57),rgba(10,13,19,.70)),url("./tequila-viewer.svg");background-position:center;background-size:cover;background-attachment:fixed}
 button,input{font:inherit}
-.top{position:sticky;top:0;z-index:10;background:var(--panel);padding:7px 8px 6px;border-bottom:1px solid #3a444d}
-.app{font-size:18px;font-weight:800;text-align:center;line-height:1.05}
-.headrow{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
-.playname{font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw;text-align:center}
-.count{font-size:16px;font-weight:800;white-space:nowrap}
-.actions{display:flex;gap:7px;margin-top:6px}
-.btn{border:0;border-radius:6px;background:#fff;color:#111;min-height:36px;padding:4px 12px;font-weight:800}
+.top{position:sticky;top:0;z-index:10;background:var(--panel);padding:2px 6px 2px;border-bottom:1px solid #3a444d}
+.app{display:none}
+.headrow{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:0}
+.playname{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw;text-align:center}
+.count{font-size:13px;font-weight:800;white-space:nowrap}
+.actions{display:flex;gap:5px;margin-top:2px}
+.btn{border:0;border-radius:6px;background:#fff;color:#111;min-height:28px;padding:2px 9px;font-weight:800}
 .btn.red{background:var(--red);color:#fff}
 .btn.yellow{background:#f7d129;color:#161616}
 .btn.dark{background:#080b0e;color:#fff}
@@ -29,7 +29,7 @@ button,input{font:inherit}
 .banner{margin:7px 8px;padding:8px;border-radius:7px;background:#171d22;color:#fff;text-align:center;font-size:11px;font-weight:700;line-height:1.2}
 .status{margin:0 8px 6px;color:var(--muted);font-size:10px;text-align:center}
 .list{padding:0 6px 70px}
-.song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:rgba(17,22,27,.82)}
+.song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:rgba(17,22,27,.70)}
 .num{width:27px;text-align:center;font-weight:900;font-size:14px;flex:0 0 27px}
 .title{font-weight:800;font-size:15px;line-height:1.08;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bpm{font-size:11px;color:#d9dee2;min-width:32px;text-align:right}
@@ -64,13 +64,13 @@ button,input{font:inherit}
 .small{color:var(--muted);font-size:12px;line-height:1.35;margin:9px 0 14px}
 .modal-actions{display:flex;gap:8px}
 .modal-actions .btn{flex:1}
-footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid #3a444d;text-align:center;font-size:10px;color:#b9c0c5;z-index:9}
+footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid #3a444d;text-align:center;font-size:10px;color:#b9c0c5;z-index:9}
 @media (max-width:380px){.playname{font-size:18px}.title{font-size:14px}.btn{padding:4px 9px}}
 </style>
 </head>
 <body>
 <header class="top">
-  <div class="app">TS Playlist 2026</div>
+  
   <div class="headrow"><div id="playlistName" class="playname">Connexion Viewer</div><div id="count" class="count">0 titres</div></div>
   <div class="actions">
     <button id="progressBtn" class="btn red">EN COURS</button>
@@ -82,7 +82,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.96</footer>
+<footer><strong>TS PLAYLIST</strong> · V0.96 · <span id="viewerPresence">Viewers connectés : non mesurés</span></footer>
 
 <div id="modal" class="modal">
   <div class="card">
