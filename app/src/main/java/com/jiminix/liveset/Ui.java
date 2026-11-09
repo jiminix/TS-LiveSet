@@ -79,44 +79,6 @@ public class Ui {
 
     // Low-contrast neon watermark used across Manager screens.
     public static void applyTequilaBackground(View view) {
-        view.setBackground(new android.graphics.drawable.Drawable() {
-            final android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-            @Override public void draw(android.graphics.Canvas canvas) {
-                android.graphics.Rect b=getBounds();
-                canvas.drawColor(Color.rgb(13,15,21));
-                float w=b.width(),h=b.height();
-                canvas.save();
-                canvas.translate(b.left+w/2f,b.top+h*.49f);
-                float scale=Math.min(w/900f,h/1300f);
-                canvas.scale(scale,scale);
-                paint.setStyle(android.graphics.Paint.Style.STROKE);
-                paint.setStrokeWidth(12);
-                paint.setColor(Color.argb(75,255,0,222));
-                canvas.drawOval(-420,-360,420,300,paint);
-                paint.setStrokeWidth(6);
-                paint.setColor(Color.argb(82,40,230,255));
-                canvas.drawOval(-390,-345,390,285,paint);
-                paint.setStyle(android.graphics.Paint.Style.FILL);
-                paint.setTextAlign(android.graphics.Paint.Align.CENTER);
-                paint.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
-                paint.setTextSize(132);
-                paint.setColor(Color.argb(95,255,36,230));
-                canvas.drawText("TEQUILA",0,-80,paint);
-                paint.setTypeface(Typeface.create("cursive",Typeface.ITALIC));
-                paint.setTextSize(115);
-                paint.setColor(Color.argb(105,50,225,255));
-                canvas.drawText("ungroove",0,55,paint);
-                paint.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));
-                paint.setTextSize(40);
-                canvas.drawText("COVERS 80 | 90 | 00'S",0,150,paint);
-                paint.setTypeface(Typeface.create("sans-serif-black",Typeface.BOLD_ITALIC));
-                paint.setTextSize(138);
-                canvas.drawText("MANAGER",0,490,paint);
-                canvas.restore();
-            }
-            @Override public void setAlpha(int alpha) {}
-            @Override public void setColorFilter(android.graphics.ColorFilter filter) {}
-            @Override public int getOpacity(){return android.graphics.PixelFormat.OPAQUE;}
-        });
+        view.setBackgroundColor(Color.rgb(13,15,21));
     }
 }
