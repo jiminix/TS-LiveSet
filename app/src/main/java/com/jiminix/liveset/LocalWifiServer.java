@@ -94,9 +94,9 @@ public final class LocalWifiServer {
                 type="text/plain; charset=utf-8";
             }
             byte[] payload=body.getBytes(StandardCharsets.UTF_8);
-            String header="HTTP/1.1 200 OK\\r\\nContent-Type: "+type+
-                "\\r\\nCache-Control: no-store\\r\\nAccess-Control-Allow-Origin: *\\r\\nContent-Length: "+
-                payload.length+"\\r\\nConnection: close\\r\\n\\r\\n";
+            String header="HTTP/1.1 200 OK\r\nContent-Type: "+type+
+                "\r\nCache-Control: no-store\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: "+
+                payload.length+"\r\nConnection: close\r\n\r\n";
             OutputStream out=s.getOutputStream();
             out.write(header.getBytes(StandardCharsets.UTF_8));
             out.write(payload);
@@ -105,6 +105,6 @@ public final class LocalWifiServer {
     }
     private static final String HTML="<!doctype html><html lang='fr'><meta name='viewport' content='width=device-width,initial-scale=1'><meta charset='utf-8'><title>TS Playlist LOCAL</title>"+
         "<style>body{background:#10151a;color:white;font:16px Arial;margin:0}header{position:sticky;top:0;background:#202830;padding:8px;text-align:center}button{padding:8px;margin:3px;border:0;border-radius:5px;font-weight:bold}.yellow{background:#f7d129}.red{background:#c62828;color:white}#list{padding:8px}.song{padding:12px 4px;border-bottom:1px solid #35414a}footer{position:fixed;bottom:0;background:#202830;width:100%;text-align:center;font-size:12px;padding:8px}</style>"+
-        "<header><b id='name'>TS PLAYLIST LOCAL</b><div><button onclick=\\"selectList('main')\\">PRINCIPAL</button><button class='red' onclick=\\"selectList('in_progress')\\">EN COURS</button><button class='yellow' onclick=\\"selectList('with_fred')\\">WITH FRED</button></div></header><main id='list'>Chargement...</main><footer>TS PLAYLIST · MODE LOCAL · <span id='status'>Connexion...</span></footer>"+
+        "<header><b id='name'>TS PLAYLIST LOCAL</b><div><button onclick=\"selectList('main')\">PRINCIPAL</button><button class='red' onclick=\"selectList('in_progress')\">EN COURS</button><button class='yellow' onclick=\"selectList('with_fred')\">WITH FRED</button></div></header><main id='list'>Chargement...</main><footer>TS PLAYLIST · MODE LOCAL · <span id='status'>Connexion...</span></footer>"+
         "<script>let selected='main',signature='';function selectList(x){selected=x;signature='';refresh()}async function refresh(){try{const r=await fetch('/api/playlist',{cache:'no-store'});const data=await r.json();const list=selected==='main'?data:data[selected];const s=JSON.stringify(list);if(s!==signature){signature=s;document.getElementById('name').textContent=(list.playlist_name||selected).toUpperCase();const root=document.getElementById('list');root.replaceChildren();(list.songs||[]).forEach((song,i)=>{const row=document.createElement('div');row.className='song';row.textContent=String(i+1).padStart(2,'0')+'  '+song.title+(song.bpm?' · '+song.bpm+' BPM':'');if(song.disabled)row.style.opacity='.45';root.appendChild(row)});if(!list.available)root.textContent='Playlist indisponible';}document.getElementById('status').textContent='Connecté · actualisation 2 s'}catch(e){document.getElementById('status').textContent='Connexion perdue'}}refresh();setInterval(refresh,2000)</script></html>";
 }
