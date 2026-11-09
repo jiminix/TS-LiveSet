@@ -1,4 +1,4 @@
-const CACHE="ts-playlist-viewer-ios-v102";
+const CACHE="ts-playlist-viewer-ios-v103";
 const ASSETS=["./","./index.html","./manifest.webmanifest","./icon.svg","./tequila-viewer.svg"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE)
   .then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
