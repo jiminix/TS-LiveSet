@@ -409,8 +409,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             final String lyrics=song.lyrics==null?"":song.lyrics.trim();
             final String[] lines=lyrics.isEmpty()
                 ?new String[]{"Aucune parole enregistrée pour ce morceau."}
-                :lyrics.split("\
-",-1);
+                :lyrics.split("\n",-1);
             final int[] size={getSharedPreferences("tablet_lyrics",MODE_PRIVATE)
                 .getInt("font_size",18)};
             LinearLayout panel=new LinearLayout(this);
@@ -449,8 +448,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
             StringBuilder first=new StringBuilder(),second=new StringBuilder();
             for(int i=0;i<lines.length;i++){
                 StringBuilder dest=i<split?first:second;
-                if(dest.length()>0)dest.append("\
-");
+                if(dest.length()>0)dest.append("\n");
                 dest.append(lines[i]);
             }
             left.setText(first.toString());
