@@ -215,42 +215,23 @@ function cleanCode(raw){
   return code;
 }
 async function cloudJson(target){
-  const errors=[];
-  // 1) Direct request: Android works this way and some browsers may allow it.
-  try{
-    const freshUrl=target+(target.includes("?")?"&":"?")+"_ts="+Date.now();
-    const res=await fetch(freshUrl,{cache:"no-store",headers:{"Cache-Control":"no-cache"}});
-    if(!res.ok)throw new Error("direct HTTP "+res.status);
-    return await res.json();
-  }catch(e){errors.push("direct: "+(e.message||e))}
-
-  // 2) Public CORS fallbacks. GitHub Pages cannot proxy superjsonblob itself.
-  // AllOrigins is tried first; CorsProxy's shared demo key is the second path.
-  for(const prefix of CORS_PROXIES){
+  // Run direct and CORS fallbacks in parallel instead of waiting for each timeout.
+  // A failed/hanging proxy must never delay a working endpoint.
+  const freshTarget=target+(target.includes("?")?"&":"?")+"_ts="+Date.now();
+  const urls=[freshTarget,...CORS_PROXIES.map(prefix=>prefix+encodeURIComponent(freshTarget))];
+  const attempts=urls.map(async (url,index)=>{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),index===0?6000:8000);
     try{
-      const freshTarget=target+(target.includes("?")?"&":"?")+"_ts="+Date.now();
-      const proxied=prefix+encodeURIComponent(freshTarget);
-      const res=await fetch(proxied,{cache:"no-store"});
-      if(!res.ok)throw new Error("proxy HTTP "+res.status);
-      const raw=await res.text();
-
-      // AllOrigins /get-style wrappers are also accepted if a proxy changes
-      // its response format.
-      try{
-        const parsed=JSON.parse(raw);
-        if(parsed && typeof parsed.contents==="string"){
-          return JSON.parse(parsed.contents);
-        }
-        return parsed;
-      }catch(_){
-        return JSON.parse(raw);
-      }
-    }catch(e){errors.push((prefix.includes("allorigins")?"allOrigins":"CorsProxy")+": "+(e.message||e))}
-  }
-
-  throw new Error("Connexion cloud impossible · "+errors.join(" · "));
+      const response=await fetch(url,{cache:"no-store",signal:controller.signal});
+      if(!response.ok)throw new Error("HTTP "+response.status);
+      const parsed=await response.json();
+      return typeof parsed?.contents==="string"?JSON.parse(parsed.contents):parsed;
+    }finally{clearTimeout(timeout)}
+  });
+  try{return await Promise.any(attempts)}
+  catch(e){throw new Error("Connexion cloud impossible (direct et relais indisponibles)")}
 }
-
 async function resolveCode(raw){
   const code=cleanCode(raw);
   if(!/^[A-Z][0-9]$/.test(code))return code;
@@ -428,7 +409,7 @@ try{
   }
 }catch(_){currentPayload=null;}
 sync();
-setInterval(sync,2000);
+setInterval(sync,8000);
 // Firebase presence is initialized only when the project's public web config
 // is supplied. No fictitious counts are displayed while unconfigured.
 (async function initOnlinePresence(){
