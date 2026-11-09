@@ -25,3 +25,10 @@ L'ancienne clé privée n'a pas été récupérée.
 
 ## Sécurité
 Ne jamais committer de keystore ou secret. Ne pas générer une clé de remplacement pour une mise à jour directe de V1.04. Ne pas désinstaller V1.04 sans export/restauration vérifiés.
+
+## Avancement du 2026-11-09
+- V1.05 reste sur la branche dédiée.
+- Nouvelle garde dans PlaylistCloudSync : impossible de sauvegarder vers le cloud depuis une installation V1.05 sans chansons ou sans playlists.
+- Workflow `.github/workflows/build-manager-v105.yml` créé : compilation sur demande, clé de signature obligatoire via secret `MANAGER_V105_KEYSTORE_BASE64`, empreinte attendue via variable `MANAGER_V105_CERT_SHA256`, aucun renouvellement automatique de clé.
+- Il faut créer et conserver une nouvelle clé durable et renseigner ces paramètres avant de produire un APK. Le build n'a pas encore été validé.
+- Le fichier de reprise Android ne remplace PAS la sauvegarde des playlists.
