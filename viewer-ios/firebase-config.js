@@ -1,9 +1,9 @@
-// Fill with the Firebase project's PUBLIC web-app configuration.
-// Do not place private keys or service account credentials here.
 window.TS_FIREBASE_CONFIG = {
-  databaseURL: 'https://ts-playlist-live-default-rtdb.europe-west1.firebasedatabase.app',
-  apiKey: '',
-  authDomain: 'ts-playlist-live.firebaseapp.com',
-  projectId: 'ts-playlist-live',
-  appId: ''
+  apiKey: "AIzaSyAeif74Bbdo0cW4qG2ayQRcZMYIrvlP5Mg",
+  authDomain: "ts-playlist-live.firebaseapp.com",
+  databaseURL: "https://ts-playlist-live-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "ts-playlist-live",
+  storageBucket: "ts-playlist-live.firebasestorage.app",
+  messagingSenderId: "255608920071",
+  appId: "1:255608920071:web:525b48d4ae7e2fdb41f2a2"
 };
