@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <permission
-        android:name="com.jiminix.liveset.permission.READ_VIEWER"
+        android:name="com.jiminix.liveset.v105.permission.READ_VIEWER"
         android:protectionLevel="signature" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -9,15 +9,15 @@
         android:allowBackup="true"
         android:usesCleartextTraffic="true"
         android:icon="@drawable/ic_launcher_manager"
-        android:label="TS Playlist Manager"
+        android:label="TS Playlist Manager V1.05"
         android:supportsRtl="true"
         android:theme="@style/Theme.LiveSet">
         <service android:name=".LocalWifiService" android:exported="false" android:foregroundServiceType="dataSync" />
         <provider
             android:name=".PlaylistShareProvider"
-            android:authorities="com.jiminix.liveset.playlists"
+            android:authorities="com.jiminix.liveset.v105.playlists"
             android:exported="true"
-            android:readPermission="com.jiminix.liveset.permission.READ_VIEWER" />
+            android:readPermission="com.jiminix.liveset.v105.permission.READ_VIEWER" />
         <activity android:name=".Ts2026DocsWriteTestActivity" android:exported="false" />
         <activity android:name=".Ts2026RecoveryActivity" android:exported="false" />
         <activity android:name=".Ts2026DocsPreviewActivity" android:exported="false" />
