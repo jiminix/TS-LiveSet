@@ -45,7 +45,7 @@ public final class PrivateStageIcons {
         switch(n) {
             case 3: case 6: case 10: case 21: case 22: case 27: return 1;
             case 4: case 11: case 15: case 16: case 18: case 25: case 26:
-            case 12: case 14: case 28: case 29: case 30: case 32: return 2;
+            case 1: case 2: case 5: case 7: case 12: case 14: case 28: case 29: case 30: case 32: return 2;
             case 8: case 9: case 33: return 4;
             default: return 0;
         }
