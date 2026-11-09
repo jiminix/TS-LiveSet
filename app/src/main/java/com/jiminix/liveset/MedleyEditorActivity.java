@@ -85,7 +85,7 @@ public class MedleyEditorActivity extends AppCompatActivity {
     private void buildUi(){
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        Ui.applyTequilaBackground(root);)
+        Ui.applyTequilaBackground(root);
 
         LinearLayout head=Ui.row(this);
         head.setBackgroundColor(Color.rgb(105,12,18));
