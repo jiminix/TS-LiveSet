@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private void buildUi() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.rgb(18,18,18));
+        Ui.applyTequilaBackground(root);)
 
         LinearLayout brand = Ui.row(this);
         TextView head = Ui.title(this, "LIVESET");
