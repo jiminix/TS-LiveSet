@@ -271,6 +271,11 @@ public final class PlaylistCloudSync {
     }
 
     public static void saveGlobalBackup(Context c, Listener listener){
+        if ("com.jiminix.liveset.v105".equals(c.getPackageName()) &&
+            (AppStore.loadSongs(c).isEmpty() || AppStore.loadSetlists(c).isEmpty())) {
+            if(listener!=null) MAIN.post(()->listener.onError("V1.05 : restaure d'abord tes playlists avant toute sauvegarde cloud."));
+            return;
+        }
         Context app=c.getApplicationContext();
         new Thread(()->{
             try{
