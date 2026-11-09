@@ -333,14 +333,7 @@ function render(payload,cached=false){
     }
     const info=document.createElement("div");info.className="song-info";
     const meta=document.createElement("span");meta.className="song-meta";
-    const tempoIcon=document.createElement("span");tempoIcon.textContent="♩";tempoIcon.title="Tempo";
-    meta.append(tempoIcon,bpm);
-    const hasValue=x=>x!==null&&x!==undefined&&String(x).trim()!==""&&String(x).trim()!=="0"&&String(x).toLowerCase()!=="false";
-    const instruments=[];
-    if(hasValue(s.stageNum1)||hasValue(s.stageNum2))instruments.push("🎤");
-    if(hasValue(s.stageGuitar))instruments.push("🎸");
-    if(hasValue(s.stageKeyboard))instruments.push("🎹");
-    if(instruments.length){const icons=document.createElement("span");icons.className="instr";icons.textContent=instruments.join("");icons.title="Instruments";meta.append(icons)}
+    meta.append(bpm);
     info.append(title,meta);
     row.append(info);
     const mediaUrl=effectiveMediaUrl(s);
