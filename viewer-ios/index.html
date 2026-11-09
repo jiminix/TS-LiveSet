@@ -72,7 +72,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.31</footer>
+<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.32</footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -268,7 +268,9 @@ function render(payload,cached=false){
   $("playlistName").textContent=(source.playlist_name||"Playlist").toUpperCase();
   $("count").textContent=songs.length+" titre"+(songs.length>1?"s":"");
   $("status").textContent=cached?"Internet indisponible · dernière copie enregistrée":"Internet · à jour";
-  $("banner").innerHTML="Un pour tous, tous pour la même playlist.<br>Synchro au Manager : "+(cached?"PAS OK":"OK")+"<br>Playlist TS 2026 importée<br>Viewer iPhone 13";
+  const linkedCount=songs.filter(song=>youtubeId(effectiveMediaUrl(song))).length;
+  $("banner").textContent="Un pour tous, tous pour la même playlist. · "+(cached?"Copie locale":"Playlist reçue")+" · "+linkedCount+"/"+songs.length+" liens YouTube reçus du Manager";
+  if(!linkedCount && songs.length) $("status").textContent="Aucun lien YouTube transmis par le Manager · boutons ▶ indisponibles";
   const frag=document.createDocumentFragment();
   songs.forEach((s,i)=>{
     const id=s.id||("song-"+i);
