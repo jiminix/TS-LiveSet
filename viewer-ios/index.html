@@ -80,7 +80,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:7px 8px calc(7px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.35</footer>
+<footer>Lecture seule · synchronisation Internet automatique · Viewer iPhone · V0.36</footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -306,7 +306,7 @@ function render(payload,cached=false){
     const id=s.id||("song-"+i);
     const row=document.createElement("div");
     row.className="song"+(s.disabled?" disabled":"");
-    const num=document.createElement("div"); num.className="num"; num.textContent=i+1;
+    const num=document.createElement("div"); num.className="num"; num.textContent=String(i+1).padStart(2,"0");
     const title=document.createElement("div"); title.className="title"; title.textContent=(s.title||"").toUpperCase();
     const bpm=document.createElement("div"); bpm.className="bpm";
     // The Manager remains authoritative. Legacy cloud rows may have an empty
@@ -334,7 +334,7 @@ function render(payload,cached=false){
       play.className="play-song";play.textContent="▶";play.title="Écouter "+(s.title||"le morceau");
       play.setAttribute("aria-label",play.title);
       play.onclick=()=>openPlayer(s);
-      row.append(play);
+      num.after(play);
     }
     frag.append(row);
     if(medley&&expanded.has(id)){
