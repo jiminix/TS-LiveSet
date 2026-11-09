@@ -411,7 +411,7 @@ $("cancelCode").onclick=()=>$("modal").classList.remove("show");
 $("saveCode").onclick=()=>{const c=cleanCode($("codeInput").value);if(!c){return}localStorage.setItem(KEY_CODE,c);localStorage.removeItem(KEY_CACHE);$("modal").classList.remove("show");lastSignature="";sync()};
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 sync();
-setInterval(sync,10000);
+setInterval(sync,2000);
 // Firebase presence is initialized only when the project's public web config
 // is supplied. No fictitious counts are displayed while unconfigured.
 (async function initOnlinePresence(){
