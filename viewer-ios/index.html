@@ -71,7 +71,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(saf
 <body>
 <header class="top">
   
-  <div class="headrow"><div id="playlistName" class="playname">Connexion Viewer</div><div id="count" class="count">0 titres</div></div>
+  <div class="headrow"><div id="playlistName" class="playname">Connexion Viewer</div><div id="count" class="count">0 titres</div><div id="topViewerCount" class="count" style="font-size:11px;color:#cbd3d9;white-space:nowrap" title="Viewers actuellement connectés">👥 —</div></div>
   <div class="actions">
     <button id="progressBtn" class="btn red">EN COURS</button>
     <button id="fredBtn" class="btn yellow">WITH FRED</button>
@@ -82,7 +82,7 @@ footer{position:fixed;left:0;right:0;bottom:0;padding:3px 8px calc(3px + env(saf
 <div id="banner" class="banner">Un pour tous, tous pour la même playlist.<br>Synchro au Manager : vérification…<br>Playlist TS 2026</div>
 <div id="status" class="status">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
-<footer><strong>TS PLAYLIST LIVE VIEWER</strong> · V1.02 · <span id="viewerPresence">Viewers connectés : non mesurés</span></footer>
+<footer><strong>TS PLAYLIST LIVE VIEWER</strong> · V1.02 · <span id="viewerPresence">Présence Internet · connexion en attente</span></footer>
 
 <div id="modal" class="modal">
   <div class="card">
@@ -408,6 +408,28 @@ $("saveCode").onclick=()=>{const c=cleanCode($("codeInput").value);if(!c){return
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
 sync();
 setInterval(sync,10000);
+// The public Viewer requires a real shared presence endpoint; GitHub Pages
+// cannot count concurrent clients on its own. Never display an invented count.
+const PRESENCE_ENDPOINT="";
+const presenceId="v"+Math.random().toString(36).slice(2)+Date.now().toString(36);
+async function updatePresence(){
+  if(!PRESENCE_ENDPOINT)return;
+  try{
+    const url=PRESENCE_ENDPOINT+"?id="+encodeURIComponent(presenceId);
+    const response=await fetch(url,{cache:"no-store"});
+    if(!response.ok)throw new Error("Presence HTTP "+response.status);
+    const data=await response.json();
+    const n=Number(data.connected);
+    if(!Number.isInteger(n)||n<1)throw new Error("Invalid presence count");
+    $("topViewerCount").textContent="👥 "+n;
+    $("viewerPresence").textContent=n+" viewer"+(n>1?"s":"")+" connecté"+(n>1?"s":"");
+  }catch(_){
+    $("topViewerCount").textContent="👥 —";
+    $("viewerPresence").textContent="Présence Internet indisponible";
+  }
+}
+updatePresence();
+setInterval(updatePresence,4000);
 </script>
 </body>
 </html>
