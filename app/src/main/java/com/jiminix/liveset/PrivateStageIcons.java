@@ -40,7 +40,7 @@ public final class PrivateStageIcons {
         }
         return p.getInt(k,0);
     }
-    public static void show(Context c, LinearLayout target, int flags, int size) {
+    public static void show(Context c, LinearLayout target, int flags, int size, String listId, String songId, int part) {
         if((flags&1)!=0) {
             ImageView acoustic=new ImageView(c);
             acoustic.setImageResource(R.drawable.ic_acoustic_000);
@@ -49,9 +49,9 @@ public final class PrivateStageIcons {
         }
         if((flags&2)!=0) addText(c,target,"🎸",size);
         if((flags&4)!=0) addText(c,target,"🎹",size);
-        if((flags&8)!=0) addText(c,target,prefs(c).getString("num1","12"),size);
+        if((flags&8)!=0) addText(c,target,prefs(c).getString(key(listId,songId,part)+"/num1","12"),size);
         if((flags&16)!=0) {
-            TextView n=addText(c,target,prefs(c).getString("num2","03"),size);
+            TextView n=addText(c,target,prefs(c).getString(key(listId,songId,part)+"/num2","03"),size);
             n.setTextColor(Color.RED);
         }
     }
@@ -90,7 +90,7 @@ public final class PrivateStageIcons {
                 if(a.length()>2)a=a.substring(0,2);
                 if(b.length()>2)b=b.substring(0,2);
                 prefs(c).edit().putInt(key(listId,songId,part),next)
-                    .putString("num1",a).putString("num2",b).apply();
+                    .putString(key(listId,songId,part)+"/num1",a).putString(key(listId,songId,part)+"/num2",b).apply();
                 refresh.run();
             }).setNegativeButton("Annuler",null).show();
     }
