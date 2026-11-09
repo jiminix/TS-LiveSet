@@ -45,7 +45,7 @@ public final class PrivateStageIcons {
         switch(n) {
             case 3: case 6: case 10: case 21: case 22: case 27: return 1;
             case 4: case 11: case 15: case 16: case 18: case 25: case 26:
-            case 29: case 30: case 32: return 2;
+            case 12: case 14: case 28: case 29: case 30: case 32: return 2;
             case 8: case 9: case 33: return 4;
             default: return 0;
         }
@@ -71,9 +71,9 @@ public final class PrivateStageIcons {
     }
     private static TextView addText(Context c,LinearLayout row,String s,int size) {
         TextView t=new TextView(c);
-        t.setText(s); t.setTextSize(Math.max(10,size-2)); t.setGravity(Gravity.CENTER);
+        t.setText(s); t.setTextSize(Math.max(12,size-3)); t.setGravity(Gravity.CENTER);\n        t.setIncludeFontPadding(true); t.setSingleLine(true);
         t.setTextColor(Color.WHITE); t.setTypeface(Typeface.DEFAULT_BOLD);
-        row.addView(t,new LinearLayout.LayoutParams(-2,dp(c,size)));
+        row.addView(t,new LinearLayout.LayoutParams(-2,dp(c,size+8)));
         return t;
     }
     private static int dp(Context c,int v) { return Math.round(v*c.getResources().getDisplayMetrics().density); }
