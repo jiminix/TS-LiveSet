@@ -117,6 +117,7 @@ const BOOTSTRAP_CODE="Y6";
 const BOOTSTRAP_BLOB="d7e6c82a-82e0-4336-8e66-d49b9d013312";
 const KEY_CODE="ts_viewer_code";
 const KEY_CACHE="ts_viewer_cache";
+const KEY_CACHE_CODE="ts_viewer_cache_code";
 let activePlaylist="main";
 let expanded=new Set();
 let busy=false;
@@ -268,7 +269,10 @@ async function getPayload(){
   let code=localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE;
   const resolved=await resolveCode(code);
   const payload=await cloudJson(API+"/"+resolved);
-  localStorage.setItem(KEY_CACHE,JSON.stringify(payload));
+  try{
+    localStorage.setItem(KEY_CACHE,JSON.stringify(payload));
+    localStorage.setItem(KEY_CACHE_CODE,cleanCode(code));
+  }catch(_){}
   return {payload,cached:false};
 }
 function mergeBackupMedia(payload,songs){
@@ -303,13 +307,13 @@ function render(payload,cached=false){
   }
   const songs=mergeBackupMedia(payload,Array.isArray(source.songs)?source.songs:[]);
   const sig=activePlaylist+"|"+JSON.stringify(songs)+"|"+source.playlist_name;
+  $("banner").textContent=cached?"Synchro au Manager : en cours":"Synchro au Manager : OK";
   if(sig===lastSignature)return;
   lastSignature=sig;
   $("playlistName").textContent=(source.playlist_name||"Playlist").toUpperCase();
   $("count").textContent=songs.length+" titre"+(songs.length>1?"s":"");
   $("status").textContent=cached?"Internet indisponible · dernière copie enregistrée":"Internet · à jour";
   const linkedCount=songs.filter(song=>youtubeId(effectiveMediaUrl(song))).length;
-  $("banner").textContent=cached?"Synchro au Manager : en cours":"Synchro au Manager : OK";
   if(!linkedCount && songs.length) $("status").textContent="Aucun lien YouTube trouvé dans la playlist ou la sauvegarde Cloud";
   const frag=document.createDocumentFragment();
   songs.forEach((s,i)=>{
@@ -376,7 +380,8 @@ async function sync(){
     render(currentPayload,false);
   }catch(e){
     const raw=localStorage.getItem(KEY_CACHE);
-    if(raw){
+    const matchingCache=localStorage.getItem(KEY_CACHE_CODE)===cleanCode(localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE);
+    if(raw && matchingCache){
       try{
         currentPayload=JSON.parse(raw);
         currentCached=true;
@@ -410,8 +415,18 @@ $("fredBtn").onclick=()=>switchPlaylist("fred");
 $("syncBtn").onclick=()=>window.location.reload();
 $("codeBtn").onclick=openCode;
 $("cancelCode").onclick=()=>$("modal").classList.remove("show");
-$("saveCode").onclick=()=>{const c=cleanCode($("codeInput").value);if(!c){return}localStorage.setItem(KEY_CODE,c);localStorage.removeItem(KEY_CACHE);$("modal").classList.remove("show");lastSignature="";sync()};
+$("saveCode").onclick=()=>{const c=cleanCode($("codeInput").value);if(!c){return}localStorage.setItem(KEY_CODE,c);localStorage.removeItem(KEY_CACHE);localStorage.removeItem(KEY_CACHE_CODE);currentPayload=null;currentCached=false;$("modal").classList.remove("show");lastSignature="";sync()};
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+// Show the last locally saved playlist immediately, then refresh from the cloud.
+try{
+  const savedCode=cleanCode(localStorage.getItem(KEY_CODE)||BOOTSTRAP_CODE);
+  const raw=localStorage.getItem(KEY_CACHE);
+  if(raw && localStorage.getItem(KEY_CACHE_CODE)===savedCode){
+    currentPayload=JSON.parse(raw);
+    currentCached=true;
+    render(currentPayload,true);
+  }
+}catch(_){currentPayload=null;}
 sync();
 setInterval(sync,2000);
 // Firebase presence is initialized only when the project's public web config
