@@ -540,7 +540,7 @@ public class IntegratedViewerActivity extends AppCompatActivity {
         int savedFlags=PrivateStageIcons.flags(this,privateListId,song.id,0,privateSeed?number-1:-1);
         // TS 2026: only the requested instrument per position; preserve other private markers.
         int displayFlags=PrivateStageIcons.displayFlags(savedFlags,privateSeed,number);
-        PrivateStageIcons.show(this,privateIcons,displayFlags,14,privateListId,song.id,0);
+        PrivateStageIcons.show(this,privateIcons,displayFlags,19,privateListId,song.id,0);
         row.addView(privateIcons);
         TextView addIcons=new TextView(this);
         addIcons.setText("+"); addIcons.setTextColor(Color.rgb(255,193,7));
