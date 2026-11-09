@@ -22,7 +22,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      # Only use the original installed app signing certificate. Never create a replacement.\n      # Reuse one signing certificate for all future CLOUD RESTORE TEST builds.
+      # Only use the original installed app signing certificate. Never create a replacement.
+      # Reuse one signing certificate for all future CLOUD RESTORE TEST builds.
       # For durable storage, set the GitHub Actions secret
       # CLOUD_RESTORE_TEST_KEYSTORE_BASE64 to the base64 of this keystore.
       # The fixed-key cache is a fallback only (GitHub may evict caches).
