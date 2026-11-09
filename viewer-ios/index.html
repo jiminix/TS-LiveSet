@@ -237,6 +237,23 @@ async function getPayload(){
   localStorage.setItem(KEY_CACHE,JSON.stringify(payload));
   return {payload,cached:false};
 }
+function mergeBackupMedia(payload,songs){
+  // The legacy Android Manager published playlist rows without mediaUrl,
+  // but its independent full backup retains the original Song JSON.
+  const saved=payload?.manager_backup?.songs;
+  if(!Array.isArray(saved))return songs;
+  const byId=new Map();
+  for(const item of saved){
+    const id=String(item?.id||"").trim();
+    const url=effectiveMediaUrl(item||{});
+    if(id&&youtubeId(url))byId.set(id,url);
+  }
+  return songs.map(song=>{
+    if(youtubeId(effectiveMediaUrl(song)))return song;
+    const url=byId.get(String(song?.id||"").trim());
+    return url?{...song,mediaUrl:url}:song;
+  });
+}
 function render(payload,cached=false){
   let source=payload;
   if(showInProgress){
@@ -248,7 +265,7 @@ function render(payload,cached=false){
     $("count").textContent="0 titres";
     return;
   }
-  const songs=Array.isArray(source.songs)?source.songs:[];
+  const songs=mergeBackupMedia(payload,Array.isArray(source.songs)?source.songs:[]);
   const sig=(showInProgress?"1":"0")+"|"+JSON.stringify(songs)+"|"+source.playlist_name;
   if(sig===lastSignature)return;
   lastSignature=sig;
@@ -256,8 +273,8 @@ function render(payload,cached=false){
   $("count").textContent=songs.length+" titre"+(songs.length>1?"s":"");
   $("status").textContent=cached?"Internet indisponible · dernière copie enregistrée":"Internet · à jour";
   const linkedCount=songs.filter(song=>youtubeId(effectiveMediaUrl(song))).length;
-  $("banner").textContent="Un pour tous, tous pour la même playlist. · "+(cached?"Copie locale":"Playlist reçue")+" · "+linkedCount+"/"+songs.length+" liens YouTube reçus du Manager";
-  if(!linkedCount && songs.length) $("status").textContent="Aucun lien YouTube transmis par le Manager · boutons ▶ indisponibles";
+  $("banner").textContent="Un pour tous, tous pour la même playlist. · "+(cached?"Copie locale":"Playlist reçue")+" · "+linkedCount+"/"+songs.length+" liens YouTube disponibles";
+  if(!linkedCount && songs.length) $("status").textContent="Aucun lien YouTube trouvé dans la playlist ou la sauvegarde Cloud";
   const frag=document.createDocumentFragment();
   songs.forEach((s,i)=>{
     const id=s.id||("song-"+i);
