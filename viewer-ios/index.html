@@ -27,7 +27,7 @@ button,input{font:inherit}
 .btn.dark{background:#080b0e;color:#fff}
 .btn:active{transform:scale(.98)}
 .banner{margin:1px 6px 0;padding:2px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#171d22;color:#fff;text-align:center;font-size:11px;font-weight:700;line-height:1.2}
-.status{margin:0 6px 2px;color:var(--muted);font-size:10px;text-align:center}
+.status{display:none}
 .list{padding:0 6px 80px}
 .song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:rgba(17,22,27,.70)}
 .num{width:27px;text-align:center;font-weight:900;font-size:14px;flex:0 0 27px}
@@ -80,7 +80,7 @@ button,input{font:inherit}
   </div>
 </header>
 <div id="banner" class="banner">Synchro au Manager : en cours</div>
-<div id="status" class="status">Connexion…</div>
+<div id="status" class="status" aria-hidden="true">Connexion…</div>
 <main id="list" class="list"><div class="empty">Chargement…</div></main>
 <footer><div class="footer-playlist"><span id="playlistName" class="playname">TS 2026</span><span id="count" class="count">33 titres</span></div><div class="footer-details"><strong>TS PLAYLIST LIVE VIEWER</strong><div class="footer-version">V1.02 · <span id="viewerPresence">Viewers connectés : en attente</span></div></div><span id="topViewerCount" hidden aria-hidden="true"></span></footer>
 
