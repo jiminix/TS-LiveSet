@@ -40,13 +40,13 @@ jobs:
             printf '%s' "$TEST_KEYSTORE_BASE64" | base64 --decode > .signing/liveset-debug.keystore
           fi
           if [ ! -s .signing/liveset-debug.keystore ]; then
-            echo "::error::Original RESTORE TEST signing key missing. Supply CLOUD_RESTORE_TEST_KEYSTORE_BASE64. Do not generate a replacement."
+            echo "::error::Stable migration signing key missing. Supply CLOUD_RESTORE_TEST_KEYSTORE_BASE64. Do not generate a replacement."
             exit 1
           fi
           ACTUAL="$(keytool -list -v -keystore .signing/liveset-debug.keystore -alias androiddebugkey -storepass android | sed -n 's/.*SHA256: //p' | head -1 | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          EXPECTED="6453839D301E35727B9B63595A15DE8A25C58A73388B9365C1B134974B1DD512"
+          EXPECTED="C3442E5EEF079FE39ECE2DA2EB158799151638AAE35093E97BBA2F270A9A9321"
           if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "::error::Signing certificate does not match installed RESTORE TEST APK. Build blocked to preserve update compatibility."
+            echo "::error::Migration signing certificate mismatch. Build blocked to preserve update compatibility."
             exit 1
           fi
       - name: Show OAuth Android certificate fingerprint
