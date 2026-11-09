@@ -1729,7 +1729,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 h.stageBox.setVisibility(View.VISIBLE);
                 h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
-                    zdp(28)
+                    zdp(32)
                 ));
                 h.stageBox.setPadding(0,0,0,0);
 
@@ -1764,6 +1764,8 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
             h.stageBox.setBackground(null);
             h.stageBox.setPadding(0,0,0,0);
+            h.stageBox.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,zdp(32)));
+            h.stageBox.setGravity(Gravity.CENTER_VERTICAL);
             // RecyclerView reuses rows: clear all previously appended private icons.
             while(h.stageBox.getChildCount()>4)h.stageBox.removeViewAt(4);
             if(ts2026){
@@ -1777,7 +1779,7 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
                 // TS 2026: same one-instrument mapping as the integrated Viewer.
                 flags=PrivateStageIcons.displayFlags(flags,ts2026,position+1);
                 if(!ts2026 && s.stageGuitar)flags &= ~2;
-                PrivateStageIcons.show(PlaylistOverviewActivity.this,h.stageBox,flags,14,setlist.id,s.id,0);
+                PrivateStageIcons.show(PlaylistOverviewActivity.this,h.stageBox,flags,19,setlist.id,s.id,0);
                 if(flags!=0)h.stageBox.setVisibility(View.VISIBLE);
             }
             h.medleyBox.removeAllViews();
