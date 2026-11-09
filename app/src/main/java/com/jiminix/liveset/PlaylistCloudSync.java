@@ -140,7 +140,8 @@ public final class PlaylistCloudSync {
     }
 
     public static boolean isConfigured(Context c){
-        return !getCode(c).isEmpty();
+        // Y6 is bound to a fixed cloud blob. Fresh V1.05 installs have no legacy preferences.
+        return !FIXED_BLOB_ID.isEmpty();
     }
 
     public static void maybePublish(Context c){
