@@ -217,7 +217,8 @@ async function cloudJson(target){
   const errors=[];
   // 1) Direct request: Android works this way and some browsers may allow it.
   try{
-    const res=await fetch(target,{cache:"no-store"});
+    const freshUrl=target+(target.includes("?")?"&":"?")+"_ts="+Date.now();
+    const res=await fetch(freshUrl,{cache:"no-store",headers:{"Cache-Control":"no-cache"}});
     if(!res.ok)throw new Error("direct HTTP "+res.status);
     return await res.json();
   }catch(e){errors.push("direct: "+(e.message||e))}
@@ -226,7 +227,8 @@ async function cloudJson(target){
   // AllOrigins is tried first; CorsProxy's shared demo key is the second path.
   for(const prefix of CORS_PROXIES){
     try{
-      const proxied=prefix+encodeURIComponent(target);
+      const freshTarget=target+(target.includes("?")?"&":"?")+"_ts="+Date.now();
+      const proxied=prefix+encodeURIComponent(freshTarget);
       const res=await fetch(proxied,{cache:"no-store"});
       if(!res.ok)throw new Error("proxy HTTP "+res.status);
       const raw=await res.text();
@@ -370,7 +372,6 @@ async function sync(){
     const r=await getPayload();
     currentPayload=r.payload;
     currentCached=false;
-    lastSignature="";
     render(currentPayload,false);
   }catch(e){
     const raw=localStorage.getItem(KEY_CACHE);
