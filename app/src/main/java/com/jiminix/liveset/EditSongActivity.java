@@ -70,7 +70,7 @@ public class EditSongActivity extends AppCompatActivity {
 
     private void buildUi(){
         boolean newSong=getIntent().getBooleanExtra("new_song",false);
-        LinearLayout outer=new LinearLayout(this); outer.setOrientation(LinearLayout.VERTICAL); Ui.applyTequilaBackground(outer.setBackgroundColor(Color.rgb(18,18,18));)
+        LinearLayout outer=new LinearLayout(this); outer.setOrientation(LinearLayout.VERTICAL); Ui.applyTequilaBackground(outer);
         LinearLayout head=Ui.row(this); Button back=Ui.button(this,"‹"); TextView h=Ui.title(this,newSong?"Nouveau morceau":"Modifier le morceau"); Ui.compactHeaderTitle(h,this); Ui.compactHeaderButton(back,this,46); head.addView(back); head.addView(h); outer.addView(head); back.setOnClickListener(v->finish());
 
         LinearLayout topActions=Ui.row(this);
