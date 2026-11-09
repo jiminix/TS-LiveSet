@@ -74,11 +74,11 @@ public final class PrivateStageIcons {
         EditText first=new EditText(c);
         first.setHint("Chiffre blanc (00–99)");
         first.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        first.setText(prefs(c).getString("num1","12"));
+        first.setText(prefs(c).getString(key(listId,songId,part)+"/num1","12"));
         EditText second=new EditText(c);
         second.setHint("Chiffre rouge (00–99)");
         second.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        second.setText(prefs(c).getString("num2","03"));
+        second.setText(prefs(c).getString(key(listId,songId,part)+"/num2","03"));
         numbers.addView(first); numbers.addView(second);
         new AlertDialog.Builder(c).setTitle("Icônes du titre")
             .setView(numbers)
