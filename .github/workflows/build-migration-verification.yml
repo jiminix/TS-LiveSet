@@ -67,8 +67,8 @@ jobs:
           data=gradle.read_text()
           assert "applicationId 'com.jiminix.liveset'" in data
           data=data.replace("applicationId 'com.jiminix.liveset'","applicationId 'com.jiminix.liveset.migrationtest'")
-          data=data.replace('versionCode 87','versionCode 103')
-          data=data.replace("versionName '0.87'","versionName '1.03-compact-song-icons'")
+          data=data.replace('versionCode 87','versionCode 104')
+          data=data.replace("versionName '0.87'","versionName '1.04-viewer-bpm-only'")
           gradle.write_text(data)
           # Publish only after a valid cloud backup is confirmed. Preserve that
           # backup verbatim; refuse all writes if the remote cannot be read.
@@ -142,5 +142,5 @@ jobs:
       - name: Upload recovery test APK
         uses: actions/upload-artifact@v4
         with:
-          name: TS-Playlist-Live-Manager-V1.03
+          name: TS-Playlist-Live-Manager-V1.04
           path: app/build/outputs/apk/debug/app-debug.apk
