@@ -1,5 +1,5 @@
-const CACHE="ts-playlist-viewer-ios-v4";
-const ASSETS=["./","./index.html","./manifest.webmanifest","./icon.svg"];
+const CACHE="ts-playlist-viewer-ios-v96";
+const ASSETS=["./","./index.html","./manifest.webmanifest","./icon.svg","./tequila-viewer.svg"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE)
   .then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys()
