@@ -1764,7 +1764,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
             h.stageBox.setBackground(null);
             h.stageBox.setPadding(0,0,0,0);
+            // RecyclerView reuses rows: clear all previously appended private icons.
             while(h.stageBox.getChildCount()>4)h.stageBox.removeViewAt(4);
+            if(ts2026){
+                // Never display legacy stage guitar/keyboard alongside the single TS 2026 icon.
+                h.guitarIcon.setVisibility(View.GONE);
+                h.keyboardIcon.setVisibility(View.GONE);
+            }
             if(s!=null){
                 int flags=PrivateStageIcons.flags(PlaylistOverviewActivity.this,setlist.id,s.id,0,
                     setlist.name!=null && setlist.name.toLowerCase(Locale.ROOT).contains("ts 2026")?position:-1);
