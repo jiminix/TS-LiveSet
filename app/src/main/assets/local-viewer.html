@@ -32,7 +32,7 @@ button,input{font:inherit}
 .song{display:flex;align-items:center;gap:5px;min-height:43px;padding:4px 4px;border-bottom:1px solid var(--line);background:rgba(17,22,27,.70)}
 .num{width:27px;text-align:center;font-weight:900;font-size:14px;flex:0 0 27px}
 .title{font-weight:800;font-size:15px;line-height:1.08;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bpm{font-size:11px;color:#d9dee2;min-width:32px;text-align:right}
+.song-info{display:flex;align-items:center;gap:4px;flex:1;min-width:0}.song-info .title{flex:0 1 auto;min-width:0}.song-meta{display:inline-flex;align-items:center;gap:3px;flex:none;white-space:nowrap;font-size:10px;color:#d9dee2}.song-meta .tempo{font-weight:700}.song-meta .instr{font-size:12px}.song.disabled .song-meta{color:#939393}
 .medley{flex:0 0 34px;width:34px;height:32px;padding:0;border:0;border-radius:5px;background:#fff;color:#111;font-size:18px;font-weight:900}
 .song.disabled{opacity:1;background:#303030;color:#939393}.song.disabled .title,.song.disabled .artist,.song.disabled .bpm{color:#939393!important}.song.disabled button{filter:grayscale(1);opacity:.6}
 .play-song{flex:0 0 35px;width:35px;height:32px;border:1px solid #59636b;border-radius:6px;background:#252f38;color:#fff;font-size:17px;font-weight:800;padding:0}
@@ -316,7 +316,7 @@ function render(payload,cached=false){
     row.className="song"+(s.disabled?" disabled":"");
     const num=document.createElement("div"); num.className="num"; num.textContent=String(i+1).padStart(2,"0");
     const title=document.createElement("div"); title.className="title"; title.textContent=(s.title||"").toUpperCase();
-    const bpm=document.createElement("div"); bpm.className="bpm";
+    const bpm=document.createElement("span"); bpm.className="tempo";
     // The Manager remains authoritative. Legacy cloud rows may have an empty
     // tempo when a song was originally created without filling its BPM.
     const normalizedTitle=(s.title||"").normalize("NFD")
@@ -335,7 +335,18 @@ function render(payload,cached=false){
       b.onclick=()=>{expanded.has(id)?expanded.delete(id):expanded.add(id);lastSignature="";render(payload,cached)};
       row.append(b);
     }
-    row.append(title,bpm);
+    const info=document.createElement("div");info.className="song-info";
+    const meta=document.createElement("span");meta.className="song-meta";
+    const tempoIcon=document.createElement("span");tempoIcon.textContent="♩";tempoIcon.title="Tempo";
+    meta.append(tempoIcon,bpm);
+    const hasValue=x=>x!==null&&x!==undefined&&String(x).trim()!==""&&String(x).trim()!=="0"&&String(x).toLowerCase()!=="false";
+    const instruments=[];
+    if(hasValue(s.stageNum1)||hasValue(s.stageNum2))instruments.push("🎤");
+    if(hasValue(s.stageGuitar))instruments.push("🎸");
+    if(hasValue(s.stageKeyboard))instruments.push("🎹");
+    if(instruments.length){const icons=document.createElement("span");icons.className="instr";icons.textContent=instruments.join("");icons.title="Instruments";meta.append(icons)}
+    info.append(title,meta);
+    row.append(info);
     const mediaUrl=effectiveMediaUrl(s);
     if(youtubeId(mediaUrl)){
       const play=document.createElement("button");
