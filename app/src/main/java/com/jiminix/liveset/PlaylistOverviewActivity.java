@@ -1546,7 +1546,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
 
             row.addView(num);
             row.addView(play);
-            row.addView(song);
+            LinearLayout titleAndIcons=new LinearLayout(PlaylistOverviewActivity.this);
+            titleAndIcons.setOrientation(LinearLayout.HORIZONTAL);
+            titleAndIcons.setGravity(Gravity.CENTER_VERTICAL);
+            titleAndIcons.setClipChildren(true);
+            row.addView(titleAndIcons,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
+            song.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+            titleAndIcons.addView(song);
             TextView addIcons=new TextView(PlaylistOverviewActivity.this);
             addIcons.setText("+");
             addIcons.setTextColor(Color.rgb(255,193,7));
@@ -1554,8 +1560,13 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             addIcons.setGravity(Gravity.CENTER);
             addIcons.setContentDescription("Ajouter des icônes privées");
             addIcons.setLayoutParams(new LinearLayout.LayoutParams(zdp(18),zdp(32)));
-            row.addView(addIcons);
-            row.addView(stageBox);
+            titleAndIcons.addView(addIcons);
+            titleAndIcons.addView(stageBox);
+            titleAndIcons.addOnLayoutChangeListener((v,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->{
+                int room=Math.max(Ui.dp(PlaylistOverviewActivity.this,45),
+                    right-left-addIcons.getMeasuredWidth()-stageBox.getMeasuredWidth()-Ui.dp(PlaylistOverviewActivity.this,2));
+                if(song.getMaxWidth()!=room)song.setMaxWidth(room);
+            });
             row.addView(bpm);
             row.addView(validate);
             row.addView(disable);
@@ -1652,10 +1663,11 @@ public class PlaylistOverviewActivity extends AppCompatActivity {
             h.song.setIncludeFontPadding(false);
             h.song.setSingleLine(true);
             h.song.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            h.song.setPadding(zdp(2),0,zdp(2),0);
+            h.song.setMaxWidth(Integer.MAX_VALUE);
+            h.song.setPadding(zdp(1),0,zdp(1),0);
             h.bpm.setTextSize(zsp(compact?12:15));
             h.bpm.setPadding(0,0,0,0);
-            h.song.setSingleLine(compact);
+            h.song.setSingleLine(true);
 
             h.validate.setTextSize(zsp(20));
             h.validate.setLayoutParams(new LinearLayout.LayoutParams(zdp(30),zdp(compact?32:40)));
