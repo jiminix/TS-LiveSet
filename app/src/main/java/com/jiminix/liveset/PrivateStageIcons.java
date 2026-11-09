@@ -71,7 +71,8 @@ public final class PrivateStageIcons {
     }
     private static TextView addText(Context c,LinearLayout row,String s,int size) {
         TextView t=new TextView(c);
-        t.setText(s); t.setTextSize(Math.max(12,size-3)); t.setGravity(Gravity.CENTER);\n        t.setIncludeFontPadding(true); t.setSingleLine(true);
+        t.setText(s); t.setTextSize(Math.max(12,size-3)); t.setGravity(Gravity.CENTER);
+        t.setIncludeFontPadding(true); t.setSingleLine(true);
         t.setTextColor(Color.WHITE); t.setTypeface(Typeface.DEFAULT_BOLD);
         row.addView(t,new LinearLayout.LayoutParams(-2,dp(c,size+8)));
         return t;
